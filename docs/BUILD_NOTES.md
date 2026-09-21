@@ -222,6 +222,48 @@ The browser smoke test and release build were not repeated for this test-only
 change. The preceding browser observations cover the unchanged maintenance rule.
 The planned population scenario and later biological rules remain unimplemented.
 
+## Git and RustRover setup — September 21, 2026
+
+Created local `main` and checkpoint commit `9469f3d` before changing IDE setup or
+the energy plan. Included `Cargo.lock` and ignored personal `.idea/` state.
+The latest test cleanup had removed the final creature-count assertion; restored
+it and ran the focused regression successfully before the checkpoint commit.
+
+Configured the installed RustRover 2026.3 EAP (263.5153.48) using shared `.run/`
+files and its UI. The local **Settings → Rust → Environment variables** setting
+`DEVELOPER_DIR=/Library/Developer/CommandLineTools` was saved and verified in
+ignored workspace state. The IDE reports Rust 1.93.1. Cargo native tests retain
+the native target; Trunk selects WASM separately. Shared configs contain no
+machine-specific compiler path. Official JetBrains documentation plus the
+installed Cargo/Shell plugin classes were checked for their configuration fields.
+
+Actual verification:
+
+- `scripts/check.sh`: all 11 native tests, formatting, native/WASM Clippy, and
+  JavaScript syntax passed from the command line.
+- **Moss - All tests** in RustRover: the IDE's results tree reports 11 passed.
+- **Moss - Maintenance test** in normal Run mode: the IDE reports 1 test passed.
+- **Moss - Full checks** in RustRover: exit code 0 after the same check script.
+- **Moss - Browser build** in RustRover: Trunk release build succeeded, exit 0.
+- Stopped the previous agent-owned Trunk terminal session, then started
+  **Moss - Browser preview** in RustRover. It reports a successful build and
+  listens on 127.0.0.1:8080. Reloading the in-app browser showed a working scene;
+  selecting Hare #1 and taking three Steps changed reserve from 60 to 57.
+
+Native **Debug** of the maintenance test was also attempted. LLDBFrontend and
+debugserver started, but the IDE remained at “Instantiating tests…” and the
+test process was stopped without reporting a result. The log records startup
+and the correct `DEVELOPER_DIR`, but no failure reason. This does not validate
+debugging; normal Run mode remains the verified path. A process sample also
+stalled and was cancelled. The next diagnostic is a retry with JetBrains debugger
+logging enabled, as described in `RUSTROVER.md`. No security settings were changed.
+Terminated only the diagnostic processes created for this attempt. The IDE was
+left on a passing normal maintenance Run, with the browser preview still active.
+
+Camera/resize/hidden-tab checks and extended zero-energy playback were not
+repeated for this IDE-only setup; their earlier observations remain applicable.
+Species rates and new biological behavior are planned, not implemented.
+
 ## Remaining limits
 
 Desktop mouse/trackpad is the initial input target. Mobile touch/pinch,

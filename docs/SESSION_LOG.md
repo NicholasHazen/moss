@@ -135,6 +135,31 @@ does not change runtime behavior; the browser smoke test was not repeated.
 **Next:** The separate authored population scenario and read-only species
 summaries are the recommended mechanical slice. No later biology was implemented.
 
+## September 21, 2026 — Git checkpoint, RustRover, and energy direction
+
+**Changed:** Initialized local Git on `main` and committed the existing foundation
+as `9469f3d`, including the dependency lockfile. Restored the final creature-count
+assertion removed during test cleanup. Added six shared `.run/` configurations,
+kept personal `.idea/` state ignored, and configured this Mac's compiler path in
+RustRover's project-only Rust environment. Moved the preview from the prior
+terminal server into the IDE. Added `RUSTROVER.md` and updated current notes.
+
+**Evidence:** The focused test and full command-line checks pass. RustRover's
+All tests reports 11 passed; Full checks and Browser build exit 0. Browser
+preview successfully serves localhost:8080; the browser shows 60 → 57 after three
+Steps. Two bounded read-only helpers reviewed energy storage and IDE configuration
+details. No new biological rule was implemented.
+
+**Limit:** Native Debug stalled at test initialization. Stopped that diagnostic
+attempt and left RustRover showing the maintenance test passing in normal Run
+mode, with the browser preview still running. `RUSTROVER.md` records the next
+debugger diagnostic; no successful breakpoint/stepping check is claimed.
+
+**Next:** Pair on a shared species resource for passive burn, keeping defaults
+at 1 and testing an override of Hare=1/Fox=2. Then resume the original population,
+food-choice, movement, and eating sequence. Future travel costs use actual
+distance at execution, with action fields introduced alongside their actions.
+
 ## Entry shape
 
 Date / small goal. What actually changed. One useful discovery. Commands or checks actually run and their result. Any remaining blocker. The single next action, also reflected in `NOW.md`.

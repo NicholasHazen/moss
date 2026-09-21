@@ -7,7 +7,8 @@ Only the current card in `NOW.md` is active. Later stops can change order. The a
 `crates/moss-sim/src/lessons.rs` now has the implemented maintenance loop and
 three documented, unscheduled stubs for later biological examples. Nick's focused
 maintenance regression passes; only this first rule is scheduled. The recommended
-next slice is mechanical population setup, before pairing on food choice.
+next edit makes passive burn configurable by species, then mechanical population
+setup precedes pairing on food choice.
 [ECOLOGY_PLAN.md](ECOLOGY_PLAN.md) records the selected model defaults and which
 parts are still proposals.
 

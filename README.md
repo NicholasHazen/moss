@@ -6,6 +6,8 @@ A browser-first Rust/ECS ecosystem workbench. The foundation has a finite 32 × 
 
 Start with [NOW.md](NOW.md) when returning. The vision remains in [PROJECT_BRIEF.md](PROJECT_BRIEF.md); exact evidence and limitations are in [docs/BUILD_NOTES.md](docs/BUILD_NOTES.md).
 
+For the configured RustRover EAP build/test actions, see [the IDE guide](docs/RUSTROVER.md).
+
 ## Run locally
 
 From `/Users/nick/Code/moss`:
@@ -85,7 +87,8 @@ Flint can therefore share maintenance while differing in later food-seeking
 rules. Neither needs its own class or a name-specific policy.
 
 The first paired edit makes time cost energy; its focused regression passes.
-Later edits let the hare select food, move, and eat. The next mechanical slice is a separate
+The next paired refinement makes passive burn configurable by species. Then the
+next mechanical slice is a separate
 population scenario with 6 hares, 2 foxes, 4 patches, and species totals. It does
 not require reproduction. [The ecology plan](docs/ECOLOGY_PLAN.md) defines that
 scenario, local plant growth before any CA spread, physical extent versus the
@@ -95,6 +98,7 @@ The current three-entity chamber remains the diagnostic scene. No population
 scenario, plant growth, day/night, weather, or physical body model is implemented.
 Balance becomes a question after individual interactions can be explained.
 
-Next: scaffold the authored population scenario described in [NOW.md](NOW.md).
+Next: pair on configurable passive burn, then scaffold the authored population
+scenario described in [NOW.md](NOW.md).
 The maintenance loop is written, scheduled, and tested; food choice, movement,
 eating, and starvation remain separate paired edits.

@@ -6,38 +6,50 @@ single-threaded schedule explicitly runs maintenance before completing the tick.
 Movement, feeding, and death remain unimplemented. Later scope is in the
 [ecology plan](docs/ECOLOGY_PLAN.md).
 
-## One next task — authored population scenario (not started)
+## One active task — configurable passive burn (paired; not started)
 
-**Mode:** Scaffold. The paired maintenance exercise is finished: Nick wrote the
+**Mode:** Pair. The first maintenance exercise is finished: Nick wrote the
 rule and its regression, which checks both creatures at 60 initially, 57 after
 three ticks, and zero after 63 ticks while both still exist. The test exercises
 the installed schedule. Its commented API reference remains for returning to Rust.
 
-**Open:** `crates/moss-sim/src/fixture.rs` for the next mechanical slice.
+**Open:** `crates/moss-sim/src/lib.rs` beside the existing `Energy` component.
 
-**One concrete next edit:** Extract the creature-spawn block into a small helper
-that accepts identity, species/role, and position, keeping the diagnostic scene
-unchanged. Reuse it for the planned separate scenario with 6 hares, 2 foxes, and
-4 grass patches. The full slice adds scenario selection, deterministic reset,
-and read-only species counts and energy summaries; see the ecology plan.
+**One concrete next edit:** Define a small `SpeciesEnergyRules` resource with
+named Hare and Fox passive rates, both initially 1 energy unit per tick. A
+resource is shared world configuration; `Energy` is each individual's reserve.
+Then pair on having `spend_energy` read `Species` and the configured rate instead
+of the literal `1`. The agent handles installation and inspector plumbing.
+
+Keep the existing default-rate regression. Add a focused example with Hare=1,
+Fox=2: three ticks from 60 yield 57 and 54, and additional ticks clamp both at
+zero without despawning either animal. Rates stay fixed for a run; reset when
+configuration changes. This plan is recorded, not implemented yet.
 
 **Expected browser observation:** Reset, Step three times, and inspect either
 animal: 57 / 100. Positions and grass biomass remain unchanged. Zero causes no
 death yet; Reset restores 60 / 100.
 
-**Stop:** This session ends with the tested maintenance rule. For the next
-mechanical slice, stop when both scenarios reset reproducibly and their displayed
-summaries match individual inspection. Food choice remains the next paired
-biological exercise; movement, eating, and starvation remain separate work.
+**Stop:** Species rates work in the native test and are visible in the browser.
+Then return to the planned mechanical population scenario: 6 hares, 2 foxes,
+4 patches, deterministic reset, and read-only species summaries. Food choice,
+movement, and eating follow as paired exercises. Death remains separate.
 
 **Energy direction:** Baseline maintenance now runs. When movement is implemented,
-add an extra cost per cell actually traveled, with an affordability check after
-maintenance. Other completed actions can add their own costs later; choosing an
-activity does not itself incur movement cost.
+add species-configured cost per cell actually traveled, with an affordability
+check after maintenance. Calculate distance where authoritative movement occurs;
+no permanent distance component is needed merely to charge a step. Add other
+named costs with completed actions; choosing an activity does not incur travel.
 
 ## Verified run path
 
 Working directory: `/Users/nick/Code/moss`.
+
+RustRover EAP now has shared **Moss - Maintenance test**, **Simulation tests**,
+**All tests**, **Full checks**, **Browser build**, and **Browser preview** actions.
+The IDE owns the active localhost:8080 preview; stop it with the red Stop button
+before launching a terminal preview. See [the IDE guide](docs/RUSTROVER.md) for
+the local Mac environment setting and the shared configurations.
 
 ```sh
 scripts/with-toolchain.sh trunk serve --locked --release
@@ -51,18 +63,26 @@ scripts/with-toolchain.sh trunk build --locked --release
 python3 -m http.server 8081 --bind 127.0.0.1 --directory dist
 ```
 
-For the September 21 coding session, the live-reloading Trunk preview is running
-at <http://127.0.0.1:8080>. Use that while editing; the optional static server at
+For the September 21 coding session, RustRover's live-reloading Trunk preview is
+running at <http://127.0.0.1:8080>. Use that while editing; the optional static server at
 8081 serves only the most recently built bundle. Restart Trunk with the first
 command above when needed. Stop a terminal server with Ctrl-C.
 
 ## Evidence and code map
 
 `scripts/check.sh` passes all 11 tests, formatting, native/WASM Clippy with warnings
-denied, and JS syntax, including Nick's completed maintenance regression. The
-focused test also passes on its own. Trunk and browser behavior were verified
-when the rule was wired; the test-only edit did not repeat the browser smoke test.
-Exact evidence and limitations are recorded in [build notes](docs/BUILD_NOTES.md).
+denied, and JS syntax. RustRover's **All tests** also reports 11 passed; **Full
+checks** and **Browser build** finish with exit code 0. The IDE preview serves
+the browser, where three Steps again showed Hare #1 at 57 / 100. The focused test
+passes separately. Exact evidence and limitations are in [build notes](docs/BUILD_NOTES.md).
+
+**IDE limitation:** native Debug stalled while instantiating the maintenance
+test; Run mode works. The IDE guide records the next debugger diagnostic. This
+does not block the species-rate edit or normal test/build/preview workflow.
+
+**Git checkpoint:** local `main` starts with `9469f3d`, the browser foundation and
+tested maintenance rule. The IDE setup and energy plan are a separate follow-up
+commit. No remote or public deployment was created.
 
 To revisit just this exercise:
 

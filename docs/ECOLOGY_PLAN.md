@@ -27,10 +27,49 @@ shared maintenance. Neither the name nor a species-specific switch decides
 who pays that maintenance. Nicknames may eventually be optional or duplicate;
 run-scoped IDs remain unique.
 
-## Multiples are the next scenario, not a reproduction prerequisite
+## Energy rates belong to species settings; reserves belong to individuals
+
+**Next paired refinement, not implemented:** introduce a concrete
+`SpeciesEnergyRules` resource with named Hare and Fox settings. A resource is one
+shared value in the ECS world; `Energy` remains a component on each creature.
+Begin with only `maintenance_units_per_tick`, defaulting to 1 for both species.
+Maintenance reads each creature's `Species` and looks up that setting. Grass
+does not acquire animal maintenance merely because it has a species label.
+
+Keep these settings fixed during a run; changing them starts a new run. Initially
+configure them in Rust, with a test override; a browser settings editor is a
+separate convenience. The inspector should report the applicable passive rate.
+Do not copy shared defaults into each animal until individual metabolic traits
+or inheritance give those copies a distinct meaning.
+
+The regression experiment sets Hare to 1 and Fox to 2 units per tick. Starting
+at 60, three ticks must leave 57 and 54. Both still clamp at zero and remain
+present; the existing default-rate regression remains useful. Rates are per
+executed simulation tick (currently 0.25 simulated seconds), never per frame.
+
+When movement arrives, extend the same species settings with
+`movement_units_per_cell`. Add other explicitly named action costs when their
+actions are implemented. These are incremental costs above passive maintenance.
+There is no generic action-cost registry or unused field inventory to build now.
+
+The movement system knows the old position and the accepted destination. For
+the first cardinal step, actual distance is the sum of absolute x/y changes in
+cells: zero or one. Check affordability after maintenance, then apply position
+and its checked distance-times-rate cost together, once. Rejected movement,
+missing targets, and repeated decisions incur no movement charge. Clamping a
+charge is not permission to move farther than the available energy buys.
+
+No persistent distance component is needed just to charge a move. If we later
+want travel history or aggregate distance, record the actual movement outcome.
+For multi-segment travel, sum segment lengths; an out-and-back journey has zero
+net displacement but nonzero distance. Camera motion and visual interpolation
+never enter this calculation. Fractional rates, activity-duration costs, and
+individual modifiers wait until a concrete rule needs them.
+
+## Multiples follow the energy refinement
 
 Keep the three-entity **diagnostic fixture** for isolating a rule. Immediately
-after the first maintenance exercise, add a separate authored **population
+after the small species-rate refinement, add a separate authored **population
 fixture**: **6 hares, 2 foxes, 4 grass patches** in the same 32 × 20 world.
 The counts are a small experiment, not a claim of sustainable balance.
 

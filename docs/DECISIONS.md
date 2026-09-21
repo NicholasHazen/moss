@@ -69,6 +69,22 @@ plant patches before CA spread, constant-light growth then a tick-driven day,
 and authored clouds before more complex weather. Full scope, ordering, and
 acceptance examples live in [ECOLOGY_PLAN.md](ECOLOGY_PLAN.md).
 
+## Species energy settings and development checkpoint — September 21, 2026
+
+Nick requested configurable passive burn and a place for later species/action
+costs. The selected next paired edit uses a shared concrete species-settings
+resource; reserves remain individual components. Only passive units per tick
+are introduced first. Movement adds a cost per actual cell traveled when its
+executor exists, and other actions add named costs at their point of use.
+Settings remain fixed within a run. This is a planned refinement, not implemented
+biology. The original population → food choice → movement → eating route follows.
+
+Initialized local Git and committed the browser foundation, lockfile, and first
+maintenance rule/test as `9469f3d` before the IDE/planning changes. Personal
+`.idea/` state is ignored; reusable RustRover configurations live in `.run/`.
+The Mac's compiler environment belongs in local project settings, preserving
+portable shared configurations and leaving the system Xcode selection alone.
+
 ## Still unresolved
 
 Final species design and detailed balance; reproduction eligibility and costs; local observation rules; geometry beyond initial cell contact; how attributes affect energy; durable storage; inheritance/mutation; mobile input scope; world generation; performance targets; and any commercial game objective.
