@@ -2,18 +2,36 @@
 
 [Guide home](README.md) · Next chapter: [populations](02-populations.md)
 
-**Today's smallest useful edit is checkpoint A.** It adds a type and its defaults.
-No loop changes yet. The rest of this chapter is here for a later sitting, or
-for continuing after review if you want to.
+**Ready:** checkpoint A matches the current code. It adds a type and its defaults;
+the loop change follows after review. The [verification record](authoring/verification.md)
+names the source revision and separates tested examples from future browser work.
 
-We currently have individual `Energy` components and one literal `1` in
-`spend_energy`. We want one shared configuration saying how much a hare or fox
-pays per executed tick. Both defaults stay at 1. A test will deliberately choose
-Hare = 1 and Fox = 2 to prove the distinction works.
+Fern and Flint both reach 57 energy after three ticks. The shared maintenance
+loop makes that result easy to explain: each animal started at 60 and paid 1
+three times. But suppose a fox should cost twice as much to sustain. Changing
+the literal in that loop would make the hare pay twice as much too.
+
+We need two facts to meet at the subtraction: which species this animal belongs
+to, and the passive rate configured for that species. The individual already
+carries `Species` and `Energy`. What is missing is a shared place for the rates.
+That is the resource we will add first. Both defaults stay at 1; a separate test
+will choose Hare = 1 and Fox = 2 and expect 57 and 54.
+
+**Today's edit:** add the resource and its defaults in checkpoint A, run the
+existing tests, then stop. The remaining checkpoints are available when you
+want the next session; no preparation reading is required.
+
+## On this page
+
+- [A: describe the settings](#checkpoint-a--describe-the-settings)
+- [B: give the test a different rate](#checkpoint-b--give-the-test-a-different-rate)
+- [C: read the setting in the loop](#checkpoint-c--read-the-setting-in-the-loop)
+- [Complete the behavior together](#complete-the-behavior-together)
+- [Optional: one setting, several animals](#optional-one-setting-several-animals)
 
 ## Checkpoint A — describe the settings
 
-Open `crates/moss-sim/src/lib.rs`. Find `pub struct Energy` and add this **after
+Open [lib.rs](../../crates/moss-sim/src/lib.rs). Find `pub struct Energy` and add this **after
 its closing brace**, before the next type. The existing Bevy prelude import
 already provides `Resource`.
 
@@ -45,6 +63,12 @@ derived default would make both `u32` fields zero.
 `u32` is an unsigned integer. The field names carry the units: energy per tick.
 We are not specifying energy per rendered frame or per real-world second.
 `pub` makes the type and fields usable by the browser crate and integration tests.
+
+We could put a rate on every `Energy` component, but then changing the hare
+default would mean tracking several copies. For now all hares share a species
+setting, so one resource expresses the intended relationship. Later, an
+individual inherited metabolism could justify per-animal data. That would be a
+new fact about the animal, rather than another copy of today's shared default.
 
 Run:
 
@@ -99,7 +123,7 @@ instead would replace an existing value. See the pinned
 [Bevy World API](https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/world/struct.World.html#method.init_resource).
 Keep configuration fixed during each run; the existing `reset` preserves it.
 
-Now open `crates/moss-sim/tests/bootstrap.rs`. Add `SpeciesEnergyRules` to its
+Now open [bootstrap.rs](../../crates/moss-sim/tests/bootstrap.rs). Add `SpeciesEnergyRules` to its
 existing `use moss_sim::{...};` import. Keep your original maintenance test.
 Add this separate test at file scope:
 
@@ -170,7 +194,7 @@ different failure, send me the output before changing the rule.
 
 ## Checkpoint C — read the setting in the loop
 
-Open `crates/moss-sim/src/lessons.rs`. Extend its `use crate::{...};` import to
+Open [lessons.rs](../../crates/moss-sim/src/lessons.rs). Extend its `use crate::{...};` import to
 include `Species` and `SpeciesEnergyRules`. Replace only `spend_energy`.
 
 The intended edit is: request the resource, query each animal's species alongside
@@ -221,3 +245,18 @@ the result in `NOW.md` before recommending [Chapter 2](02-populations.md).
 The consequence of this design is simple: settings belong to a species, while
 the remaining reserve belongs to an individual. Travel costs can extend these
 settings when travel exists; we do not need an action registry today.
+
+## Optional: one setting, several animals
+
+Imagine three hares with starting reserves 60, 40 and 1, sharing a rate of 2.
+After one tick they should have 58, 38 and 0. The shared setting does not require
+equal reserves, and the last hare still uses the lower bound you already wrote.
+This is a paper prediction, not an additional implementation assignment.
+
+That same distinction is what makes the next population chapter useful: six
+hares can share the rule while their individual state diverges. If the borrowing
+syntax is the unfamiliar part, [the Rust companion](context/rust-at-point-of-use.md)
+explains it using this loop; [the ECS companion](context/ecs-in-moss.md) follows
+how the resource reaches the system.
+
+[Guide home](README.md) · Next after review: [populations](02-populations.md)

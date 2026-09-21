@@ -2,11 +2,27 @@
 
 [Guide home](README.md) · Previous: [species energy](01-species-energy.md) · Next: [food choice](03-food-choice.md)
 
-**This chapter is agent scaffolding.** After Chapter 1 is reviewed, send the
-request below. You do not have to implement a scenario menu before returning to
-the biological rules.
+**Future; agent scaffolding after Chapter 1.** The population API and its test
+do not exist yet. The [verification record](authoring/verification.md) keeps
+that boundary explicit.
+
+One hare and one fox make a good diagnostic: every reserve is easy to inspect.
+They cannot show what “the hares are doing” means when one hare reaches food
+first and another waits. Before we introduce those interactions, we can create
+several individuals and make sure the inspector accounts for all of them.
+
+This chapter adds starting conditions and ways to observe them. It does not
+need reproduction to explain how the animals appeared: we authored the scene.
+After Chapter 1 is reviewed, send this request and I will prepare it:
 
 > Prepare Chapter 2: keep the diagnostic scene, add the authored 6-hare / 2-fox / 4-patch population scenario and read-only summaries. Verify deterministic reset and maintenance across all animals. Give me one short test walkthrough; leave food choice unimplemented.
+
+## On this page
+
+- [What we are adding](#what-we-are-adding)
+- [The test we will walk through](#the-test-we-will-walk-through)
+- [Browser checkpoint](#browser-checkpoint)
+- [Optional: a mean can hide a hungry hare](#optional-a-mean-can-hide-a-hungry-hare)
 
 ## What we are adding
 
@@ -70,3 +86,16 @@ After the agent demonstrates those checks, send:
 
 **Stop here.** Multiple individuals are useful even before they interact. We
 have not claimed the population is balanced or capable of surviving indefinitely.
+
+## Optional: a mean can hide a hungry hare
+
+Two hares at 0 and 100 have the same mean reserve as two at 50: both averages
+are 50. Their minimum and maximum tell different stories. That is why the first
+summary includes all three values, with a count to say how many animals they
+describe. This is an observation tool, not yet a population-behavior model.
+
+Once several animals share a world, [food choice](03-food-choice.md) can give
+them different local opportunities. [The ecosystem context](context/from-meals-to-ecosystems.md)
+explains how those individual opportunities later affect population experiments.
+
+[Guide home](README.md) · Previous: [species energy](01-species-energy.md) · Next after review: [food choice](03-food-choice.md)

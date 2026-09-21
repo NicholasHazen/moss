@@ -2,11 +2,29 @@
 
 [Guide home](README.md) · Previous: [populations](02-populations.md) · Next: [movement](04-movement.md)
 
-**Future chapter: ask me to prepare it when Chapter 2 is reviewed.** The first
-edit is an ordinary Rust function for choosing a patch. Then we connect your
-function to the ECS system and test a complete tick.
+**Future chapter; preparation follows Chapter 2's review.** The helper and
+activity data below are not installed. See [verification](authoring/verification.md)
+for which worked examples were tested separately.
+
+Fern can now spend energy, but the loss does not make anything happen. Meadow
+could be nearby or across the chamber and the maintenance loop would behave
+the same way. The first step toward feeding is to turn the animal's state and
+nearby food into a choice we can inspect.
+
+We will give a hungry grazer a target while leaving its position unchanged.
+That makes a useful boundary: if the inspector names the wrong patch, we can
+investigate the choice without also wondering whether movement or eating caused
+it. The first edit is an ordinary Rust function; then we connect that function
+to the ECS system and check a complete tick.
 
 > Prepare Chapter 3 with a hungry-grazer fixture, explicit activity/target data and inspector fields. Leave target selection for me. Keep movement and eating unscheduled, and reconcile this guide with the current code first.
+
+## On this page
+
+- [The small rule](#the-small-rule)
+- [A: a test for selection](#checkpoint-a--a-test-for-selection)
+- [B: choosing becomes an ECS behavior](#checkpoint-b--choosing-becomes-an-ecs-behavior)
+- [Optional: why a tie needs a rule](#optional-why-a-tie-needs-a-rule)
 
 ## The small rule
 
@@ -25,6 +43,13 @@ initial settings are: begin seeking below 45 reserve, stop at 75, and preserve
 the previous seeking state between those thresholds. These are energy units
 for the current capacity-100 animals. Maintenance runs first, so the decision
 uses the reserve after that tick's passive cost. Foxes do not become grass eaters.
+
+Using separate start and stop thresholds gives the animal a reason to continue
+an activity. With one threshold, a small meal could make it stop, the next
+maintenance cost could make it start, and the activity label could alternate
+every tick. The gap gives the previous state a defined role. This technique is
+often called *hysteresis*: the same current reserve can produce a different
+decision depending on whether the animal was already seeking.
 
 ## Checkpoint A — a test for selection
 
@@ -150,3 +175,17 @@ biomass stay fixed. Selection by the user does not select food for the animal.
 
 Finish only when helper and installed-schedule tests pass and this browser
 observation works. Review and stop before [movement](04-movement.md).
+
+## Optional: why a tie needs a rule
+
+If two patches are equally near, either could make sense for the animal. Why
+choose the lower ID? It gives this version a repeatable answer that survives a
+change in spawn order. We can later choose randomness deliberately and control
+its seed; relying on storage traversal order would make the choice accidental.
+
+The worked test already gives you a check: reversing the input leaves the
+answer at patch 4. If we moved patch 9 onto the origin while leaving it nonempty,
+patch 9 should win because distance is compared before ID. You can reason that
+out from `(distance, id)` without adding another feature.
+
+[Guide home](README.md) · Previous: [populations](02-populations.md) · Next after review: [movement](04-movement.md)

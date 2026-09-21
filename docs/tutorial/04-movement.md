@@ -2,11 +2,28 @@
 
 [Guide home](README.md) · Previous: [food choice](03-food-choice.md) · Next: [eating](05-eating.md)
 
-**Future chapter: complete and review food choice first.** Now a target can
-produce a visible effect. The first movement is one cardinal cell per tick,
-x before y, with no obstacles or body collision.
+**Future chapter; complete and review food choice first.** The step helper was
+tested separately; the installed movement system is still future work. See
+[the verification record](authoring/verification.md).
+
+Fern has selected Meadow, but selecting a destination has not changed her cell.
+Now the decision needs an executor: a rule that takes an accepted step and
+updates the world. This is also the point where we know whether travel actually
+happened, so it is where we can charge for it.
+
+The first movement is one cardinal cell per tick, x before y, with no obstacles
+or body collision. The constraint gives us an explainable route and a distance
+of either zero or one. We can learn the relationship between movement and cost
+before adding speed variation or pathfinding.
 
 > Prepare Chapter 4 with species travel rates, a nearby-food fixture and query/schedule plumbing. Leave the affordable-step rule for me. Keep eating unscheduled and update this guide to match our current types.
+
+## On this page
+
+- [Where costs belong](#where-costs-belong)
+- [A: an affordable step](#checkpoint-a--an-affordable-step)
+- [B: move toward the accepted target](#checkpoint-b--move-toward-the-accepted-target)
+- [Optional: a journey that ends where it started](#optional-a-journey-that-ends-where-it-started)
 
 ## Where costs belong
 
@@ -159,3 +176,17 @@ paying travel, but maintenance continues. Biomass stays unchanged: eating is the
 next chapter. Zero-energy animals still exist.
 
 Review and stop once the installed test and browser agree.
+
+## Optional: a journey that ends where it started
+
+Suppose a later action moves from (2, 2) to (3, 2), then back to (2, 2). The
+final displacement is zero, but the distance traveled is two cells. At 2 units
+per cell, travel should cost 4, before counting any passive maintenance.
+That is why a future multi-segment action must sum accepted segment lengths.
+
+For the current one-cell action, old and new positions are enough. Record that
+actual outcome and we can later explain a travel total without asking the camera
+or a policy evaluation how far the animal went. [The tick walkthrough](context/a-tick-through-moss.md)
+shows where authoritative state and its presentation part ways.
+
+[Guide home](README.md) · Previous: [food choice](03-food-choice.md) · Next after review: [eating](05-eating.md)

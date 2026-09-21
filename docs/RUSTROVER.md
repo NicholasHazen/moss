@@ -4,6 +4,15 @@ Open `/Users/nick/Code/moss` as the project. The configured application is
 RustRover **2026.3 EAP, build 263.5153.48**. Rust remains pinned to **1.93.1**
 by `rust-toolchain.toml`; the IDE toolchain points to `~/.cargo/bin`.
 
+## Read the tutorial
+
+Open [the guide home](tutorial/README.md) under `docs/tutorial` in the Project
+tree. Use Markdown **Preview** for reading, or **Editor and Preview** while
+comparing prose and snippets. Each chapter has a contents list, stable links
+to the next checkpoint and source files, and an explicit review stop.
+[Reading in RustRover](tutorial/reading-in-rustrover.md) explains the layout;
+the [context shelf](tutorial/context/README.md) holds optional Rust/ECS background.
+
 ## The run menu
 
 Shared configurations are stored in `.run/` and versioned with the code. Choose

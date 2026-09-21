@@ -189,6 +189,30 @@ not claimed; no browser smoke test was repeated for this documentation change.
 the existing sim tests, and sends “Chapter 1A is green” for code review. The agent
 installs the resource at review before pairing on the rate-aware loop.
 
+## September 21, 2026 — TutorBro guide and continuing structure
+
+**Changed:** Retrieved Nick's TutorBro skill through the shared ChatGPT link and
+read its main instructions, prose guide and exemplar reference. Revised the
+five chapters around concrete problems and causal explanations while preserving
+their worked code. Added local contents, source links, bottom navigation and
+optional adjacent variations. Added a context shelf for Rust, ECS, one tick's
+code path, and the later ecology sequence. Added authoring instructions, a
+chapter template, a verification record and RustRover reading notes; connected
+them from `AGENTS.md`, `NOW.md`, README and the learning/IDE guides.
+
+**Evidence:** All original Rust/shell chapter examples are unchanged against
+`ee514e9`. The focused current maintenance test passed during context preparation.
+Checked local links/anchors, fences and whitespace. Two bounded helpers prepared
+and reviewed the additional docs. RustRover's actual Editor and Preview mode
+renders the guide home and Chapter 1, including the Rust block. Direct file
+opening worked; an automated preview-link click did not navigate, so interactive
+link traversal is not claimed. The verification page records this distinction.
+
+**Boundary:** Documentation only; no live biological rule or dependency changed.
+Future integration/browser results remain labeled as acceptance checks.
+**Next:** Chapter 1A remains the single edit: species resource and explicit
+defaults, then the existing sim tests and code review.
+
 ## Entry shape
 
 Date / small goal. What actually changed. One useful discovery. Commands or checks actually run and their result. Any remaining blocker. The single next action, also reflected in `NOW.md`.

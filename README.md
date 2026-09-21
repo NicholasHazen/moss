@@ -8,8 +8,10 @@ Start with [NOW.md](NOW.md) when returning. The vision remains in [PROJECT_BRIEF
 
 For the configured RustRover EAP build/test actions, see [the IDE guide](docs/RUSTROVER.md).
 For a guided coding session, start with [the tutorial's first small checkpoint](docs/tutorial/01-species-energy.md#checkpoint-a--describe-the-settings).
-The [five-chapter guide](docs/tutorial/README.md) includes worked examples, test
-checkpoints and clear review stops for the next planned changes.
+The [TutorBro guide](docs/tutorial/README.md) includes five coding chapters,
+worked examples, test checkpoints and review stops, plus optional Rust/ECS and
+project context. Its linked Markdown pages are designed for RustRover; the
+authoring notes and chapter template keep it expandable as Moss changes.
 
 ## Run locally
 

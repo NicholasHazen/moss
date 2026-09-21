@@ -7,6 +7,10 @@ Only the current card in `NOW.md` is active. Later stops can change order. The a
 For the next actual coding sessions, use the [step-by-step tutorial](tutorial/README.md).
 Start with its Chapter 1A resource/default edit and stop for review. This page
 remains the broader path; the tutorial supplies concrete code and test checkpoints.
+Its [optional context shelf](tutorial/context/README.md) builds familiarity with
+Rust, ECS, the codebase and the ecology direction without adding prerequisite
+reading. When this path changes, update the affected guide pages using
+[the authoring contract](tutorial/authoring/README.md).
 
 `crates/moss-sim/src/lessons.rs` now has the implemented maintenance loop and
 three documented, unscheduled stubs for later biological examples. Nick's focused

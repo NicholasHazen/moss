@@ -28,6 +28,12 @@ Challenge assumptions constructively. State the concern, show an example, and pr
 
 Maintain `NOW.md`: one active task, a verified run path, one concrete next edit, and a stopping point. Put interesting future ideas in `docs/PARKING_LOT.md`. Update the session log briefly after meaningful work. These records are re-entry aids, not homework for Nick.
 
+Maintain the expandable guide in `docs/tutorial/` alongside changes to scope,
+plans, or teaching APIs. Follow `docs/tutorial/authoring/README.md`; keep the
+reader entry point, affected chapters, optional context, and verification notes
+aligned with the actual code. Preserve existing chapter links and use the
+template for new increments. Guide maintenance is agent work, not Nick's backlog.
+
 ## Technical guardrails
 
 Rust and ECS are fixed direction. The starting stack and boundaries are in `docs/ARCHITECTURE.md`. Verify current official documentation before manifests or API-specific code. Record tested versions and commit the dependency lockfile when a repository exists. Never claim an unbuilt version combination works.

@@ -15,8 +15,11 @@ the installed schedule. Its commented API reference remains for returning to Rus
 
 **Start here:** [Tutorial Chapter 1, checkpoint A](docs/tutorial/01-species-energy.md#checkpoint-a--describe-the-settings).
 It has the exact code, a short Rust refresher, test command and copyable review
-request. The [guide home](docs/tutorial/README.md) maps the next five chapters;
-only checkpoint A is active today.
+request. The [TutorBro guide home](docs/tutorial/README.md) maps the next five
+chapters; only checkpoint A is active today. In RustRover, open that README's
+Markdown preview. The [context shelf](docs/tutorial/context/README.md) is optional
+background, and [authoring notes](docs/tutorial/authoring/README.md) tell the agent
+how to keep the guide aligned as plans and code change.
 
 **Open:** `crates/moss-sim/src/lib.rs` beside the existing `Energy` component.
 

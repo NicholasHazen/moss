@@ -1,112 +1,103 @@
-# Returning to Moss: a few small, testable changes
+# Building Moss, one explainable change at a time
 
-**Start with [Chapter 1, checkpoint A](01-species-energy.md#checkpoint-a--describe-the-settings). You can stop there today.**
-That edit introduces the shared species settings without changing any behavior.
-You do not need to read the other chapters first.
+**Start with [Chapter 1A: species settings](01-species-energy.md#checkpoint-a--describe-the-settings).**
+Add the configuration type and its defaults, run the existing simulation tests,
+then stop for review. You do not need to read ahead to begin.
 
-You already wrote Moss's first biological rule and its regression. Each animal
-starts at 60 energy, loses one per tick, and stays present at zero. This guide
-builds from that working code. It is a companion while editing, not a Rust course
-you need to finish before contributing.
+Fern and Flint both start with 60 energy. Step three times and both have 57.
+That is the rule you wrote, running in the browser and in a renderer-free test.
+Our next change lets a fox and a hare pay different passive costs. From there,
+we can ask what a hungry animal notices, how it reaches food, and what happens
+when two animals reach the same finite patch.
 
-## The route
+This guide follows those questions through the actual project. The coding path
+stays small. Optional context pages explain the surrounding Rust, ECS, and
+ecology ideas when you want more of the picture.
 
-| Chapter | Visible result when complete | Your small rule | Agent preparation |
-| --- | --- | --- | --- |
-| [1. Species energy](01-species-energy.md) | The inspector explains each animal's passive rate. | Replace the shared literal with a species setting. | Install configuration and expose it in the inspector. |
-| [2. Populations](02-populations.md) | Six hares, two foxes, four grass patches and species summaries. | Read one aggregate test with me; no biological implementation required. | Scenario setup, deterministic reset, summaries and tests. |
-| [3. Choosing food](03-food-choice.md) | A hungry grazer names a nearby target while standing still. | Choose an eligible patch, with a stable tie rule. | Prepare activity data, fixtures, query wiring and inspection. |
-| [4. Paying to move](04-movement.md) | A grazer takes affordable steps toward its target. | Change position and charge for actual distance together. | Add species travel settings and schedule/inspector plumbing. |
-| [5. A finite meal](05-eating.md) | Grass decreases when an animal actually receives energy. | Bound the transfer by food, bite size and free capacity. | Prepare contact/conflict fixtures and actual-outcome reporting. |
+## Find your place
 
-Only Chapter 1 is active. Later chapters are worked previews of the selected
-direction, with explicit preparation steps. Their new functions do **not** exist
-in the live code yet. Before each chapter, I will reconcile the guide with your
-latest implementation, prepare the mechanical pieces, and leave one edit ready.
-You do not need to design those prerequisites yourself.
+- [The coding chapters](#the-coding-chapters)
+- [Context when you want it](#context-when-you-want-it)
+- [Reading and running in RustRover](#reading-and-running-in-rustrover)
+- [How the guide grows](#how-the-guide-grows)
 
-## Where the code lives
+## The coding chapters
 
-All paths below are relative to `/Users/nick/Code/moss`.
+**Ready to start:** Chapter 1A. The later checkpoints and chapters require the
+agent preparation named on their pages. They describe future behavior, not
+features already running in Moss. [NOW.md](../../NOW.md) records your current
+edit and stopping point.
 
-| File | Read it as |
-| --- | --- |
-| `crates/moss-sim/src/lib.rs` | The vocabulary: components, shared configuration, tick order and reset. |
-| `crates/moss-sim/src/lessons.rs` | The rules you are changing. Maintenance works; the three later systems are unscheduled stubs. |
-| `crates/moss-sim/src/fixture.rs` | The authored starting conditions. |
-| `crates/moss-sim/tests/bootstrap.rs` | A renderer-free world exercising the real installed schedule. |
-| `crates/moss-web/src/browser.rs` | Browser controls and a read-only view of simulation state. |
+1. **[Species energy settings](01-species-energy.md).** The reserve belongs to
+   the animal; the rate belongs to shared configuration. Keep the existing
+   default, then prove that three ticks can leave the hare at 57 and fox at 54.
+2. **[Authored populations](02-populations.md).** Keep the diagnostic chamber,
+   add six hares, two foxes and four grass patches, and inspect species totals.
+   This is agent scaffolding, followed by a short test walkthrough together.
+3. **[Choosing nearby food](03-food-choice.md).** Give a hungry grazer a target
+   without moving it. A stable tie rule makes an otherwise ambiguous choice
+   explainable and repeatable.
+4. **[Paying to move](04-movement.md).** Turn the target into an affordable
+   one-cell step. Charge for the accepted distance, after passive maintenance.
+5. **[A finite meal](05-eating.md).** Transfer only the food that exists and
+   the energy that fits. Two grazers must share the actual remaining biomass.
 
-An **entity** identifies one thing. A **component** is data attached to it, such
-as its `Energy`. A **resource** is one shared value in the world, such as species
-settings. A **system** is a function Bevy calls with the components/resources it
-requests. The **schedule** says which systems run, and in which order.
+Each chapter supplies code placement, a worked example, an observable
+checkpoint and a review stop. I prepare the mechanical prerequisites and
+reconcile later instructions with your current code before you reach them.
+The guide does not require you to manage those dependencies.
 
-Think of a query as selecting rows by the data they carry. Fern is a hare because
-her `Species` value is `Hare`, not because her nickname says anything biological.
-Meadow is a grass patch with biomass. It is not an animal with an energy reserve.
+## Context when you want it
 
-## The working rhythm
+The [context shelf](context/README.md) is optional. These pages answer questions
+you can carry back to the code:
 
-1. Open the one file named by the checkpoint. Make that edit only.
-2. Run its focused test. A red test is useful when its failure is the intended missing behavior.
-3. Read the result: **`0 passed` / zero tests run is not a checkpoint**. Check the test name/filter.
-4. When green, send the review request at the checkpoint. Green is a place to review and stop, not an instruction to start the next chapter.
+- **[Follow one Step through Moss](context/a-tick-through-moss.md):** where the
+  button becomes a rule, and why the browser and native tests agree.
+- **[Rust at the point of use](context/rust-at-point-of-use.md):** references,
+  mutable bindings, loops, tuple patterns and `Option` in this codebase.
+- **[ECS through Fern and Flint](context/ecs-in-moss.md):** components, resources,
+  queries, schedules and the different meanings of identity and species.
+- **[From a meal to an ecosystem](context/from-meals-to-ecosystems.md):** why
+  finite food comes before sunlight, growth, weather and population experiments.
 
-Cargo may also report zero **doc-tests** after the real tests; that is normal.
-The focused test named in the chapter must actually appear and run.
+## Reading and running in RustRover
 
-Use RustRover's **Run** triangle, including the gutter beside an individual
-`#[test]`. Native Debug currently stalls on this machine; [the IDE guide](../RUSTROVER.md)
-records that limitation. Terminal commands in these chapters are the dependable
-fallback; run them from the workspace root.
+Open this file in the Project tree under `docs/tutorial`. Use **Preview** for
+reading or **Editor and Preview** when comparing prose and code. Chapter pages
+have a local contents list and links back here; the files also remain readable
+as plain Markdown. [The reading setup](reading-in-rustrover.md) describes the
+layout and navigation without requiring a theme or diagram plugin.
 
-The agent runs the broader checks, handles formatting/build/browser plumbing,
-reviews correctness and Rust usage, and updates `NOW.md`. For a completed behavior,
-we also check it through `install` + `tick` and in the browser. A helper test alone
-cannot prove that a system is scheduled, filters the right entities, or resolves
-competition correctly.
+All shell commands assume the workspace root, `/Users/nick/Code/moss`. Use the
+existing **Run** configurations or a terminal command printed beside the
+checkpoint. Native Debug has a known stall on this machine; normal test Run
+works. [The IDE guide](../RUSTROVER.md) keeps those setup details in one place.
 
-If a test fails unexpectedly, send its output and your current edit. You do not
-need to diagnose the whole project before asking. Complete worked examples are
-included; copying one and walking through it together is a valid way to resume.
+When a focused test runs, check its name and result. Zero matching tests is
+not a green checkpoint. A separate line saying zero *doc-tests* is normal.
+The chapter explains any intended red result and the edit that should make it
+green. For an unexpected failure, send the output with your current edit.
 
-## What comes after these chapters
+Once green, send the chapter's review request. I will review the rule and Rust
+usage, handle broader checks and browser plumbing, and update `NOW.md`.
+A helper test proves its calculation; a completed behavior also needs the real
+installed schedule and a browser observation. Those are different kinds of
+evidence, and the chapters label them separately.
 
-First finish finite eating. Then the recommended environmental sequence is
-bounded grass renewal under constant light, followed by a tick-driven day/night
-cycle, then an authored cloudy interval. Neighbor-based plant spread, broader
-weather, starvation, fatigue and reproduction remain separate decisions and
-exercises. Zero energy continues to mean zero reserve; we have not defined death.
+## How the guide grows
 
-The [ecology plan](../ECOLOGY_PLAN.md) holds those details. You do not need it open
-for Chapter 1.
+The chapters use the [TutorBro Tutorial Writing skill](https://chatgpt.com/skills?skill_id=6ab16fad9a7881919144924b499536e8):
+keep a familiar example while one idea changes, explain why each change is
+needed, and check its effect before continuing. The source skill and both
+writing references were read for this revision.
 
-## Evidence for this guide
+Plans remain in [ECOLOGY_PLAN.md](../ECOLOGY_PLAN.md); the broader journey remains
+in [LEARNING_PATH.md](../LEARNING_PATH.md). As those change, the agent updates
+the relevant chapter and its evidence, preserving existing links where possible.
+The [authoring notes and template](authoring/README.md) make that maintenance
+repeatable. You do not need to read them to use the guide.
 
-The guide targets this repository's pinned Rust 1.93.1 and Bevy ECS 0.18.1.
-Worked code is checked in an isolated copy; it is not installed into the live
-simulation by writing this guide. The validation record below distinguishes
-tested examples from the future integration/browser acceptance checks.
-
-<!-- tutorial-validation -->
-Verified September 21, 2026:
-
-- Chapter 1A's resource/default example compiles with the existing six simulation tests passing.
-- Chapter 1B's new regression fails for the intended reason: Fox actual 57 versus expected 54. Chapter 1C's worked system makes it pass; all seven simulation tests then pass.
-- Each helper test in Chapters 3–5 fails against its unfinished stub and passes against the exact worked function. The food-choice test also checks that a closer patch beats a lower-ID, farther patch.
-- A separate temporary regression confirms reset preserves custom species rates. With all examples and that check installed in the temporary copy, 11 native simulation tests pass. Formatting and simulation Clippy with warnings denied also pass.
-- The live repository's six simulation tests still pass. No live Rust source, dependency or biological behavior was changed for this guide.
-
-Commands used in the temporary copy: the focused `cargo test` commands printed
-in the chapters, `cargo test -p moss-sim --locked`, `cargo fmt --all`, and
-`cargo clippy -p moss-sim --all-targets --locked -- -D warnings`, through the
-repository's toolchain wrapper. Two read-only subagent reviews checked API
-accuracy, test coverage and the size of the learning steps.
-
-**Not yet implemented or verified:** population scaffolding, the installed
-choice/movement/eating systems, their future integration tests, and the browser
-acceptance checks described in these chapters. The helper examples do not claim
-those later behaviors work. No new WASM/browser smoke test was run for this
-documentation-only change; the current foundation's evidence remains in
-[build notes](../BUILD_NOTES.md).
+The [verification record](authoring/verification.md) distinguishes tested examples
+from future acceptance checks. The source code is the running implementation;
+a worked example in this guide does not install a biological rule.

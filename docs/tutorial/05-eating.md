@@ -2,11 +2,28 @@
 
 [Guide home](README.md) · Previous: [movement](04-movement.md)
 
-**Future chapter: review movement first.** Now the animal can reach food. The
-next rule transfers actual biomass into actual energy, bounded by what exists
-and what fits. It does not replenish the patch or remove animals at zero.
+**Future chapter; review movement first.** The transfer helper has an isolated
+worked test; the full eating system and its browser checks remain future work.
+See [the verification record](authoring/verification.md).
+
+Fern can reach Meadow, but contact alone has not made a meal. Energy still
+falls while the patch keeps its biomass. We need one operation that removes
+available food and awards the corresponding energy. If a second hare arrives
+in the same tick, it must see what the first hare actually left behind.
+
+That shared patch makes the boundary worth getting right now. The rule transfers
+actual biomass into actual energy, bounded by what exists and what fits. It
+does not replenish the patch or remove an animal at zero.
 
 > Prepare Chapter 5 with same-cell meal fixtures, an authored bite limit and stable conflict ordering. Leave the finite transfer for me. Keep plant growth and death separate, and update the guide against our current code.
+
+## On this page
+
+- [The units and the boundary](#the-units-and-the-boundary)
+- [A: a bounded transfer](#checkpoint-a--a-bounded-transfer)
+- [B: two mouths, one patch](#checkpoint-b--two-mouths-one-patch)
+- [Browser checkpoint and stopping point](#browser-checkpoint-and-stopping-point)
+- [Optional: the meal and the net change](#optional-the-meal-and-the-net-change)
 
 ## The units and the boundary
 
@@ -154,3 +171,18 @@ After native checks, browser verification and review, stop. The recommended next
 chapter will be **bounded grass renewal under constant light**, followed by
 day/night as its own small change. We should first be able to explain one finite
 meal without any growth hiding where the food came from.
+
+## Optional: the meal and the net change
+
+In the installed example, the hare starts at 60, pays 1 maintenance and receives
+4 from food. Its reserve rises by 3 overall. An event saying “ate 3” would be
+wrong: the meal supplied 4, while another rule spent 1. That distinction will
+matter when we ask which costs or shortages explain a population's reserves.
+
+The expected end state, energy 63 and biomass 1, is already written in the
+integration checkpoint. It closes the original question: reaching Meadow can
+now help the animal because a finite, inspectable transfer occurs. The optional
+[ecosystem context](context/from-meals-to-ecosystems.md) follows the next question:
+where should the replacement food come from?
+
+[Guide home](README.md) · Previous: [movement](04-movement.md) · After review: bounded renewal under constant light
