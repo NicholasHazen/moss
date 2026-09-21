@@ -1,0 +1,12 @@
+[build]
+target = "crates/moss-web/index.html"
+dist = "dist"
+filehash = true
+
+[serve]
+addresses = ["127.0.0.1"]
+port = 8080
+open = false
+
+[tools]
+wasm_bindgen = "0.2.123"

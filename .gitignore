@@ -1,0 +1,6 @@
+/target/
+/dist/
+/.tools/
+.DS_Store
+# Personal IDE state stays local; shared run configurations live in .run/.
+/.idea/

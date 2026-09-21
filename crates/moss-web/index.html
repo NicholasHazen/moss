@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f3ec">
+    <meta name="description" content="Moss — a small browser ecosystem workbench built with Rust and ECS.">
+    <title>Moss · A little life. A world to grow.</title>
+    <link data-trunk rel="rust" data-bin="moss-web" data-wasm-opt="0">
+    <link data-trunk rel="css" href="shell.css">
+    <link data-trunk rel="copy-file" href="shell.js">
+  </head>
+  <body>
+    <div class="workbench">
+      <header class="page-header">
+        <div class="identity"><span class="mark" aria-hidden="true">m</span><div><h1>Moss</h1><p>A little life. A world to grow.</p></div></div>
+        <div class="edition"><span class="status-dot" aria-hidden="true"></span> Field notes / 001 <span>Browser workbench</span></div>
+      </header>
+
+      <main>
+        <section class="toolbar" aria-label="Simulation controls">
+          <div class="playback-controls">
+            <button id="play" class="primary" type="button" disabled>Play</button>
+            <button id="step" type="button" disabled>Step <span aria-hidden="true">→</span></button>
+            <button id="reset" type="button" disabled>Reset</button>
+          </div>
+          <div class="clock" aria-label="Simulation clock"><span class="eyebrow">Tick</span><strong id="tick">0</strong><span id="playback-state" class="state-label">Loading</span></div>
+          <span class="scope-badge">Not autonomous yet</span>
+        </section>
+
+        <div id="startup" class="startup" role="status" aria-live="polite">
+          <strong id="startup-title">Opening the chamber…</strong>
+          <span id="startup-detail">Loading Rust + WebAssembly. The first visit may take a moment.</span>
+        </div>
+        <noscript><p class="startup error">Moss needs JavaScript to load its WebAssembly workbench.</p></noscript>
+
+        <div class="workspace">
+          <section class="map-panel" aria-label="World map">
+            <div class="map-heading"><span class="eyebrow">The first chamber</span><span id="dimensions">Authored fixture</span></div>
+            <div id="map-container" class="map-container">
+              <canvas id="moss-canvas" aria-label="Moss world. Drag to pan, use the wheel to zoom, or choose an inhabitant from the inspector." tabindex="0"></canvas>
+              <div class="map-note">Markers show type, not body size.</div>
+              <div class="map-navigation" aria-label="Map controls">
+                <button id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in" disabled>+</button>
+                <button id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out" disabled>−</button>
+                <button id="fit" type="button" disabled>Fit world</button>
+              </div>
+            </div>
+            <div class="map-footer"><span>Drag to pan · Scroll to zoom · Click to inspect</span><span id="zoom-level">—</span></div>
+          </section>
+
+          <aside class="notebook" aria-label="World inspection">
+            <section class="notebook-section inspection">
+              <div class="section-heading"><h2>Inspector</h2><span id="run-label" class="annotation">Run —</span></div>
+              <div id="inspector" class="inspector"><p class="empty-state">Choose a creature or food patch to see its starting state.</p></div>
+              <div class="inhabitants"><h3>In this chamber</h3><div id="entity-list" class="entity-list"></div></div>
+            </section>
+            <section class="notebook-section journal">
+              <div class="section-heading"><h2>Recent events</h2><span class="annotation">Observed outcomes</span></div>
+              <ol id="events" class="events"><li class="empty-state">The journal opens when the fixture is ready.</li></ol>
+              <p id="coverage" class="coverage">Bounded history · Kept in memory for this run.</p>
+            </section>
+            <section class="lesson-note"><span class="eyebrow">Workbench note</span><p>Creatures spend one energy unit per tick, stopping at zero. Movement, eating, and death come next.</p></section>
+          </aside>
+        </div>
+      </main>
+      <footer class="page-footer"><span>Rust / ECS / WebAssembly</span><span>Observe a state. Change a rule. See what happens.</span></footer>
+    </div>
+    <script src="shell.js"></script>
+  </body>
+</html>
