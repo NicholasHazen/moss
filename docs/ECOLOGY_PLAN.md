@@ -36,6 +36,12 @@ Begin with only `maintenance_units_per_tick`, defaulting to 1 for both species.
 Maintenance reads each creature's `Species` and looks up that setting. Grass
 does not acquire animal maintenance merely because it has a species label.
 
+The [tutorial](tutorial/01-species-energy.md) starts with one flat resource:
+`hare_maintenance_units_per_tick` and `fox_maintenance_units_per_tick`, plus a
+`maintenance_units_per_tick(species)` lookup. This keeps the first edit small;
+grouping settings into a plain per-species struct can follow when more fields
+make that clearer. Neither form requires a registry or per-individual copies.
+
 Keep these settings fixed during a run; changing them starts a new run. Initially
 configure them in Rust, with a test override; a browser settings editor is a
 separate convenience. The inspector should report the applicable passive rate.
@@ -65,6 +71,14 @@ For multi-segment travel, sum segment lengths; an out-and-back journey has zero
 net displacement but nonzero distance. Camera motion and visual interpolation
 never enter this calculation. Fractional rates, activity-duration costs, and
 individual modifiers wait until a concrete rule needs them.
+
+The later tutorial chapters use **proposed demonstration settings**, still
+unimplemented: start seeking below 45 energy, stop at 75, preserve seeking state
+between those thresholds, perception radius 10 cells, movement x before y,
+travel cost 2 per cell in examples, and a bite limit of 4 biomass with a 1:1
+biomass-to-energy conversion. These make the examples reproducible; they are not
+balance claims. Review them when preparing each paired chapter. Maintenance
+precedes choice, so threshold checks use post-maintenance reserves.
 
 ## Multiples follow the energy refinement
 

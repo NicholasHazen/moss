@@ -160,6 +160,35 @@ at 1 and testing an override of Hare=1/Fox=2. Then resume the original populatio
 food-choice, movement, and eating sequence. Future travel costs use actual
 distance at execution, with action fields introduced alongside their actions.
 
+## September 21, 2026 — guided return to coding
+
+**Changed:** Added `docs/tutorial/` with a short entry page and five chapters:
+species passive rates, authored populations, food choice, movement costs and
+finite meals. Each names the edit, relevant Rust/ECS syntax, focused test,
+expected failure/pass, browser acceptance and review stopping point. Population
+setup and later integration fixtures remain agent preparation. `NOW.md` now
+starts with just the species resource/default checkpoint; linked the guide from
+README and the learning path. Recorded future demonstration settings as proposals.
+
+**Evidence:** Two bounded read-only reviewers checked teaching scope and API/test
+accuracy. In a temporary copy, Chapter 1's six existing tests stay green after
+the data-only edit; its new custom-rate regression goes red at Fox 57 vs 54,
+then green with the worked loop. Each later helper test goes red against a stub
+and green against the worked example. All 11 temporary simulation tests,
+including an extra reset-preserves-rates check, pass; formatting and native sim
+Clippy pass. Re-ran the strengthened food-choice example. Cleared shared sim
+build artifacts after discovering test-cache reuse between copies, then rebuilt
+the live simulation and confirmed its original six tests pass. Markdown links
+and patch whitespace were checked. Live Rust source and dependencies are unchanged.
+
+**Limit:** The later population and full-schedule foraging tests are preparation
+contracts, not implemented tests. Browser/WASM acceptance for future rules is
+not claimed; no browser smoke test was repeated for this documentation change.
+
+**Next:** Nick adds only `SpeciesEnergyRules` and its explicit `Default`, runs
+the existing sim tests, and sends “Chapter 1A is green” for code review. The agent
+installs the resource at review before pairing on the rate-aware loop.
+
 ## Entry shape
 
 Date / small goal. What actually changed. One useful discovery. Commands or checks actually run and their result. Any remaining blocker. The single next action, also reflected in `NOW.md`.

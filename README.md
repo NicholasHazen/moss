@@ -7,6 +7,9 @@ A browser-first Rust/ECS ecosystem workbench. The foundation has a finite 32 × 
 Start with [NOW.md](NOW.md) when returning. The vision remains in [PROJECT_BRIEF.md](PROJECT_BRIEF.md); exact evidence and limitations are in [docs/BUILD_NOTES.md](docs/BUILD_NOTES.md).
 
 For the configured RustRover EAP build/test actions, see [the IDE guide](docs/RUSTROVER.md).
+For a guided coding session, start with [the tutorial's first small checkpoint](docs/tutorial/01-species-energy.md#checkpoint-a--describe-the-settings).
+The [five-chapter guide](docs/tutorial/README.md) includes worked examples, test
+checkpoints and clear review stops for the next planned changes.
 
 ## Run locally
 

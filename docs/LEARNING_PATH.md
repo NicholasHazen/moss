@@ -4,6 +4,10 @@
 
 Only the current card in `NOW.md` is active. Later stops can change order. The agent recommends the next small step and maintains the notes; Nick is not responsible for turning this page into a project-management system.
 
+For the next actual coding sessions, use the [step-by-step tutorial](tutorial/README.md).
+Start with its Chapter 1A resource/default edit and stop for review. This page
+remains the broader path; the tutorial supplies concrete code and test checkpoints.
+
 `crates/moss-sim/src/lessons.rs` now has the implemented maintenance loop and
 three documented, unscheduled stubs for later biological examples. Nick's focused
 maintenance regression passes; only this first rule is scheduled. The recommended

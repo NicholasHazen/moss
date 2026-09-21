@@ -13,13 +13,21 @@ rule and its regression, which checks both creatures at 60 initially, 57 after
 three ticks, and zero after 63 ticks while both still exist. The test exercises
 the installed schedule. Its commented API reference remains for returning to Rust.
 
+**Start here:** [Tutorial Chapter 1, checkpoint A](docs/tutorial/01-species-energy.md#checkpoint-a--describe-the-settings).
+It has the exact code, a short Rust refresher, test command and copyable review
+request. The [guide home](docs/tutorial/README.md) maps the next five chapters;
+only checkpoint A is active today.
+
 **Open:** `crates/moss-sim/src/lib.rs` beside the existing `Energy` component.
 
 **One concrete next edit:** Define a small `SpeciesEnergyRules` resource with
 named Hare and Fox passive rates, both initially 1 energy unit per tick. A
 resource is shared world configuration; `Energy` is each individual's reserve.
-Then pair on having `spend_energy` read `Species` and the configured rate instead
-of the literal `1`. The agent handles installation and inspector plumbing.
+Add the resource and its explicit `Default` implementation only, then run
+`scripts/with-toolchain.sh cargo test -p moss-sim --locked`. Expect the existing
+six simulation tests to pass. Stop and send “Chapter 1A is green” for review.
+This first checkpoint changes no behavior. The agent handles installation at
+review; reading `Species` in the loop and inspector plumbing follow afterward.
 
 Keep the existing default-rate regression. Add a focused example with Hare=1,
 Fox=2: three ticks from 60 yield 57 and 54, and additional ticks clamp both at
@@ -30,7 +38,8 @@ configuration changes. This plan is recorded, not implemented yet.
 animal: 57 / 100. Positions and grass biomass remain unchanged. Zero causes no
 death yet; Reset restores 60 / 100.
 
-**Stop:** Species rates work in the native test and are visible in the browser.
+**Today's stop:** The resource/default edit compiles and has been reviewed.
+**Chapter completion:** Species rates work in the native test and are visible in the browser.
 Then return to the planned mechanical population scenario: 6 hares, 2 foxes,
 4 patches, deterministic reset, and read-only species summaries. Food choice,
 movement, and eating follow as paired exercises. Death remains separate.
@@ -69,6 +78,12 @@ running at <http://127.0.0.1:8080>. Use that while editing; the optional static 
 command above when needed. Stop a terminal server with Ctrl-C.
 
 ## Evidence and code map
+
+The [new tutorial](docs/tutorial/README.md) has checked examples for species
+rates and the later choice/movement/eating helpers. Its native red/green checks
+ran in a temporary copy; no future rule was installed in the live project.
+The live six simulation tests also pass. Future browser and full-schedule checks
+are explicitly acceptance steps, not claimed results.
 
 `scripts/check.sh` passes all 11 tests, formatting, native/WASM Clippy with warnings
 denied, and JS syntax. RustRover's **All tests** also reports 11 passed; **Full
