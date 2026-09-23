@@ -42,6 +42,24 @@ again, so recorded scenario overrides recur and temporary instance edits do not.
 If live retuning is added, its scope must be explicit: updating a template alone
 will not silently overwrite existing individuals.
 
+Consider an override that happens to equal the default. These are two different
+authoring instructions, even though the first constructed values agree:
+
+| Authored input | New component value under each scenario default |
+| --- | --- |
+| `None`: use the species value | Default 1 produces 1; a later scenario with default 9 produces 9. |
+| `Some(1)`: explicitly use 1 | Default 1 produces 1; a later scenario with default 9 still produces 1. |
+
+This is a construction comparison, not live propagation. Existing animals keep
+their owned baseline. Under the planned Reset policy, the unchanged default-1
+scenario would reconstruct 1 for both animals; the table's changed default belongs
+to a newly configured run. Keep the original `Option` in authored scenario data so
+reconstruction can repeat the instruction. An inspector reading only a component
+with value 1 cannot infer “default” or “override”: that origin must have been
+recorded, or be shown as unknown. Maintenance itself needs only the resolved
+number. [Session 06's reference](../path/06-owned-costs.md#trace-a-resolved-value)
+checks the equal-result case without adding a provenance component or a new task.
+
 ## Many attributes do not require many scattered lookups
 
 An ECS query names the component types a system needs. Bevy prepares access to

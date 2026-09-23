@@ -45,6 +45,24 @@ fn movement_charges_only_an_affordable_actual_step() {
     assert_eq!(position, current);
     assert_eq!(energy.reserve, 10);
 
+    // The configured rate controls both payment and affordability.
+    position = Position { x: 2, y: 2 };
+    energy.reserve = 3;
+    assert_eq!(
+        move_one_cell(&mut position, &mut energy, target, 3, config),
+        1
+    );
+    assert_eq!(position, Position { x: 3, y: 2 });
+    assert_eq!(energy.reserve, 0);
+
+    energy.reserve = 2;
+    assert_eq!(
+        move_one_cell(&mut position, &mut energy, target, 3, config),
+        0
+    );
+    assert_eq!(position, Position { x: 3, y: 2 });
+    assert_eq!(energy.reserve, 2);
+
     // Review cases: all directions, x-before-y, bounds and exact affordability.
     for (start, goal, expected) in [
         ((1, 1), (0, 0), (0, 1)),

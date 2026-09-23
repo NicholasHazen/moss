@@ -34,6 +34,12 @@ used `Option` when there might be no food target and no population mean. Here
 `None` means use the species default, while `Some(0)` means this animal explicitly
 has zero maintenance. Testing `override > 0` would destroy that distinction.
 
+Equal numbers can also come from different instructions. With default 1, both
+`None` and `Some(1)` create a cost of 1. If a later scenario uses default 9,
+the same authored inputs create 9 and 1. The explicit override still means
+“this animal costs 1.” Keep that authored input for reconstruction; the resolved
+number alone cannot tell us whether an override was supplied.
+
 ![At spawn, a species default of 1 combines with authored overrides None, Some(2) and Some(0) to create three owned cost components containing 1, 2 and 0. Later maintenance reads each component directly.](visuals/default-to-instance.svg)
 
 Read the diagram in two moments. During creation, the initializer needs the
@@ -94,9 +100,11 @@ fn session_06_an_override_is_resolved_at_creation() {
         maintenance_units_per_tick: 1,
     };
     let fern = resolve_costs(hare_default, None);
+    let explicit_one = resolve_costs(hare_default, Some(1));
     let other_hare = resolve_costs(hare_default, Some(2));
     let free_upkeep = resolve_costs(hare_default, Some(0));
     assert_eq!(fern.maintenance_units_per_tick, 1);
+    assert_eq!(explicit_one, fern); // Equal results can have different authored inputs.
     assert_eq!(other_hare.maintenance_units_per_tick, 2);
     assert_eq!(free_upkeep.maintenance_units_per_tick, 0);
 
@@ -107,6 +115,10 @@ fn session_06_an_override_is_resolved_at_creation() {
         resolve_costs(hare_default, None).maintenance_units_per_tick,
         9
     );
+    assert_eq!(
+        resolve_costs(hare_default, Some(1)).maintenance_units_per_tick,
+        1
+    );
 }
 ```
 
@@ -115,6 +127,12 @@ it automatically. `Copy` means passing this small value copies its fields. There
 is no shared pointer back to the template in `fern`. Changing the template in
 the reference therefore leaves existing values alone and affects only a later
 construction.
+
+The last two calls construct new values from the changed test template. They
+explain why `None` and `Some(1)` must remain distinct in authored scenario data;
+they do not run Moss's Reset or retune an existing animal. The initializer tests
+the resolution rule. Later construction and Reset tests must check that the
+scenario retained the intended input.
 
 Moss keeps defaults fixed during a run. The template mutation above demonstrates
 ownership, not a proposed browser control. Live retuning could be added later as

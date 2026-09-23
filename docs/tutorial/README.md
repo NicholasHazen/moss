@@ -5,12 +5,6 @@
 This guide explains how each small change works and how to check it. The
 [documentation index](../README.md) leads to setup, design, research and history.
 
-For the weeks after today, use [the short-session learning path](path/README.md):
-16 guides organized into four adaptable arcs, with worked examples, returning
-reminders and visible results. The intended focus block is 20–30 minutes; actual
-progress and useful questions can change the route. V2 keeps today's movement
-exercise and brings its explanation, worked answer and review into one page.
-
 Fern and Flint both start with 60 energy. Three ticks at the default rate leave
 57. The next visible result is Fern walking to Meadow, then eating a finite meal.
 We introduce autonomous choice and individual differences after that loop can
@@ -33,10 +27,10 @@ its plumbing before your coding block. Reading ahead does not activate a task.
 
 | Visible progress | What you learn |
 | --- | --- |
-| **Completed reference:** [species maintenance](01-species-energy.md) | Revisit the rule already running: components hold reserves, a resource supplies rates, and a query updates animals. No edit is assigned here. |
 | **Today:** [an affordable step, v2](today-v2.md) | Copy a proposed position, borrow real values mutably, validate before mutation, then connect a helper to ECS. |
 | **Next / today's stretch:** [a finite meal](05-eating.md) | Transfer bounded quantities; account for actual consumption and competing eaters. Agent preparation follows movement review. |
 | **After today:** [sixteen short sessions](path/README.md) | Develop finite food, autonomous foraging, individual costs, growth, daylight and an explainable response to scarcity. |
+| **Completed reference:** [species maintenance](01-species-energy.md) | Revisit the rule already running: components hold reserves, a resource supplies rates, and a query updates animals. No edit is assigned here. |
 
 If today's stretch already covers a meal checkpoint, keep the reviewed work;
 the agent skips that duplicate exercise. `NOW.md` remains the one place recording
@@ -52,22 +46,10 @@ later ideas without making them prerequisites for visible progress.
 
 ## Context when you want it
 
-The [context shelf](context/README.md) is optional reading:
-
-- [Follow one Step through Moss](context/a-tick-through-moss.md) connects the
-  browser button, rule and native test.
-- [Rust at the point of use](context/rust-at-point-of-use.md) explains modules,
-  public paths, borrowing and query syntax.
-- [Read a test as a small experiment](context/reading-a-test.md) follows the
-  maintenance regression you already have, including how to interpret its result.
-- [ECS through Fern and Flint](context/ecs-in-moss.md) connects components,
-  resources, queries, schedules and identity.
-- [Attributes and defaults](context/attributes-and-defaults.md) explores
-  templates, individual values and future temporary effects.
-- [From a meal to an ecosystem](context/from-meals-to-ecosystems.md) connects
-  finite food to growth, daylight and population experiments.
-- [The learning path](context/learning-path.md) shows the broader conceptual
-  progression; the [ecology plan](../design/ecology.md) holds model decisions.
+Use the [optional context shelf](context/README.md) when a Rust expression,
+ECS query or test feels unfamiliar. Its explanations follow the same Moss
+animals and files, so you can investigate one question and return to your edit.
+You do not need to read the shelf before starting today's lesson.
 
 ## Reading and running in RustRover
 

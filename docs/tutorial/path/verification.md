@@ -2,9 +2,9 @@
 
 [Path home](README.md) · [Tutorial authoring](../authoring/README.md)
 
-**Evidence through September 22, 2026.** These future guides are reviewed against
-`86f9f2e` plus the existing uncommitted source/document reorganization and movement
-preparation. Their passing references do not install behavior or establish
+**Evidence through September 23, 2026.** These records cover the module
+reorganization and movement preparation now committed in `83a72a5`, plus later
+tutorial refinements. Their passing references do not install behavior or establish
 browser acceptance. Today's live helper remains `todo!()` and movement stays
 unscheduled. [Current guide evidence](../authoring/verification.md) covers v2;
 [development verification](../../development/verification.md) covers the runtime.
@@ -17,7 +17,9 @@ from the existing lockfile. The latest evidence is a sequence of checks:
 
 | Checkpoint | Observed result |
 | --- | --- |
-| Last complete reference target | All 16 current tests were discovered and passed, none ignored, with the execution guard. This includes the strengthened session 01 assertions. A separate session 01 run discovered and passed one test. |
+| Last complete reference target | All 16 tests were discovered and passed, none ignored, with the execution guard. This included the strengthened session 01 assertions; sessions 06 and 07 were extended afterward and checked separately below. |
+| Session 06 refinement | Its extended reference passed one discovered test, Clippy and pinned formatting. It distinguishes absent from explicit same-as-default input when constructing values under a later template. No installed Reset or provenance wiring was tested. |
+| Session 07 membership example | Both discovered reference tests passed, with Clippy and pinned formatting. Removing the animal filter passed the old test but failed the new non-animal control. No live query or spawn wiring changed. |
 | Runner execution guard | Seventeen Python fixtures passed. Native ignored and conditionally excluded reference probes were rejected; an expected-panic test was accepted. These checks do not prove assertion quality. |
 | Session 01 refinement | Its revised reference test and Clippy passed. Two faulty variants that passed the old assertions fail the stronger checks for finite supply and a configured positive bite limit. |
 | Earlier temporal checkpoint | All 16 tests, three additional Rust explanation tests and Clippy passed after revising sessions 11 and 13. |
@@ -44,7 +46,11 @@ retain the earlier execution history. [The runner check](../../history/tutorial/
 records the fresh full pass; it did not rerun path Clippy or scratch diagnostic
 targets. [The later meal check](../../history/tutorial/2026-09-22-path.md#three-meal-limits-checkpoint-september-22)
 records the focused session 01 revision; the other fifteen reference bodies
-remain unchanged. Temporary scratch targets named in history are not checked-in
+were unchanged at that checkpoint. [The later ownership check](../../history/tutorial/2026-09-22-path.md#equal-values-different-authored-inputs-september-22)
+records session 06's new case without claiming a repeated full suite.
+The [query-membership check](../../history/tutorial/2026-09-22-path.md#query-membership-checkpoint-september-22)
+records session 07's added diagnostic and temporary filter-removal experiment.
+Temporary scratch targets named in history are not checked-in
 commands.
 
 ## What each reference establishes
@@ -56,8 +62,8 @@ commands.
 | 03 | Local, nonempty nearest-food selection with stable ties, meaningful absence, an inclusive radius boundary and a diagonal metric discriminator. No installed target mutation. |
 | 04 | Idle/Seeking transitions and threshold boundaries using post-maintenance reserves. No deferred target visibility check. |
 | 05 | Count, minimum, maximum and mean, including a fractional mean; empty input stays absent. Species filtering and browser aggregates remain future checks. |
-| 06 | Copy ownership, default/override resolution and explicit zero. No live spawn wiring. |
-| 07 | Actual Bevy component attachment and maintenance query in an isolated schedule, including clamping at zero. No future complete-world reset acceptance. |
+| 06 | Copy ownership, default/override resolution, explicit zero and equal initial values from distinct authored inputs. New construction under a changed template preserves the explicit override. No live spawn, Reset or origin-recording wiring. |
+| 07 | Valid-fixture component attachment, individual upkeep and clamping; a separate synthetic fixture shows required-data and animal-filter exclusion with a positive control. No future complete-world reset acceptance. |
 | 08 | Accounting for supplied affordable movement traces, equal travel and unequal upkeep. The reference does not move creatures. |
 | 09 | Growth reports the actual amount, handles partial capacity, honors a request that fits and allows cropped patches to regrow. No installed growth system. |
 | 10 | Growth-before-meal arithmetic and full-patch ordering. No autonomous-choice or live-schedule proof. |
@@ -91,6 +97,16 @@ biology. V2's two diagrams and navigation now have a separate
 the sixteen future guides have not received that IDE inspection. The current
 [document checker](../authoring/README.md#run-the-document-checks) verifies local
 navigation and fences; exact historical counts stay in their dated checkpoints.
+The [September 23 visual check](../../history/tutorial/2026-09-23.md#choice-before-the-meal)
+covers session 04's two-tick illustration in Chromium. Its numbers are an
+expected trace of the proposed order; no live foraging system or native IDE
+rendering was tested in that pass.
+
+The [comparison observation review](../../history/tutorial/2026-09-23.md#inspecting-overlapping-individuals)
+checked session 08's inputs and the existing stable-ID selection controls in
+source. Its revised instructions use separate entity buttons while overlapping
+hares stay paused at the same tick. No reference code or live behavior changed;
+the future scenario's browser acceptance remains pending.
 
 The path's source/configuration preservation checks passed. The later v2 work
 changed only NOW's two lesson links among those protected files; its

@@ -1,6 +1,6 @@
 # 1. Put passive burn in species settings
 
-[Guide home](README.md) · Next session: [Fern reaches Meadow](today.md)
+[Guide home](README.md) · Next session: [Fern reaches Meadow](today-v2.md)
 
 **Completed walkthrough, not a new assignment.** The settings, lookup and loop
 below are implemented. This page explains the current source; its checkpoint
@@ -22,7 +22,7 @@ Both defaults are 1. A separate test configures Hare = 1 and Fox = 2 to make
 the lookup's effect visible as 57 and 54.
 
 **Current stop:** the rate-aware loop is green and reviewed. Continue with
-[today's movement helper](today.md). [Individual costs](path/06-owned-costs.md)
+[today's movement helper](today-v2.md). [Individual costs](path/06-owned-costs.md)
 remain a later variation experiment in the short-session path, after motion and
 food make the difference observable.
 
@@ -261,4 +261,4 @@ syntax is the unfamiliar part, [the Rust companion](context/rust-at-point-of-use
 explains it using this loop; [the ECS companion](context/ecs-in-moss.md) follows
 how the resource reaches the system.
 
-[Guide home](README.md) · Current edit: [today's movement](today.md) · After today: [short-session path](path/README.md)
+[Guide home](README.md) · Current edit: [today's movement](today-v2.md) · After today: [short-session path](path/README.md)

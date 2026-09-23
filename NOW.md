@@ -5,6 +5,10 @@
 Maintenance works. Movement's target, rate, ECS adapter, tests and inspector
 are prepared; the movement rule is still your edit and is not scheduled.
 
+For an illustrated companion, the [published Moss book](https://nicholashazen.github.io/moss/)
+opens with this same affordable-step exercise. It adds experiments and the longer
+story; it does not add another prerequisite or change today's assignment.
+
 ## One next edit — an affordable step
 
 In [`lessons.rs`](crates/moss-sim/src/lessons.rs), replace only the body of
@@ -39,7 +43,7 @@ scripts/with-toolchain.sh trunk serve --locked --release
 Open <http://127.0.0.1:8080>, or use **Moss - Browser preview**. Keep one preview
 on that port. Stop with Ctrl-C or the IDE Stop button. The wrapper handles this
 Mac's compiler environment; [IDE notes](docs/development/rustrover.md) describe
-Run actions and the still-unverified native debugger.
+Run actions and the native debugger's verified coverage.
 
 [Current verification](docs/development/verification.md) separates the intentional
 red exercise, isolated worked-answer checks and browser evidence. The

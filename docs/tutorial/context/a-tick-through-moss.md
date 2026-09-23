@@ -6,10 +6,10 @@ Fern has 60 energy. You press Step, and the inspector shows 59. Several files
 cooperate to make that happen, but only one short loop decides the energy
 change. Following that single number gives us a useful tour of the codebase.
 
-This page describes the implemented foundation, checked against the source on
-September 22, 2026. Species rates pass native tests, and the rebuilt browser's
-default-rate smoke check passes. Custom-rate browser acceptance remains pending.
-Foraging remains planned work.
+This source walkthrough was reviewed on September 23, 2026. The
+[runtime record](../../development/verification.md) retains the earlier native
+species-rate and default-rate browser checks. Custom-rate browser acceptance
+remains pending. Foraging remains planned work.
 
 ## On this page
 
@@ -30,13 +30,32 @@ messages in order. Step pauses continuous playback and requests one complete
 simulation tick. Play requests ticks as time accumulates. Neither control
 contains the rule that subtracts energy.
 
-That separation lets the rendering code draw as often as it needs. A fast monitor
-does not make Fern hungrier. Autonomous biological rules advance only through
-executed simulation ticks. An explicit Reset replaces the run through the
+Drawing another frame does not itself spend energy. Autonomous biological rules
+advance through executed simulation ticks. Compare outcomes after the same ticks
+and accepted inputs, starting from the same world and rules. An explicit Reset
+replaces the run through the
 separate `moss_sim::reset` command; it is not another tick.
 [playback.rs](../../../crates/moss-web/src/playback.rs) handles timing decisions,
-including bounded catch-up and hidden-tab suspension. Returning to a hidden
+including bounded automatic playback and hidden-tab suspension. Returning to a hidden
 page leaves playback paused; there is no offline progress.
+
+Equal wall time is a different comparison. During Play, a delayed frame requests
+at most four automatic ticks and discards excess elapsed time. It does not save
+that excess for later. Here are two calls-to-ticks traces, each starting with
+Play enabled, a baseline frame at 0 ms, and the default reserve of 60:
+
+| Automatic playback updates over two seconds | Result after those updates |
+| --- | --- |
+| Every 250 ms, through 2,000 ms | Eight ticks; each animal's reserve is 52. |
+| One late update at 2,000 ms | Four ticks; each reserve is 56; playback reports that it slowed. |
+
+In both cases, a following update at 2,250 ms requests one tick. The delayed
+case does not recover the discarded four. The animals experienced different
+amounts of simulation time during the same two seconds of wall time; their
+maintenance rule still costs one per executed tick. Manual Step continues to
+request exactly one complete tick. An [isolated native check](../../history/tutorial/2026-09-23.md#wall-time-and-executed-ticks)
+verified these numbers using the existing playback code and installed simulation;
+it did not simulate a real browser stall.
 
 ## The schedule gives the tick an order
 

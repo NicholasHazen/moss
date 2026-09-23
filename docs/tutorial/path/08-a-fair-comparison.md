@@ -160,11 +160,17 @@ python3 docs/tutorial/authoring/check_path_examples.py --session 08
 
 [What this checks](README.md#checking-your-work) · [Recorded evidence](verification.md)
 
-After integration, Reset the comparison scene, Step three times and inspect
-each animal. There is no need to let the run continue until food competition
-introduces another cause. A narrow, explainable result is the point of this session.
-It establishes that individual settings matter without claiming which animal
-will thrive across every habitat or how fast the storage layout performs.
+After integration, Reset the comparison scene, Step exactly three times and leave
+it paused. Both hares occupy `(13, 10)`, so their map markers overlap. Use each
+animal's separate **Hare #ID** button under **In this chamber** to inspect reserves
+51 and 48 at that same position. Repeatedly clicking the overlapping markers
+selects the lower-ID animal; it does not cycle between them. Select Meadow's
+button as well and check that biomass remains 80. Selection changes the view,
+so these inspections can all describe the same completed tick.
+
+Stop before arrival introduces food competition as another cause. This comparison
+establishes that individual settings matter without claiming which animal will
+thrive across every habitat or how fast the storage layout performs.
 
 Send: **“Session 08's comparison is green. Review the controlled inputs and
 verify 51/48 with equal travel before preparing plant renewal.”**

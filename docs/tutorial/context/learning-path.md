@@ -50,12 +50,14 @@ the rate changes. We do not need that refactor before observing movement.
 ## Foraging makes small rules cooperate
 
 Begin with [today's authored journey](../today-v2.md): Fern has a stable target,
-and Nick writes one [movement helper](../04-movement.md). Learn mutable borrowing
-by proposing a cell, checking its cost and committing position and energy together.
+and Nick writes one [movement helper](../today-v2.md#3-write-one-affordable-step).
+Learn mutable borrowing by proposing a cell, checking its cost and committing
+position and energy together.
 The agent connects it to ECS and verifies the browser. That visible journey is
 a complete session, with a [finite meal](../05-eating.md) as a separate stretch.
 
-Then replace the authored target with [food choice](../03-food-choice.md).
+Then replace the authored target with [food selection](../path/03-finding-food.md)
+and [a decision about when to seek](../path/04-when-to-seek.md).
 `Option`, selection loops and activity state now explain an observable difference:
 Fern finds food rather than following the fixture's instruction. Each layer gets
 one focused regression and an installed-world/browser check before the next.

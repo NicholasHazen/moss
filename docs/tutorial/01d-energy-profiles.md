@@ -1,10 +1,10 @@
 # 1D. Give each animal its own energy costs
 
-[Guide home](README.md) · Current route: [today](today.md) · Related: [populations](02-populations.md)
+[Guide home](README.md) · Current route: [today](today-v2.md) · Related: [populations](02-populations.md)
 
 **Future: revisit individual variation after movement, a finite meal and food
 choice make the difference visible.** This chapter is not a prerequisite for
-[today's route](today.md). The proposed component and its runtime use are not
+[today's route](today-v2.md). The proposed component and its runtime use are not
 implemented. Before activation, the agent reconciles the examples and acceptance
 checks with the current code and test baseline. [Verification](authoring/verification.md)
 separates historical worked-example evidence from current readiness.
@@ -175,4 +175,4 @@ keeps [NOW.md](../../NOW.md) on one step through reset, inspector and browser
 acceptance. Population scaffolding supplies the comparison scene; none of this
 is a prerequisite for today's movement and meal.
 
-[Guide home](README.md) · Current route: [today](today.md) · Related: [populations](02-populations.md)
+[Guide home](README.md) · Current route: [today](today-v2.md) · Related: [populations](02-populations.md)

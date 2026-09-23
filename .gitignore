@@ -2,5 +2,8 @@
 /dist/
 /.tools/
 .DS_Store
+# Python caches from documentation and publishing checks.
+__pycache__/
+*.pyc
 # Personal IDE state stays local; shared run configurations live in .run/.
 /.idea/

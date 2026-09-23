@@ -8,7 +8,7 @@ records checks separately from the proposed rules below. `NOW.md` owns the activ
 
 ## Current teaching route
 
-[Today's session](../tutorial/today.md) starts with one affordable cardinal step.
+[Today's session](../tutorial/today-v2.md) starts with one affordable cardinal step.
 After helper review, the agent activates movement and verifies Fern's nine-cell
 journey. A finite meal is a separate stretch. Autonomous choice follows those
 observable actions; population and individual-cost experiments follow when useful.

@@ -62,7 +62,7 @@ pub fn move_one_cell(
     units_per_cell: u32,
     config: WorldConfig,
 ) -> u32 {
-    // Replace this body using docs/tutorial/04-movement.md, checkpoint A.
+    // Follow docs/tutorial/today-v2.md, section 3: one affordable step.
     let _ = (position, energy, target, units_per_cell, config);
     todo!("Paired movement exercise: propose, validate, then commit one step")
 }

@@ -1,0 +1,37 @@
+[book]
+title = "Moss — A Small World, Understood"
+description = "A field guide to building an inspectable ecosystem with Rust and ECS."
+language = "en"
+src = "src"
+
+[rust]
+edition = "2024"
+
+[build]
+build-dir = "_site"
+create-missing = false
+extra-watch-dirs = ["theme"]
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+additional-css = ["theme/moss.css", "theme/daylight-visual.css"]
+additional-js = ["theme/moss.js", "theme/meal-lab.js", "theme/tick-lab.js", "theme/defaults-lab.js", "theme/daylight-lab.js", "theme/reading.js"]
+smart-punctuation = true
+no-section-label = true
+git-repository-url = "https://github.com/NicholasHazen/moss"
+site-url = "/moss/"
+
+[output.html.print]
+enable = true
+page-break = true
+
+[output.html.playground]
+copyable = true
+runnable = false
+line-numbers = false
+
+[output.html.search]
+enable = true
+limit-results = 20
+heading-split-level = 3

@@ -1,0 +1,134 @@
+/* Moss field-guide typography. All fonts are local platform fonts. */
+:root {
+    --content-max-width: 860px;
+    --sidebar-width: 274px;
+    --moss-accent: #285943;
+    --moss-tint: #edf3e9;
+    --moss-border: #cbd5c6;
+    --moss-muted: #566250;
+    --moss-surface: #fffef9;
+}
+.light, .rust {
+    --bg: #fcfbf6;
+    --fg: #252e26;
+    --sidebar-bg: #f0f0e6;
+    --sidebar-fg: #334437;
+    --sidebar-active: #245b3d;
+    --links: #24613f;
+    --inline-code-color: #6a3b23;
+    --quote-bg: #eef2e8;
+    --quote-border: #92af89;
+    --table-border-color: #d2dacd;
+    --table-header-bg: #e5ebdf;
+    --table-alternate-bg: #f1f4ed;
+    --code-bg: #f0f1e9;
+}
+.navy, .coal, .ayu {
+    --bg: #17241f;
+    --fg: #e2e8dc;
+    --sidebar-bg: #122019;
+    --sidebar-fg: #d0dacb;
+    --sidebar-active: #bcdfaa;
+    --links: #bbdfa8;
+    --moss-accent: #b7dc9d;
+    --moss-tint: #20362b;
+    --moss-border: #46614e;
+    --moss-muted: #b1bfa9;
+    --moss-surface: #1d2e24;
+    --inline-code-color: #ecd1a6;
+    --quote-bg: #233b2c;
+    --quote-border: #86a077;
+    --code-bg: #1b2c23;
+    --table-border-color: #46614e;
+    --table-header-bg: #2d4233;
+    --table-alternate-bg: #203328;
+}
+html { scroll-padding-top: 5rem; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.content { padding: 0 36px 80px; }
+.content main { max-width: var(--content-max-width); margin: auto; }
+.content p, .content li { font-size: 1.75rem; line-height: 1.8; }
+.content p { margin: 1.05em 0; }
+.content h1, .content h2, .content h3 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -.015em;
+    line-height: 1.2;
+}
+.content h1 { font-size: clamp(3.8rem, 5vw, 5.8rem); max-width: 17ch; margin: .35em 0 .6em; }
+.content h2 { font-size: 3.1rem; margin-top: 2em; }
+.content h3 { font-size: 2.45rem; margin-top: 1.65em; }
+.content h1 a.header, .content h2 a.header, .content h3 a.header { text-decoration: none; }
+.content a { text-underline-offset: .16em; text-decoration-thickness: .07em; }
+.content .eyebrow { color: var(--moss-muted); font-size: 1.25rem; text-transform: uppercase; letter-spacing: .14em; margin: 3rem 0 1rem; font-weight: 650; }
+.content .lede { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 2.8rem; line-height: 1.45; color: var(--moss-accent); }
+.content img { display: block; max-width: 100%; margin: 2.4rem auto 1rem; }
+.content p:has(> em:only-child) { color: var(--moss-muted); font-size: 1.5rem; line-height: 1.65; }
+.content pre { border: 1px solid var(--moss-border); border-radius: 6px; padding: 1.3rem; margin: 1.6rem 0 2rem; }
+.content pre code { font-size: 1.4rem; line-height: 1.65; }
+.content :not(pre) > code { font-size: .87em; padding: .12em .3em; border-radius: 3px; }
+.content table { width: 100%; margin: 2rem 0; font-size: 1.55rem; line-height: 1.65; }
+.content table td, .content table th { padding: 1rem 1.3rem; text-align: left; }
+.content blockquote { padding: .6rem 1.8rem; margin: 2rem 0; border-radius: 0 6px 6px 0; }
+.worked-reference { margin: 2rem 0; border: 1px solid var(--moss-border); border-radius: 6px; background: var(--moss-surface); }
+.worked-reference > summary { cursor: pointer; padding: 1.3rem 1.6rem; color: var(--moss-accent); font-size: 1.55rem; line-height: 1.6; font-weight: 650; }
+.worked-reference[open] > summary { border-bottom: 1px solid var(--moss-border); }
+.worked-reference > :not(summary) { margin-left: 1.3rem; margin-right: 1.3rem; }
+.lab-state + .lab-state { margin-top: 1rem; }
+.sidebar .chapter { line-height: 1.65; }
+.sidebar .chapter li a { padding: .25rem 0; }
+.sidebar .sidebar-scrollbox { padding: 24px 22px; }
+.menu-title { font-size: 1.35rem; letter-spacing: .015em; }
+button, input, select { font: inherit; }
+:focus-visible { outline: 3px solid var(--moss-accent); outline-offset: 4px; }
+.lab { border: 1px solid var(--moss-border); border-radius: 10px; background: var(--moss-surface); padding: 2.4rem; margin: 2.5rem 0; }
+.lab-heading { display: flex; flex-direction: column; gap: .5rem; }
+.lab-heading strong { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 2.5rem; }
+.lab-kind { color: var(--moss-muted); text-transform: uppercase; font-size: 1.1rem; letter-spacing: .1em; font-weight: 650; }
+.content .lab p { font-size: 1.5rem; line-height: 1.6; }
+.lab-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; margin: 2rem 0; }
+.lab-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; min-width: 0; font-size: 1.4rem; color: var(--fg); }
+.lab-controls label:last-child { grid-column: 1 / -1; }
+.lab input, .lab select { color: var(--fg); background: var(--bg); border: 1px solid var(--moss-accent); padding: .75rem; border-radius: 4px; }
+.lab input { width: 6rem; }
+.lab select { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+.lab-state { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.state-card { background: var(--moss-tint); border: 1px solid var(--moss-border); border-radius: 6px; padding: 1.4rem; }
+.state-card h4 { font-size: 1.2rem; letter-spacing: .06em; text-transform: uppercase; color: var(--moss-muted); margin: 0 0 .8rem; }
+.state-card .coordinate { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 2.8rem; color: var(--moss-accent); }
+.content .state-card p { margin: .4rem 0 0; }
+.lab-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.8rem; }
+.lab button { cursor: pointer; border: 1px solid var(--moss-accent); border-radius: 5px; background: var(--moss-accent); color: var(--bg); padding: .8rem 1.4rem; font-size: 1.4rem; font-weight: 650; }
+.lab button[data-action="reset"] { background: transparent; color: var(--moss-accent); }
+.lab button:disabled { opacity: .6; cursor: default; }
+.lab-explanation { border-left: 3px solid var(--moss-border); padding-left: 1.2rem; min-height: 4.8rem; }
+@media (max-width: 600px) {
+    .content { padding: 0 19px 50px; }
+    .content p, .content li { font-size: 1.65rem; }
+    .content h1 { font-size: 3.9rem; }
+    .content h2 { font-size: 2.8rem; }
+    .lab { padding: 1.5rem; }
+    .lab-controls { grid-template-columns: 1fr; }
+    .lab-state { grid-template-columns: 1fr; }
+    .content pre code { font-size: 1.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
+@media print {
+    :root, .light, .navy, .coal, .ayu, .rust { --bg: white; --fg: #18291d; --links: #254b35; --moss-muted: #43523f; --moss-border: #a7b59f; --code-bg: #f2f4ee; }
+    @page { size: A4; margin: 20mm 20mm 22mm; }
+    .content { padding: 0; }
+    .content p, .content li { font-size: 10.5pt; line-height: 1.6; orphans: 3; widows: 3; }
+    .content h1 { font-size: 30pt; max-width: none; }
+    .content h2 { font-size: 20pt; }
+    .content h3 { font-size: 15pt; }
+    .content h1, .content h2, .content h3 { break-after: avoid; }
+    .content pre code { font-size: 8pt; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .content pre { break-inside: auto; }
+    .content table { font-size: 9pt; }
+    .content tr, .content img { break-inside: avoid; }
+    .content .lab { display: none; }
+    .content a { color: inherit; }
+    .content .eyebrow { margin-top: 1rem; }
+}

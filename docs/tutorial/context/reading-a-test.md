@@ -135,7 +135,7 @@ one function to calculate and apply a step.
 One passing helper test therefore fits with Fern still standing still in the
 browser. The two prepared world-level movement tests remain explicitly ignored
 until review; **ignored means skipped, not passed**. The agent handles
-[reviewed activation](../04-movement.md#checkpoint-b--move-toward-the-accepted-target),
+[reviewed activation](../today-v2.md#5-follow-your-helper-into-the-world),
 enables those tests and checks the browser journey. You do not need to unignore
 them merely to make the helper checkpoint green.
 

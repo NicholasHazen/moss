@@ -26,7 +26,7 @@ If the menu shows only recent entries, expand **All Configurations**.
 
 | Configuration | Purpose |
 | --- | --- |
-| Moss - Maintenance test | Run Nick's first rule regression. Native Debug currently stalls; see below. |
+| Moss - Maintenance test | Run Nick's first rule regression. Native Debug completed this test; see verification below. |
 | Moss - Movement test | Run the single prepared helper test. It intentionally fails until today's rule is implemented. |
 | Moss - Simulation tests | Run `moss-sim` tests without the browser or renderer. |
 | Moss - All tests | Run all workspace tests with the IDE's test-results tree. |
@@ -43,8 +43,8 @@ WebAssembly for the browser build.
 The movement configuration uses the exact focused command from the guide. On
 September 22, its normal Run action reached the one named test and failed at the
 unfinished helper's `todo!()`, as intended. The [IDE execution record](../history/builds/2026-09-22.md#movement-action-in-rustrover--september-22-2026)
-keeps the result separate from a completed solution. Prefer Run while the native
-debugger remains unresolved.
+keeps the result separate from a completed solution. Normal Run is enough for
+today's checkpoint; movement Debug has not been checked.
 
 The older automatically created `Run moss-web` configuration is a native
 `cargo run`, which does not launch the browser application. Use **Moss - Browser
@@ -54,28 +54,28 @@ run is separate from a browser runtime check.
 
 ## This Mac's compiler setting
 
-**Settings → Rust → Environment variables** contains the project-local setting:
+**Settings → Rust → Environment variables** now has no `DEVELOPER_DIR` override.
+This Mac uses its selected Xcode at `/Applications/Xcode.app/Contents/Developer`.
+The earlier project-local override pointed at `/Library/Developer/CommandLineTools`,
+which no longer exists; a fresh native link failed before the debugger could start.
+Removing that stale entry repaired the build without changing macOS's Xcode
+selection. The change lives in ignored `.idea/workspace.xml`; do not recreate the
+old override in a fresh checkout. Other machines should use their own working
+compiler environment. Shared `.run/` files contain no Mac-specific path.
 
-```text
-DEVELOPER_DIR=/Library/Developer/CommandLineTools
-```
+The shell configurations use `scripts/with-toolchain.sh`. It selects standalone
+Command Line Tools only when that directory exists and no explicit override is
+set; otherwise it leaves compiler selection alone. It also normalizes Trunk's
+`NO_COLOR` value. No wrapper change was needed for this repair.
 
-This uses the working Command Line Tools without changing macOS's system-wide
-Xcode selection. It applies to RustRover's Cargo builds, tests (including gutter
-runs), and analysis. It lives in ignored `.idea/workspace.xml`; a fresh checkout
-on this Mac needs this setting once. Other machines should use their own working
-compiler environment. The shared `.run/` files contain no Mac-specific path.
-The shell configurations use `scripts/with-toolchain.sh`, which makes the same
-conditional choice and normalizes Trunk's `NO_COLOR` value.
-
-Native Debug was attempted with **Moss - Maintenance test** but remained at
-“Instantiating tests…” after LLDB launched. Run mode works; Debug is not verified.
-The IDE log shows backend startup and the correct compiler environment, without
-a failure reason. The next diagnostic is a single retry with JetBrains' debugger
-logging enabled (`com.jetbrains.cidr.execution.debugger` under Help → Diagnostic
-Tools → Debug Log Settings); remove the category afterward. No system permission
-or security settings were changed. Browser/WASM debugging is a separate workflow.
-To inspect browser-only code,
+After the repair, **Moss - Maintenance test** freshly compiled, launched the
+bundled LLDB and completed **one test passed, exit code 0**. This verifies native
+Debug execution of that test, not breakpoints, stepping, locals or browser/WASM
+debugging. The earlier “Instantiating tests…” stall did not recur; its original
+cause remains unproven. Temporary trace logging was cleared after the retry.
+The [dated debugger record](../history/builds/2026-09-22.md#native-debugger-retry--september-22-2026)
+contains the failure and successful execution evidence. No restart, installation,
+system permission or security change was needed. To inspect browser-only code,
 the IDE's target selector can switch analysis to `wasm32-unknown-unknown`; return
 to the native target for the simulation test workflow.
 
@@ -88,8 +88,9 @@ contains the exact plugin version, log evidence and verification limits.
 
 If false errors return, compare Cargo's result and the current IDE log before
 changing correct source or disabling inspections. Recheck the same failure
-before applying an old workaround. Native Debug remains unverified as described
-above; custom-rate browser acceptance is recorded separately in verification.
+before applying an old workaround. Native Debug's breakpoint, stepping and locals
+coverage remains untested; custom-rate browser acceptance is recorded separately
+in verification.
 
 ## Configuration references
 

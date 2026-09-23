@@ -1,8 +1,12 @@
 # 4. Pay for the distance actually traveled
 
-[Guide home](README.md) · Session: [today](today.md) · Next after review: [eating](05-eating.md)
+[Guide home](README.md) · Session: [today](today-v2.md) · Next after review: [eating](05-eating.md)
 
-**Ready: implement `move_one_cell`; movement remains unscheduled until review.**
+For the current build-along, use [v2](today-v2.md). This chapter preserves the
+same helper and checkpoint anchors as a companion reference; you can use either
+explanation without completing the exercise twice.
+
+**Prepared reference: movement remains unscheduled until helper review.**
 The helper stub and focused test are prepared. The test is intentionally red;
 the browser still runs maintenance alone. See
 [the verification record](authoring/verification.md) for executed checks and limits.
@@ -12,10 +16,11 @@ building an autonomous food policy. Today's edit takes one affordable step towar
 that destination and pays for the distance actually traveled. Later, food choice
 can assign a different target without changing this step rule.
 
-**Start here:** in [`lessons.rs`](../../crates/moss-sim/src/lessons.rs), replace
-only the body of `move_one_cell`. Its prepared imports and signature already
-match this chapter. Run checkpoint A's test, then stop for review; the agent
-handles schedule activation and browser verification.
+**For the current edit, start with [v2's step walkthrough](today-v2.md#3-write-one-affordable-step).**
+It changes only the body of `move_one_cell` in
+[`lessons.rs`](../../crates/moss-sim/src/lessons.rs). The prepared imports,
+signature and checkpoint A test below describe that same edit. Stop for review
+after the test; the agent handles schedule activation and browser verification.
 
 ## On this page
 
@@ -53,8 +58,8 @@ That lets the first test name all inputs without constructing an entire world.
 The following shows the **first cases of the prepared test** in
 [`tests/movement.rs`](../../crates/moss-sim/tests/movement.rs); it is already in
 the project, so you do not need to paste it. The full test also covers both axes,
-both directions, exact affordability and world edges. The `use` line brings its types and
-helper into this test file's scope.
+both directions, a different configured rate, exact affordability and world edges.
+The `use` line brings its types and helper into this test file's scope.
 
 <!-- example: movement-test -->
 ```rust
@@ -222,8 +227,8 @@ scripts/with-toolchain.sh cargo test -p moss-sim --locked --test movement
 **Expected after activation:** all three movement tests run and pass, with none
 ignored. They exercise the helper, installed world, Reset, and missing, empty or
 unaffordable destinations. The agent also checks the
-helper's remaining boundaries, including y movement, both directions, exact
-affordability and world edges. The first helper example is not exhaustive coverage.
+helper's remaining boundaries, including y movement, both directions, configured
+rates, exact affordability and world edges. The first helper example is not exhaustive coverage.
 Maintenance tests use no-food setup so their existing reserve assertions keep
 measuring maintenance alone; their expected values are preserved.
 
@@ -259,4 +264,4 @@ distance component is required. The [tick walkthrough](context/a-tick-through-mo
 shows how the simulation's result becomes a visible position without letting
 render frame rate decide how far an animal travels.
 
-[Guide home](README.md) · Session: [today](today.md) · Next after review: [eating](05-eating.md)
+[Guide home](README.md) · Session: [today](today-v2.md) · Next after review: [eating](05-eating.md)

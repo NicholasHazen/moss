@@ -31,15 +31,21 @@ grouping and future behavior, but it no longer has to participate in this rate
 lookup. Two hares can therefore share all the same component types while storing
 different numbers. Different values alone do not create different ECS archetypes.
 
-| Components on an entity | What this query does |
+Imagine three test entities starting at reserve 60. Where present, the cost is 1.
+The second reference test below gives this table an executable example:
+
+| Components on an entity | Result after one pass |
 | --- | --- |
-| `Creature`, `AnimalEnergyCosts`, `Energy` | Yields `(costs, energy)` so this animal pays its own upkeep. |
-| `Creature`, `Energy`, but no costs | Skips it: one required component is missing. |
-| Costs and energy, but no `Creature` | Skips it: the explicit animal filter is not satisfied. |
+| `Creature`, `AnimalEnergyCosts`, `Energy` | Yields `(costs, energy)` and pays its own upkeep: **59**. |
+| `Creature`, `Energy`, but no costs | Skipped because required data is missing: **60**. |
+| Costs and energy, but no `Creature` | Skipped because the animal filter is not satisfied: **60**. |
 
 Missing components need not produce a compiler error. A query can match zero
 entities and quietly do nothing. That is why the agent checks attachment as
 well as arithmetic: an animal skipped by the query should not receive free upkeep.
+The incomplete animal in this diagnostic is deliberately synthetic. A query
+can correctly skip a malformed animal while its spawn code is still wrong for
+Moss. The production fixture must attach the required costs to every animal.
 
 ## Change the input, preserve the rule
 
@@ -71,9 +77,12 @@ before changing arithmetic.
 
 The **optional worked reference** defines the component locally and installs only
 maintenance in a small Bevy schedule. Its first function is the complete system
-shape; the test below it supplies the world that Bevy uses to fill the query.
+shape; the tests below it supply worlds that Bevy uses to fill the query.
 Your live component comes from session 06, so do not redeclare it. The prepared
 live regression keeps the full installed schedule, with no food opportunity.
+The first reference checks valid animals and their costs. The second changes
+component presence to explain membership; it is a supplied diagnostic, not
+another live exercise to complete.
 
 <!-- runnable: session-07 -->
 ```rust
@@ -152,16 +161,60 @@ fn session_07_same_species_can_have_different_costs() {
     assert_eq!(world.get::<Energy>(second).unwrap().reserve, 0);
     assert!(world.get::<Creature>(second).is_some());
 }
+
+#[test]
+fn session_07_only_matching_entities_pay() {
+    let mut world = World::new();
+    let energy = Energy {
+        reserve: 60,
+        capacity: 100,
+    };
+    let eligible = world
+        .spawn((
+            Creature { name: "eligible" },
+            energy,
+            AnimalEnergyCosts {
+                maintenance_units_per_tick: 1,
+            },
+        ))
+        .id();
+    let missing_cost = world.spawn((Creature { name: "no cost" }, energy)).id();
+    let not_an_animal = world
+        .spawn((
+            energy,
+            AnimalEnergyCosts {
+                maintenance_units_per_tick: 1,
+            },
+        ))
+        .id();
+
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems(spend_energy);
+    schedule.run(&mut world);
+
+    assert_eq!(world.get::<Energy>(eligible).unwrap().reserve, 59);
+    assert_eq!(world.get::<Energy>(missing_cost).unwrap().reserve, 60);
+    assert_eq!(world.get::<Energy>(not_an_animal).unwrap().reserve, 60);
+}
 ```
 
 `saturating_sub` still spends up to the remaining reserve and stops at zero.
 Changing where the cost is stored does not change what zero means: the final
-test preserves an animal with zero reserve until a later lifecycle lesson.
+case in the first test preserves an animal with zero reserve until a later
+lifecycle lesson.
 
 `0..3` is a half-open range, so the test runs three maintenance passes. Each
 `schedule.run` supplies the system's query from the world. The test then looks up
 each specific entity rather than comparing a sum that might hide one missed
-animal. The final assertion preserves the current zero-energy boundary.
+animal.
+
+In the membership test, `Energy` implements `Copy`, so each spawn receives its
+own initial reserve of 60. The eligible entity reaching 59 proves the system did
+run; unchanged controls alone could also mean nothing ran. The entity without
+`Creature` has both requested data components, so only the filter excludes it.
+A bare grass entity could not expose a missing filter: it lacks those data
+components too. Neither test names nor variable names determine query membership.
 
 In `for (costs, mut energy)`, `costs` is the read-only reference requested by the
 query. Bevy wraps writable component access in a `Mut<Energy>` value; marking
@@ -175,7 +228,7 @@ explains how setup, the call under test, and assertions fit together. The test's
 `World` and `Schedule` are an explicit way to run the same kind of query as the
 game, without opening a browser.
 
-**Optional:** run the complete answer; expect one passing reference test.
+**Optional:** run the complete answer; expect two passing reference tests.
 
 ```sh
 python3 docs/tutorial/authoring/check_path_examples.py --session 07

@@ -187,8 +187,8 @@ exits early on rejection; the final expression supplies the accepted result.
 
 Save the file and run **Moss - Movement test** again, or rerun the same command
 from section 1. **Your checkpoint is one named test passing.** Besides the first
-step, that test checks rejection, arrival, both axes and directions, world edges
-and a reserve that pays the cost exactly.
+step, that test checks rejection, arrival, both axes and directions, world edges,
+a different configured rate and a reserve that pays the cost exactly.
 
 The test's low-energy case comes after its first successful move: position is
 already `(3, 2)`, then reserve is set to 1. That call must preserve `(3, 2)` and

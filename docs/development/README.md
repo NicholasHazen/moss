@@ -20,7 +20,7 @@ the native binary does not open the browser app.
 **Current teaching checkpoint:** full tests intentionally fail at the unfinished
 `move_one_cell` helper. Its adapter is unscheduled, so the browser can still build
 and run maintenance. Two movement integration tests are explicitly ignored until
-reviewed activation; [today's guide](../tutorial/today.md) explains the red-to-green edit.
+reviewed activation; [today's guide](../tutorial/today-v2.md) explains the red-to-green edit.
 
 ```sh
 scripts/check.sh
@@ -66,11 +66,13 @@ cargo +1.93.1 install wasm-bindgen-cli --version 0.2.123 --locked
 These are setup instructions, not commands executed during the documentation
 cleanup. Use trusted official sources and the environment's installation
 permissions. Node is used only by `node --check` in the check script; it is not
-an application dependency. macOS builds also need working Command Line Tools.
+an application dependency. macOS builds also need a working Apple compiler and
+SDK, supplied by Xcode or the standalone Command Line Tools.
 
-The wrapper conditionally sets `DEVELOPER_DIR` to the installed Command Line
-Tools on this Mac and respects an explicit value. It normalizes `NO_COLOR=1`
-for Trunk. It changes neither the system Xcode selection nor its license state.
+The wrapper selects standalone Command Line Tools only when that directory exists
+and no explicit `DEVELOPER_DIR` is set. On this Mac the directory is now absent,
+so builds use the selected Xcode. It normalizes `NO_COLOR=1` for Trunk and changes
+neither the system Xcode selection nor its license state.
 See the [build history](../history/README.md#build-records) for original diagnostics.
 
 ## Browser smoke checks
@@ -81,7 +83,7 @@ leave both animals at 57 / 100 after three Steps; zero energy does not cause
 death. Camera actions while paused must preserve biological state.
 
 That is the current maintenance-only baseline. After movement is reviewed and
-activated, use [the movement acceptance table](../tutorial/04-movement.md#checkpoint-b--move-toward-the-accepted-target)
+activated, use [the movement acceptance table](../tutorial/today-v2.md#6-watch-the-journey-and-stop)
 instead: Fern pays maintenance plus travel while Flint remains still.
 
 When input or lifecycle behavior changes, also check drag versus click,

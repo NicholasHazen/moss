@@ -63,8 +63,9 @@ context page links back to the chapter where its idea first matters.
 For today's edit use **Moss - Movement test**; it intentionally starts red at
 the helper's `todo!()`. Use **Moss - Simulation tests** for a broader run. For a single later regression,
 use the Run gutter beside its `#[test]` in the Rust file, or the exact terminal
-command in the lesson. Choose normal **Run** while the native debugger stall
-remains unresolved. Build and preview setup lives in [the IDE guide](../development/rustrover.md).
+command in the lesson. Normal **Run** is enough for this checkpoint. Native Debug
+has completed the maintenance test; its remaining verification limits and build
+setup live in [the IDE guide](../development/rustrover.md).
 
 Check that the named test actually ran. If you pasted a command into a terminal,
 its working directory should be `/Users/nick/Code/moss`. A “could not find

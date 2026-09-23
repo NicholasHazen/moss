@@ -1,6 +1,7 @@
 # Verification and tested stack
 
-**Latest checkpoint: September 22, 2026, movement preparation and IDE checks.**
+**Runtime baseline: September 22, 2026, movement preparation and IDE checks.**
+The latest focused test check is September 23, described below.
 The browser remains maintenance-only. One intentionally red helper test marks
 Nick's next edit; two integration tests wait for reviewed activation.
 [Development commands](README.md) explain the runnable preview and focused test.
@@ -11,6 +12,7 @@ Nick's next edit; two integration tests wait for reviewed activation.
 | --- | --- |
 | Existing live native tests | Seven simulation and five presentation tests passed. |
 | New movement exercise | One expected failure at `move_one_cell`'s `todo!()`; two explicit activation tests ignored. Both the terminal command and the native RustRover Run action reached the one named helper test. |
+| Native maintenance Debug | After removing a stale project compiler override, RustRover freshly built and ran one passing maintenance test through bundled LLDB, exit 0. Breakpoints, stepping and locals were not exercised. |
 | Formatting and lint | rustfmt, native/WASM Clippy with warnings denied, and JS syntax passed. |
 | Browser bundle | Release Trunk build passed with the helper unfinished and unscheduled. |
 | Live browser baseline | Startup, both animals at 57 after three Steps, unchanged positions, Fern's maintenance rate 1 and authored destination #3, and Reset to reserve 60/target #3 observed in in-app Chromium. |
@@ -25,6 +27,16 @@ The later [native Run check](../history/builds/2026-09-22.md#movement-action-in-
 ended with the expected unfinished-helper panic and exit 101. The
 [native reading check](../history/tutorial/2026-09-22.md#native-reading-checkpoint-september-22-2026)
 covers v2's diagrams and navigation, including the background repaint limitation.
+The later [debugger retry](../history/builds/2026-09-22.md#native-debugger-retry--september-22-2026)
+records the obsolete compiler path, its project-local repair and the passing
+maintenance Debug execution. Other suite, WASM and browser checks were not rerun
+for that repair.
+
+The [September 23 rate check](../history/tutorial/2026-09-23.md#the-supplied-movement-rate-matters)
+added two cases to the movement helper test. Its live command compiled and reached
+the same expected unfinished-helper failure. In a separate copy, the written
+answer passed that stronger test, all five movement/maintenance checks and Clippy.
+The earlier whole-workspace, browser, WASM and IDE results above were not rerun.
 
 Live movement/meal browser acceptance remains pending Nick's helper review and
 activation. Camera, Play/Pause, resize and hidden-tab checks were not repeated

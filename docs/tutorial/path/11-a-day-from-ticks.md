@@ -24,9 +24,12 @@ simulation ticks. Hidden-tab suspension does not create catch-up biology.
 
 Use a 240-tick day for this demonstration. The first 120 phase values are day;
 the next 120 are night. At the normal four ticks per second this is a convenient
-one-minute viewing cycle. It is a playback choice, not an assertion about hare
-metabolism or real sunlight. You can change the model's duration later without
-making the rule depend on wall time.
+one-minute viewing cycle. Pauses and overloaded playback make that cycle longer
+in wall time; the [tick walkthrough](../context/a-tick-through-moss.md#the-browser-requests-a-tick)
+shows why equal waiting time need not mean equal progress. These values make a
+short cycle easy to inspect: the 240-tick period is a model setting, while playback
+determines how quickly we watch those ticks. Neither is a claim about real hare
+metabolism or sunlight. We can change the period without reading the wall clock.
 
 ## Wrap a growing counter into a small phase
 

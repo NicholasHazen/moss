@@ -2,12 +2,13 @@
 
 [Guide home](../README.md) · [Maintaining the guide](README.md)
 
-**Evidence through September 22, 2026.** Today's task is still the unfinished
+**Evidence through September 23, 2026.** Today's task is still the unfinished
 movement helper. These summaries distinguish live code, isolated worked answers
 and browser observations. [Development verification](../../development/verification.md)
 owns the tested stack and runtime coverage; dated records retain exact commands.
-The reviewed base is `86f9f2e` plus the existing uncommitted module reorganization
-and movement preparation.
+The module reorganization and movement preparation are now saved in `83a72a5`;
+later guide, test and IDE refinements remain local. Earlier records retain the revision
+and worktree description used for their checks.
 
 ## Today's lesson v2, September 22, 2026
 
@@ -40,6 +41,13 @@ painting. The [IDE execution record](../../history/builds/2026-09-22.md#movement
 records the expected failure at the live `todo!()`. Neither check activates
 movement or establishes every guide's native rendering.
 
+The [September 23 rate check](../../history/tutorial/2026-09-23.md#the-supplied-movement-rate-matters)
+extended the existing helper test with affordable and rejected steps at rate 3.
+The unchanged printed answer passed the stronger helper check, then all five
+movement/maintenance checks and Clippy in a fresh isolated copy. A hardcoded-rate
+variant passed the old assertions and failed the new ones. The live command still
+reached one expected `todo!()` failure; no new browser or IDE check ran.
+
 ## Meal companion handoff
 
 Chapter 5 now maps its two checkpoints to short sessions 01–02 and carries
@@ -54,11 +62,11 @@ adapter and browser meal remain future work.
 ## Future references and context
 
 [Path verification](../path/verification.md) owns the sixteen references' current
-scope and test history. All sixteen current references passed a fresh full run
-with compiled-test discovery and named-pass verification, including the stronger
-session 01 assertions. Session 01 also passed a separate selected-session run.
-Those checks do not install future biology or repeat path Clippy. The path record also
-records the separate stock/flow, foraging and history-coverage demonstrations.
+scope and test history, separating the last full run from later focused ownership
+and query-membership checks. Use that record for current test counts, commands
+and limitations. Passing references do not install future biology or prove
+scenario Reset. It also links the stock/flow, foraging and history-coverage
+demonstrations.
 
 Other context checks passed in isolated copies: four component-boundary tests,
 a tail-semicolon compile error followed by its correction, a deliberately empty
@@ -71,6 +79,11 @@ was checked against an instrumented copy of v2: one trace test and Clippy passed
 Its controls and responsive layout were inspected in Chromium. It is a
 conversation illustration; the current lesson and live exercise are unchanged.
 
+The later [defaults illustration](../../history/tutorial/2026-09-23.md#defaults-and-owned-values-illustration)
+separates next-run inputs, active configuration and owned values. Its JavaScript
+syntax, control transitions, state restoration and narrow layout were checked
+in Chromium. It illustrates the planned ownership policy without installing it.
+
 The [query-access explanation](../context/ecs-in-moss.md#when-rust-compiles-but-bevy-rejects-the-queries)
 has four passing isolated native checks and clean Clippy: conflicting declarations
 fail during initialization even with no overlapping entities, while the current
@@ -79,12 +92,22 @@ also checks the filters' membership behavior. No live schedule or helper changed
 
 ## Document checks
 
+The [September 23 timing trace](../../history/tutorial/2026-09-23.md#wall-time-and-executed-ticks)
+passed one isolated native test and Clippy using the existing playback module
+and installed maintenance. It distinguishes equal wall time from equal executed
+ticks under load. Browser stalls and future daylight wiring were not tested.
+
 The retained [navigation checker](check_docs.py) checks local destinations,
 heading aliases and closed fences within its documented Markdown subset. Its ten
 focused fixtures passed during its introduction. It does not fetch external
 links, compile examples or verify IDE rendering. Use the
 [maintenance commands](README.md#run-the-document-checks) after a document change;
 keep each run's result in dated history rather than overwriting earlier evidence.
+
+The [September 23 entry-page review](../../history/tutorial/2026-09-23.md#a-shorter-way-into-the-current-lesson)
+removed duplicated navigation from tutorial home and put today's lesson first in
+its table. Existing headings and the context shelf were preserved. This was a
+documentation check, with no new runtime or native preview evidence.
 
 ## Earlier evidence
 

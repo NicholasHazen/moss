@@ -141,19 +141,24 @@ Foxes must still receive no grass target. A missing patch must clear the old
 destination without inventing a meal.
 
 One inspector result may look wrong at first: **reserve 77, still Seeking**.
-In the proposed loop, start a seeking hare on a patch with 8 biomass at reserve 74,
-with no other eater or plant growth. Maintenance
-leaves 73, choice keeps Seeking, then a four-unit meal raises reserve to 77.
-The displayed reserve comes after the meal; it was not the input to that choice.
-On the next tick, maintenance leaves 76 and choice switches to Idle, clearing
-the target before eating. No further meal occurs on that tick; the patch still
-has the 4 biomass left from the first meal.
+Follow the same hare through two ticks in this proposed example. It starts on a
+patch at reserve 74, with capacity 100 and 8 biomass available. There is no other
+eater or plant growth, and being at the destination means no travel cost.
+
+![On the first tick, upkeep leaves 73, choice keeps Seeking and a meal raises reserve to 77. On the next tick, upkeep leaves 76, choice switches to Idle and clears the target, so no meal occurs. Biomass drops from 8 to 4 only on the first tick.](visuals/choice-before-meal.svg)
+
+Read each row from left to right. The first choice uses **73**, while the inspector
+later shows **77** after a four-unit meal. That meal changes energy; it does not
+rerun the earlier decision. On the next tick, choice sees **76**, switches to Idle
+and clears the target before eating. The patch retains its remaining 4 biomass.
+The diagram omits movement and tick completion to focus on the changing values;
+the full order above still applies.
 
 Before changing a threshold to fix an apparent mismatch, pause and compare those
 two ticks. The agent prepares this same-cell case, checks reserve, activity,
 target and biomass through the installed schedule, and shows the relevant inputs
-during review. If Seeking remains
-after the second choice, inspect the value supplied to the helper and whether its
+during review. If Seeking remains after the second choice, inspect the value
+supplied to the helper and whether its
 returned state was stored. The helper test alone cannot verify either connection.
 
 Send: **“Session 04's transition test is green. Review the thresholds and target

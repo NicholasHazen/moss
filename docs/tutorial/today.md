@@ -1,5 +1,8 @@
 # Today: help Fern reach Meadow
 
+**Original version.** The current build-along is [today's v2 lesson](today-v2.md).
+The earlier lesson is preserved below; you do not need to read both.
+
 [Guide home](README.md) · Next: [the movement edit](04-movement.md#checkpoint-a--an-affordable-step)
 
 **Start here:** open [`lessons.rs`](../../crates/moss-sim/src/lessons.rs) and

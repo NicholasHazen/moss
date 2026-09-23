@@ -13,6 +13,7 @@ instructions are in [AGENTS.md](../../AGENTS.md), the active task in
 
 ## Session notes
 
+- [September 23](sessions/2026-09-23.md): a visual trace of choice and eating at different phases of a tick.
 - [September 22](sessions/2026-09-22.md): code and documentation organization.
 - [September 21](sessions/2026-09-21.md): paired maintenance, tutorial work and attribute research.
 - [September 20](sessions/2026-09-20.md): starter kit and browser foundation.
@@ -23,6 +24,7 @@ instructions are in [AGENTS.md](../../AGENTS.md), the active task in
 the active lesson; [path verification](../tutorial/path/verification.md) keeps
 the future references' tested scope. Detailed commands and outcomes live here:
 
+- [September 23, visual check](tutorial/2026-09-23.md): future foraging inputs and inspector values across two ticks.
 - [September 22, guide checks](tutorial/2026-09-22.md): today's v2 lesson, movement preparation, context and navigation checks.
 - [September 22, path checks](tutorial/2026-09-22-path.md): sixteen references, targeted counterexamples, visuals and integration limits.
 - [September 21](tutorial/2026-09-21.md): earlier red/green results, research checks and superseded proposals.
