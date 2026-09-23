@@ -1,0 +1,529 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>One step that Fern can afford - Moss — A Small World, Understood</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A field guide to building an inspectable ecosystem with Rust and ECS.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/moss-059d6a4b.css">
+        <link rel="stylesheet" href="../theme/daylight-visual-fea70df5.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-0dabd431.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-ece4b1fe.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Moss — A Small World, Understood</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/NicholasHazen/moss" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <p class="eyebrow">Chapter 1 · State, proposals and mutation</p>
+
+<h1 id="one-step-that-fern-can-afford"><a class="header" href="#one-step-that-fern-can-afford">One step that Fern can afford</a></h1>
+<p>Fern has somewhere to go. The fixture gives her Meadow’s stable ID as a
+destination, and the prepared movement system can find that patch. What it
+cannot yet do is take a step. One function in the middle is waiting for its
+rule: decide whether the next cell is valid, whether Fern can pay for it, and
+what to change when she can.</p>
+<p>This is a good first contribution because its result has three visible parts.
+Fern changes cell, her reserve changes by the price of the distance, and the
+function returns how far she actually traveled. A rejected attempt must keep
+all three accounts consistent.</p>
+<h2 id="your-first-edit"><a class="header" href="#your-first-edit">Your first edit</a></h2>
+<p>Use your existing Moss checkout, or <a href="../reference/start-here.html">prepare the edition’s starter</a>
+if you are joining from the public book.</p>
+<p>Open <code>crates/moss-sim/src/lessons.rs</code> and find <strong><code>move_one_cell</code></strong>. Replace that
+function’s unfinished body. Its signature, caller and focused test already
+exist. The <a href="#the-complete-worked-replacement">complete replacement</a> is below;
+use as much of it as helps while you regain your bearings.</p>
+<p>From the repository root, run the prepared checkpoint:</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test movement movement_charges_only_an_affordable_actual_step -- --exact
+</code></pre>
+<p>The original development checkout includes a RustRover Run configuration named
+<strong>Moss - Movement test</strong>. In the downloadable starter, use the command above in
+RustRover’s terminal or create a Cargo test configuration with those arguments.
+Before your edit, expect one selected test to fail with:</p>
+<pre><code class="language-text">not yet implemented: Paired movement exercise: propose, validate, then commit one step
+</code></pre>
+<p>That result tells us the project compiled and reached the intended function.
+It has not yet tried a wrong movement rule; it stopped at the placeholder.
+A compiler diagnostic or zero matching tests means something different and
+deserves fixing before reasoning about the rule.</p>
+<p><strong>The first stopping point is that one named test passing.</strong> Review and activation
+come afterward. The browser currently runs maintenance only, so watching it
+before activation cannot tell you whether an otherwise correct helper works.</p>
+<h2 id="think-about-a-step-before-taking-it"><a class="header" href="#think-about-a-step-before-taking-it">Think about a step before taking it</a></h2>
+<p>Use smaller coordinates than the browser world for the first calculation.
+Fern starts at <code>(2, 2)</code>, the target is <code>(4, 4)</code>, and travel costs <strong>2 energy
+units per cell</strong>. Today’s rule moves at most one cardinal cell per call,
+changing x before y. Her proposed next position is therefore <code>(3, 2)</code>.</p>
+<p>With a reserve of 59, that step costs 2 and leaves 57. With a reserve of 1,
+the same step is unaffordable. Moving first and then clamping subtraction
+at zero would give Fern travel she could not pay for. The rejection case
+is what makes the order of our writes matter.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Starting reserve</th><th>Result of the same proposed step</th></tr>
+</thead>
+<tbody>
+<tr><td>59 energy units</td><td>Move to <code>(3, 2)</code>, retain 57, return 1 cell.</td></tr>
+<tr><td>2 energy units</td><td>Move to <code>(3, 2)</code>, retain 0, return 1 cell.</td></tr>
+<tr><td>1 energy unit</td><td>Stay at <code>(2, 2)</code>, retain 1, return 0 cells.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The exact-price case matters. An animal with 2 can pay a cost of 2. The guard
+must reject <code>reserve &lt; cost</code>; rejecting <code>reserve &lt;= cost</code> would forbid that
+valid step.</p>
+<h3 id="at-the-workbench-a-proposal-is-not-the-real-position"><a class="header" href="#at-the-workbench-a-proposal-is-not-the-real-position">At the workbench: a proposal is not the real position</a></h3>
+<p>The model below separates three moments that are almost adjacent in the Rust
+function. Start with 59, then change reserve to 1 and repeat. Watch the original
+position while the proposal changes. It should move only at an accepted commit.</p>
+<section class="lab" data-lab="movement" aria-label="One affordable step teaching model">
+<div class="lab-heading"><span class="lab-kind">Interactive teaching model</span><strong>A step in three moments</strong></div>
+
+<p>This model illustrates the rule. It does not run the live Rust simulation.</p>
+
+<div class="lab-controls">
+<label>Starting reserve <input data-input="reserve" type="number" min="0" max="100" value="59" disabled=""> energy units</label>
+<label>Travel rate <input data-input="rate" type="number" min="0" max="10" value="2" disabled=""> energy units/cell</label>
+<label>Case <select data-input="case" disabled=""><option value="east">Both axes differ: (2, 2) → (4, 4)</option><option value="north">Only y differs: (2, 2) → (2, 4)</option><option value="arrived">Already there: (2, 2) → (2, 2)</option><option value="invalid">Invalid target: (2, 2) → (−1, 2)</option></select></label>
+</div>
+
+<div class="lab-state" data-output="diagram"></div>
+
+<div class="lab-actions"><button type="button" data-action="advance" disabled="">1. Propose</button><button type="button" data-action="reset" disabled="">Reset attempt</button></div>
+
+<p class="lab-explanation" data-output="explanation" role="status" aria-live="polite">Enable JavaScript to inspect each phase interactively. The table above gives the same accepted and rejected outcomes.</p>
+
+</section>
+<p>The first change is to a tentative value. The second moment asks whether it is
+allowed. The final moment writes the accepted result. This structure is useful
+well beyond movement: whenever one action must change several values together,
+deciding before writing keeps rejection from needing an undo path.</p>
+<h2 id="what-the-references-let-us-change"><a class="header" href="#what-the-references-let-us-change">What the references let us change</a></h2>
+<p>Here is the <strong>existing signature</strong>, with its body omitted for discussion:</p>
+<pre><code class="language-rust">pub fn move_one_cell(
+    position: &amp;mut Position,
+    energy: &amp;mut Energy,
+    target: Position,
+    units_per_cell: u32,
+    config: WorldConfig,
+) -&gt; u32</code></pre>
+<p>The first two parameters are mutable references. They give this call temporary,
+exclusive access through which it can change the caller’s <code>Position</code> and <code>Energy</code>.
+The remaining values arrive by value. <code>Position</code> and <code>WorldConfig</code> are small
+<code>Copy</code> types here, so passing the destination and configuration does not transfer
+away the caller’s ability to use them.</p>
+<p>The <code>mut</code> in <code>&amp;mut Position</code> describes the kind of reference. A local binding
+such as <code>let mut next</code> answers a separate question: may this local value change?
+That distinction becomes concrete in the first useful line of the body:</p>
+<pre><code class="language-rust">let mut next = *position;</code></pre>
+<p><code>position</code> is a reference; <code>*position</code> accesses the value it refers to. Because
+<code>Position</code> implements <code>Copy</code>, assigning that value to <code>next</code> makes an independent
+position. Changing <code>next.x</code> changes the proposal. It does not reach back through
+the reference and change Fern.</p>
+<p>Later, <code>*position = next</code> does reach through the reference. It replaces the
+caller’s position with our accepted proposal. The same <code>*</code> syntax participates
+in both expressions, but the assignment’s left side is the crucial difference:
+we are now writing to the original place.</p>
+<p>The official Rust book’s <a href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">references and borrowing chapter</a>
+is useful here if the distinction between a reference and the value behind it
+still feels slippery. Return with this one question: which assignment changes
+the caller’s value?</p>
+<h2 id="the-complete-worked-replacement"><a class="header" href="#the-complete-worked-replacement">The complete worked replacement</a></h2>
+<p><strong>Worked reference — replace only <code>move_one_cell</code> in
+<code>crates/moss-sim/src/lessons.rs</code>.</strong> The file already imports the types used here.
+Remove the existing placeholder; do not append another function with the same
+name. This exact answer is also maintained in the current v2 guide.</p>
+<!-- moss-example: movement-v2-helper -->
+<pre><code class="language-rust">pub fn move_one_cell(
+    position: &amp;mut Position,
+    energy: &amp;mut Energy,
+    target: Position,
+    units_per_cell: u32,
+    config: WorldConfig,
+) -&gt; u32 {
+    let in_bounds = |p: Position| {
+        (0..config.width() as i32).contains(&amp;p.x) &amp;&amp; (0..config.height() as i32).contains(&amp;p.y)
+    };
+    if !in_bounds(*position) || !in_bounds(target) {
+        return 0;
+    }
+
+    let mut next = *position;
+    if next.x != target.x {
+        next.x += if next.x &lt; target.x { 1 } else { -1 };
+    } else if next.y != target.y {
+        next.y += if next.y &lt; target.y { 1 } else { -1 };
+    }
+
+    let distance = position
+        .x
+        .abs_diff(next.x)
+        .checked_add(position.y.abs_diff(next.y))
+        .expect("step distance overflow");
+    let cost = distance
+        .checked_mul(units_per_cell)
+        .expect("movement cost overflow");
+    if energy.reserve &lt; cost {
+        return 0;
+    }
+
+    *position = next;
+    energy.reserve -= cost;
+    distance
+}</code></pre>
+<h3 id="the-guard-comes-before-the-proposal"><a class="header" href="#the-guard-comes-before-the-proposal">The guard comes before the proposal</a></h3>
+<p><code>in_bounds</code> is a closure: a local callable value. Its <code>|p: Position|</code> names
+one argument. A coordinate is valid when both axes lie inside their ranges.
+The range <code>0..width</code> includes zero and excludes width; width 32 permits x
+from 0 through 31. Signed coordinates let us represent an invalid −1 and
+reject it deliberately. The casts to <code>i32</code> fit because <code>WorldConfig</code> validates
+dimensions in the range 8–256.</p>
+<p>Rejecting an invalid start matters as much as rejecting an invalid destination.
+Otherwise a helper might quietly walk a malformed entity back into the world,
+concealing the state that should have prompted investigation. Our selected
+contract rejects either case without mutation.</p>
+<h3 id="an-if-can-produce-a-number"><a class="header" href="#an-if-can-produce-a-number">An <code>if</code> can produce a number</a></h3>
+<p>In <code>next.x += if next.x &lt; target.x { 1 } else { -1 };</code>, the inner <code>if</code> evaluates
+to an integer. Rust’s branches can supply values, so we use the direction
+comparison to choose an increment rather than assigning it in a separate block.</p>
+<p>The outer <code>else if</code> preserves x-before-y. Two independent <code>if</code> statements
+would be a different movement rule: when both coordinates differ, they could
+change both axes. Diagonal travel is not inherently wrong. It is wrong for
+this function’s stated one-cardinal-cell contract and its prepared test.</p>
+<h3 id="a-number-needs-a-unit-and-an-account"><a class="header" href="#a-number-needs-a-unit-and-an-account">A number needs a unit and an account</a></h3>
+<p>The proposed distance is the absolute x change plus the absolute y change.
+Under this rule it is 0 or 1 <strong>cell</strong>. Multiplying by <strong>energy units per cell</strong>
+produces the proposed cost in <strong>energy units</strong>. The type <code>u32</code> alone does not
+encode that distinction; the names, signature and contract supply it.</p>
+<p><code>checked_add</code> and <code>checked_mul</code> return an <code>Option</code>, because an arithmetic result
+might not fit its integer type. <code>expect</code> takes the successful value or stops
+with the given explanation if the arithmetic assumption fails. These checks
+protect representability. The subsequent comparison protects affordability.
+An affordable action and a representable calculation are different questions.</p>
+<p>Nothing has changed in the caller yet. Only after the guard accepts the cost
+do we assign the proposed position and subtract the energy. The final
+<code>distance</code> has no semicolon because it is the function’s returned expression.
+Writing <code>distance;</code> would discard that value and leave the body returning <code>()</code>,
+which does not match <code>-&gt; u32</code>.</p>
+<h2 id="a-test-should-notice-the-mistake-we-care-about"><a class="header" href="#a-test-should-notice-the-mistake-we-care-about">A test should notice the mistake we care about</a></h2>
+<p>The prepared test lives in <code>crates/moss-sim/tests/movement.rs</code>. Its first case
+constructs position <code>(2, 2)</code>, reserve 59, target <code>(4, 4)</code> and rate 2. After the
+call it checks the returned distance <strong>and</strong> the new position <strong>and</strong> the new
+reserve. A function that returns 1 without writing anything should fail.</p>
+<p>Later cases make the question sharper. A reserve of 1 must reject without
+mutation; an exact reserve of 2 must pay successfully; a rate of 3 must charge
+3. That last case catches a plausible shortcut: hard-coding the default price
+can pass all the default-price examples while ignoring the supplied argument.</p>
+<p>There is another small lesson in the low-energy case. The test performs its
+first successful step, then changes the reserve to 1. Position is already
+<code>(3, 2)</code> at that point. Each call does not reset the fixture automatically.
+Trace the values as the test changes them instead of mentally restarting the
+animal at the beginning of every assertion.</p>
+<p>Run the exact command from the opening again. A single named test passing is
+the checkpoint. If it still stops at <code>todo!()</code>, confirm that the saved file
+contains the replacement body. If only the rejection assertion fails, inspect
+whether a write happens before the affordability guard. If zero tests ran,
+check the target and exact name; an empty selection is not evidence of success.</p>
+<h3 id="one-nearby-variation"><a class="header" href="#one-nearby-variation">One nearby variation</a></h3>
+<p>Keep the target <code>(4, 4)</code> and the rate 3. Compare a fresh reserve of 3 with a
+fresh reserve of 2. The first can travel to <code>(3, 2)</code> and finish at zero. The
+second stays at <code>(2, 2)</code> with 2. The result follows from the supplied rate,
+not from the animal’s species or from how much energy movement usually costs.</p>
+<p><strong>Stop for review once the helper passes.</strong> A useful review request is:</p>
+<blockquote>
+<p>The affordable-step test passes. Please review the bounds, borrowed writes
+and payment order, then activate the prepared adapter and verify the journey.</p>
+</blockquote>
+<h2 id="how-the-little-function-reaches-an-ecs-world"><a class="header" href="#how-the-little-function-reaches-an-ecs-world">How the little function reaches an ECS world</a></h2>
+<p>The helper knows about two mutable values, a destination and configuration.
+It does not search a world, decide which animal is hungry, or draw a sprite.
+Those jobs have separate places in the program, which keeps this rule testable
+without a browser or renderer.</p>
+<p>An <strong>entity</strong> is an identity to which components can be attached. A <strong>component</strong>
+stores one kind of data, such as <code>Position</code>, <code>Energy</code> or <code>FoodTarget</code>. A <strong>system</strong>
+is a function that declares the data it needs; a <strong>schedule</strong> decides when
+systems run. In the prepared adapter, those declarations let an ECS query
+supply the values your ordinary helper needs.</p>
+<p><img src="../source/docs/tutorial/visuals/adapter-to-helper.svg" alt="The prepared adapter reads Meadow’s stable ID, position and biomass, matches Fern’s target, and lends Fern’s position and energy to the helper. The illustrated first movement phase starts after maintenance at reserve 59 and would finish at 57."></p>
+<p><em>One world supplies both sides. The destination is copied; Fern’s changing
+values are borrowed. This is the expected call after activation.</em></p>
+<p>The animal query is this <strong>parameter excerpt</strong> from <code>move_to_food</code>:</p>
+<pre><code class="language-rust">mut creatures: Query&lt;(&amp;FoodTarget, &amp;mut Position, &amp;mut Energy), With&lt;Creature&gt;&gt;,</code></pre>
+<p>All three component types are required. <code>With&lt;Creature&gt;</code> additionally restricts
+membership to entities carrying that marker. The query reads each matching
+target and lends mutable access to position and energy. Flint has no authored
+food target at this checkpoint, so he does not match, even though he is a
+creature with position and energy.</p>
+<p>A second query reads patches with <code>Without&lt;Creature&gt;</code>. This explicit separation
+matters because both queries access <code>Position</code> and the animal query may write it.
+The filters tell Bevy these two sets cannot overlap. Bevy’s
+system initialization can reject conflicting query access even when the Rust
+parameter types compile. The disjoint filters establish why this pair is safe
+to initialize together. Bevy’s
+<a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Query.html">versioned Query reference</a>
+explains the required-component and conflicting-access rules when you want the
+API-level detail behind this example.</p>
+<p>The adapter loops over matching animals, finds the target’s stable ID among
+nonempty patches, copies that patch’s destination, and calls <code>move_one_cell</code>.
+It borrows Fern’s real components for your two mutable parameters. The helper’s
+final assignments therefore change simulation state, and presentation can
+derive Fern’s next sprite position from it.</p>
+<p>The ECS entity handle and the stable <code>SimId</code> answer different needs. ECS uses
+its handle to address a currently stored entity. Moss uses its application ID
+to identify participants in inspection and history. A <code>FoodTarget</code> names the
+stable ID; the adapter still needs to resolve it against a currently available
+patch. A remembered ID alone is not proof that food still exists.</p>
+<h2 id="from-one-correct-call-to-one-visible-tick"><a class="header" href="#from-one-correct-call-to-one-visible-tick">From one correct call to one visible tick</a></h2>
+<p>The browser does not call biology once for every frame. It requests complete
+simulation ticks. Within an activated movement tick, maintenance spends upkeep,
+movement attempts the accepted step, and completion advances the clock.
+Changing zoom or drawing more frames should not change the result of the same
+executed ticks and accepted inputs.</p>
+<p>The distinction explains a common debugging puzzle: a correct helper can
+produce no visible movement when the adapter is unscheduled, when the entity
+does not match its query, when the target is missing, or when the proposal is
+rejected. Each possibility is a different link in the path. Inspecting them
+separately is more useful than changing the arithmetic until something moves.</p>
+<p><strong>Expected after reviewed activation:</strong> Fern starts at <code>(10, 10)</code> with reserve
+60. Maintenance spends 1; an accepted step spends 2. Her first tick ends at
+<code>(11, 10)</code> with 57. Six x steps and three y steps reach Meadow at <code>(16, 13)</code>
+after nine ticks, leaving <code>60 − 9 × 1 − 9 × 2 = 33</code>. The tenth tick has no
+travel to pay for, so only upkeep applies and the reserve becomes 32.</p>
+<p>These are acceptance values for the activated implementation. They are not a
+claim that the current maintenance-only browser has already shown this journey.
+The review should establish the helper, the installed schedule, the WASM build
+and the browser observation as separate pieces of evidence.</p>
+<p>At Meadow, Fern would still have no meal. Arriving changes a position;
+transferring food into energy requires another rule. We now have a pattern
+for that rule: inspect the available values, determine what is possible,
+then commit the actual change.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../reference/start-here.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapters/02-a-meal-has-two-sides.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../reference/start-here.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapters/02-a-meal-has-two-sides.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/moss-0803de9b.js"></script>
+        <script src="../theme/meal-lab-05f3c2a2.js"></script>
+        <script src="../theme/tick-lab-ba41a1af.js"></script>
+        <script src="../theme/defaults-lab-dd0d0a10.js"></script>
+        <script src="../theme/daylight-lab-ea4795d5.js"></script>
+        <script src="../theme/reading-a25554d2.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

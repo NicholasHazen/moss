@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>crates/moss-web/src/browser/snapshot.rs · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>crates/moss-web/src/browser/snapshot.rs</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>4f332cd65404f84aeec8390ec913ac1fbb6c1ac81b09f498eadc7f16d0174967</code></p><pre><span id="L1">//! Read-only inspection data serialized for the browser interface.</span>
+<span id="L2">use bevy::prelude::*;</span>
+<span id="L3">use moss_sim::{</span>
+<span id="L4">    Creature, EcologicalRole, Energy, FoodPatch, FoodTarget, Journal, Position, RunRecord,</span>
+<span id="L5">    SimClock, SimId, Species, SpeciesEnergyRules,</span>
+<span id="L6">};</span>
+<span id="L7">use serde::Serialize;</span>
+<span id="L8"></span>
+<span id="L9">use super::Presentation;</span>
+<span id="L10"></span>
+<span id="L11">#[derive(Serialize)]</span>
+<span id="L12">struct EntityView {</span>
+<span id="L13">    id: String,</span>
+<span id="L14">    name: &amp;&#x27;static str,</span>
+<span id="L15">    species: &amp;&#x27;static str,</span>
+<span id="L16">    role: &amp;&#x27;static str,</span>
+<span id="L17">    category: &amp;&#x27;static str,</span>
+<span id="L18">    x: i32,</span>
+<span id="L19">    y: i32,</span>
+<span id="L20">    energy: Option&lt;u32&gt;,</span>
+<span id="L21">    capacity: Option&lt;u32&gt;,</span>
+<span id="L22">    biomass: Option&lt;u32&gt;,</span>
+<span id="L23">    authored_target: Option&lt;String&gt;,</span>
+<span id="L24">    maintenance_units_per_tick: Option&lt;u32&gt;,</span>
+<span id="L25">}</span>
+<span id="L26"></span>
+<span id="L27">#[derive(Serialize)]</span>
+<span id="L28">struct EventView {</span>
+<span id="L29">    tick: String,</span>
+<span id="L30">    text: String,</span>
+<span id="L31">    participants: Vec&lt;String&gt;,</span>
+<span id="L32">}</span>
+<span id="L33"></span>
+<span id="L34">#[derive(Serialize)]</span>
+<span id="L35">pub(super) struct Snapshot {</span>
+<span id="L36">    run: String,</span>
+<span id="L37">    tick: String,</span>
+<span id="L38">    running: bool,</span>
+<span id="L39">    suspended: bool,</span>
+<span id="L40">    slowed: bool,</span>
+<span id="L41">    width: u32,</span>
+<span id="L42">    height: u32,</span>
+<span id="L43">    zoom: f32,</span>
+<span id="L44">    selected: Option&lt;String&gt;,</span>
+<span id="L45">    entities: Vec&lt;EntityView&gt;,</span>
+<span id="L46">    events: Vec&lt;EventView&gt;,</span>
+<span id="L47">    retained: usize,</span>
+<span id="L48">    evicted: String,</span>
+<span id="L49">    event_capacity: usize,</span>
+<span id="L50">}</span>
+<span id="L51"></span>
+<span id="L52">pub(super) fn snapshot(world: &amp;mut World, ui: &amp;Presentation, width: u32, height: u32) -&gt; Snapshot {</span>
+<span id="L53">    let rates = *world.resource::&lt;SpeciesEnergyRules&gt;();</span>
+<span id="L54">    // A query is a typed borrow of the components on matching entities.</span>
+<span id="L55">    let mut entities: Vec&lt;_&gt; = world</span>
+<span id="L56">        .query::&lt;(</span>
+<span id="L57">            &amp;SimId,</span>
+<span id="L58">            &amp;Position,</span>
+<span id="L59">            Option&lt;&amp;Species&gt;,</span>
+<span id="L60">            Option&lt;&amp;EcologicalRole&gt;,</span>
+<span id="L61">            Option&lt;&amp;Creature&gt;,</span>
+<span id="L62">            Option&lt;&amp;Energy&gt;,</span>
+<span id="L63">            Option&lt;&amp;FoodPatch&gt;,</span>
+<span id="L64">            Option&lt;&amp;FoodTarget&gt;,</span>
+<span id="L65">        )&gt;()</span>
+<span id="L66">        .iter(world)</span>
+<span id="L67">        .map(</span>
+<span id="L68">            |(id, position, species, role, creature, energy, food, target)| EntityView {</span>
+<span id="L69">                id: id.0.to_string(),</span>
+<span id="L70">                name: creature</span>
+<span id="L71">                    .map(|c| c.name)</span>
+<span id="L72">                    .or_else(|| food.map(|f| f.name))</span>
+<span id="L73">                    .unwrap_or(&quot;Unnamed&quot;),</span>
+<span id="L74">                species: species.map(|s| s.label()).unwrap_or(&quot;Unknown&quot;),</span>
+<span id="L75">                role: role.map(|r| r.label()).unwrap_or(&quot;unknown&quot;),</span>
+<span id="L76">                category: if creature.is_some() {</span>
+<span id="L77">                    &quot;creature&quot;</span>
+<span id="L78">                } else if food.is_some() {</span>
+<span id="L79">                    &quot;patch&quot;</span>
+<span id="L80">                } else {</span>
+<span id="L81">                    &quot;unknown&quot;</span>
+<span id="L82">                },</span>
+<span id="L83">                x: position.x,</span>
+<span id="L84">                y: position.y,</span>
+<span id="L85">                energy: energy.map(|e| e.reserve),</span>
+<span id="L86">                capacity: energy.map(|e| e.capacity),</span>
+<span id="L87">                biomass: food.map(|f| f.biomass),</span>
+<span id="L88">                authored_target: target.map(|target| target.0.0.to_string()),</span>
+<span id="L89">                maintenance_units_per_tick: species</span>
+<span id="L90">                    .and_then(|species| rates.maintenance_units_per_tick(*species)),</span>
+<span id="L91">            },</span>
+<span id="L92">        )</span>
+<span id="L93">        .collect();</span>
+<span id="L94">    entities.sort_by_key(|entity| entity.id.parse::&lt;u64&gt;().expect(&quot;numeric SimId&quot;));</span>
+<span id="L95">    let journal = world.resource::&lt;Journal&gt;();</span>
+<span id="L96">    let events = journal</span>
+<span id="L97">        .entries()</span>
+<span id="L98">        .iter()</span>
+<span id="L99">        .map(|entry| EventView {</span>
+<span id="L100">            tick: entry.tick.to_string(),</span>
+<span id="L101">            text: match entry.kind {</span>
+<span id="L102">                moss_sim::EventKind::RunStarted { number } =&gt; format!(&quot;Run {number} initialized&quot;),</span>
+<span id="L103">                moss_sim::EventKind::FixturePlaced { name } =&gt; {</span>
+<span id="L104">                    format!(&quot;{name} placed in the authored fixture&quot;)</span>
+<span id="L105">                }</span>
+<span id="L106">            },</span>
+<span id="L107">            participants: entry</span>
+<span id="L108">                .participants</span>
+<span id="L109">                .iter()</span>
+<span id="L110">                .map(|id| id.0.to_string())</span>
+<span id="L111">                .collect(),</span>
+<span id="L112">        })</span>
+<span id="L113">        .collect();</span>
+<span id="L114">    Snapshot {</span>
+<span id="L115">        run: world.resource::&lt;RunRecord&gt;().number.to_string(),</span>
+<span id="L116">        tick: world.resource::&lt;SimClock&gt;().tick.to_string(),</span>
+<span id="L117">        running: ui.playback.running,</span>
+<span id="L118">        suspended: ui.playback.suspended,</span>
+<span id="L119">        slowed: ui.playback.slowed,</span>
+<span id="L120">        width,</span>
+<span id="L121">        height,</span>
+<span id="L122">        zoom: 1.0 / ui.map.units_per_pixel,</span>
+<span id="L123">        selected: ui.selected.map(|id| id.0.to_string()),</span>
+<span id="L124">        entities,</span>
+<span id="L125">        events,</span>
+<span id="L126">        retained: journal.entries().len(),</span>
+<span id="L127">        evicted: journal.evicted().to_string(),</span>
+<span id="L128">        event_capacity: journal.capacity(),</span>
+<span id="L129">    }</span>
+<span id="L130">}</span></pre></body></html>

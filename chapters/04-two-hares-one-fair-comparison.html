@@ -1,0 +1,1090 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Two hares, one fair comparison - Moss — A Small World, Understood</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A field guide to building an inspectable ecosystem with Rust and ECS.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/moss-059d6a4b.css">
+        <link rel="stylesheet" href="../theme/daylight-visual-fea70df5.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-0dabd431.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-ece4b1fe.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Moss — A Small World, Understood</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/NicholasHazen/moss" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <p class="eyebrow">Chapter 4 · Individual defaults and controlled comparisons</p>
+
+<p><a id="4-two-hares-one-fair-comparison"></a></p>
+<h1 id="two-hares-one-fair-comparison"><a class="header" href="#two-hares-one-fair-comparison">Two hares, one fair comparison</a></h1>
+<p>Suppose Fern and another hare start with 60 energy. Three ticks later, one has
+57 and the other has 54. Have we made the second hare more expensive to sustain?
+Perhaps. It might also have walked farther, missed a meal, or started with a
+different reserve. The final numbers give us something to explain, but they do
+not yet identify the cause.</p>
+<p>We will make one difference deliberate: Fern pays one maintenance unit per
+tick, while the other hare pays two. Both remain hares. That modest change gives
+the questions about attributes a concrete home. Where should the default live?
+What does an override mean? Does every tick search for a value through a chain
+of fallbacks? If an animal eventually has speed, level and temporary effects,
+does everything belong in one bag of numbers?</p>
+<p>Start with the behavior we need. Each hare must own a rate that maintenance can
+read, and a comparison must show that rate making a difference. We can decide
+the representation by following those two obligations through the code.</p>
+<p><strong>Worked references · future live behavior.</strong> The current maintenance system
+still reads shared species rates. Authored populations and individual cost
+components are proposed later steps; this chapter’s examples run independently
+of the live schedule. The local repository’s <code>NOW.md</code> continues to select the
+active edit.</p>
+<h2 id="on-this-page"><a class="header" href="#on-this-page">On this page</a></h2>
+<ul>
+<li><a href="#a-population-gives-the-numbers-some-company">Summarize several individuals</a></li>
+<li><a href="#a-default-is-an-instruction-for-making-an-individual">Turn defaults into owned values</a></li>
+<li><a href="#make-the-query-read-the-new-owner">Make maintenance read those values</a></li>
+<li><a href="#how-many-components-should-these-attributes-become">Choose useful component boundaries</a></li>
+<li><a href="#give-the-difference-a-fair-journey">Compare the same journey</a></li>
+</ul>
+<p>Read the short rule excerpts and traces for the argument. Expand a complete
+answer when you want its imports, supporting types and test fixtures; each
+reference has its own command beside it.</p>
+<h2 id="a-population-gives-the-numbers-some-company"><a class="header" href="#a-population-gives-the-numbers-some-company">A population gives the numbers some company</a></h2>
+<p>One animal makes a rule easy to follow. Several animals make its consequences
+worth comparing. The proposed population scene supplies six hares, two foxes
+and four grass patches with authored IDs and positions. It does not require
+reproduction or random placement. Recreating those starting conditions gives
+each later experiment a repeatable place to begin.</p>
+<p>Fern is an individual nickname; Hare is her species; Grazer is her ecological
+role. A species summary groups hares even when their names, targets and reserves
+differ. Bevy’s <em>archetype</em> answers another question: which component types does
+an entity carry? Two hares with different energy values can have the same
+archetype. Adding a <code>FoodTarget</code> changes a component set without changing the
+animal’s species.</p>
+<p>A summary should help us find a story without replacing its participants.
+Consider two groups:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Individual reserves</th><th>What a mean of 50 conceals</th></tr>
+</thead>
+<tbody>
+<tr><td>50 and 50</td><td>Both animals have the same reserve.</td></tr>
+<tr><td>0 and 100</td><td>One animal has no reserve; the other is full.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Those groups can have different affordable actions on the next tick. Reporting
+count, minimum and maximum alongside the mean exposes that difference. We can
+then inspect the individual animals to understand it. The summary reads their
+authoritative values; changing a displayed mean must never become another way
+to change their energy.</p>
+<p>An empty group has a different answer again. It has no mean, minimum or maximum.
+Displaying zero would make “there are no hares” resemble “the hares have no
+energy.” <code>Option</code> lets the function preserve that distinction, just as it
+preserved the absence of an eligible food target.</p>
+<h3 id="checkpoint-a-summary-with-members-and-limits"><a class="header" href="#checkpoint-a-summary-with-members-and-limits">Checkpoint: a summary with members and limits</a></h3>
+<p>The complete reference from
+<a href="../source/docs/tutorial/path/05-many-individuals.md.html">session 05</a> accepts a
+borrowed slice of reserves. Species filtering happens before this function;
+the function cannot tell whether its numbers came from hares or foxes. Its local
+<code>EnergySummary</code> is reference data, not an existing live observation API.</p>
+<p>Follow <code>[20, 60]</code> first. The total is 80, the count is two, the minimum remains
+20, and the maximum becomes 60. Then look at <code>[20, 21]</code>: a mean of 20.5 is a
+useful case because integer division would conceal the half unit.</p>
+<p><strong>Reading excerpt — <code>summarize_energy</code> from the complete isolated reference below.</strong>
+The imports, local types and test fixtures remain in the expandable answer.</p>
+<pre><code class="language-rust">fn summarize_energy(reserves: &amp;[u32]) -&gt; Option&lt;EnergySummary&gt; {
+    let (&amp;first, rest) = reserves.split_first()?;
+    let mut total = u64::from(first);
+    let mut minimum = first;
+    let mut maximum = first;
+    for &amp;reserve in rest {
+        total = total
+            .checked_add(u64::from(reserve))
+            .expect("population energy total overflow");
+        minimum = minimum.min(reserve);
+        maximum = maximum.max(reserve);
+    }
+    Some(EnergySummary {
+        count: reserves.len(),
+        minimum,
+        maximum,
+        mean: total as f64 / reserves.len() as f64,
+    })
+}</code></pre>
+<p><strong>Reference check — expected: one named test.</strong> Run from the repository root:</p>
+<pre><code class="language-sh">python3 docs/tutorial/authoring/check_path_examples.py --session 05
+</code></pre>
+<details class="worked-reference">
+<summary>Complete population summary answer and test (56 lines)</summary>
+<!-- moss-example: session-05 -->
+<pre><code class="language-rust">#[derive(Debug, PartialEq)]
+struct EnergySummary {
+    count: usize,
+    minimum: u32,
+    maximum: u32,
+    mean: f64,
+}
+
+fn summarize_energy(reserves: &amp;[u32]) -&gt; Option&lt;EnergySummary&gt; {
+    let (&amp;first, rest) = reserves.split_first()?;
+    let mut total = u64::from(first);
+    let mut minimum = first;
+    let mut maximum = first;
+    for &amp;reserve in rest {
+        total = total
+            .checked_add(u64::from(reserve))
+            .expect("population energy total overflow");
+        minimum = minimum.min(reserve);
+        maximum = maximum.max(reserve);
+    }
+    Some(EnergySummary {
+        count: reserves.len(),
+        minimum,
+        maximum,
+        mean: total as f64 / reserves.len() as f64,
+    })
+}
+
+#[test]
+fn session_05_a_mean_has_members_and_limits() {
+    assert_eq!(
+        summarize_energy(&amp;[20, 60]),
+        Some(EnergySummary {
+            count: 2,
+            minimum: 20,
+            maximum: 60,
+            mean: 40.0,
+        })
+    );
+    assert_eq!(
+        summarize_energy(&amp;[60; 6]),
+        Some(EnergySummary {
+            count: 6,
+            minimum: 60,
+            maximum: 60,
+            mean: 60.0,
+        })
+    );
+    assert_eq!(summarize_energy(&amp;[]), None);
+    assert_eq!(summarize_energy(&amp;[20, 21]).unwrap().mean, 20.5);
+    let unequal = summarize_energy(&amp;[0, 100]).unwrap();
+    let equal = summarize_energy(&amp;[50, 50]).unwrap();
+    assert_eq!(unequal.mean, equal.mean);
+    assert_eq!((unequal.minimum, unequal.maximum), (0, 100));
+    assert_eq!((equal.minimum, equal.maximum), (50, 50));
+}</code></pre>
+</details>
+<p><code>split_first()</code> returns a borrowed first element and the rest of the slice.
+The <code>?</code> returns <code>None</code> immediately if there is no first element. In the pattern
+<code>(&amp;first, rest)</code>, <code>&amp;first</code> copies the referenced <code>u32</code> into a local value;
+<code>rest</code> remains a borrowed slice. Neither operation removes a member from the
+input.</p>
+<p>Starting minimum and maximum from an actual member avoids inventing initial
+extremes. The total uses <code>u64</code>, giving the sum more room than one <code>u32</code> reserve,
+and still checks addition. Converting before division preserves fractional
+means for these small populations. This display calculation is not a guarantee
+of exact floating-point summaries at arbitrary scale.</p>
+<p>The proposed scenario begins with all six hares at 60, so its initial hare
+summary should be count 6, minimum 60, maximum 60 and mean 60. The four patches
+begin with 80 biomass each, for 320 total. A patch is a stand of plants, not a
+count of individual grass blades. Those starting values are acceptance targets
+for future scenario integration, not a population already present in the live
+fixture.</p>
+<p>After some foraging, inspecting two hares can explain two particular reserves.
+It cannot verify a six-hare mean. Integration must gather all six values,
+confirm the species filter, and compare the derived result with the display.
+A correct formula applied to the wrong members remains a wrong summary.</p>
+<h2 id="a-default-is-an-instruction-for-making-an-individual"><a class="header" href="#a-default-is-an-instruction-for-making-an-individual">A default is an instruction for making an individual</a></h2>
+<p>The live code already separates individual reserves from shared rates.
+<a href="../source/crates/moss-sim/src/energy.rs.html"><code>Energy</code></a> belongs to each animal, while
+<code>SpeciesEnergyRules</code> is a shared resource.
+<a href="../source/crates/moss-sim/src/lessons.rs.html"><code>spend_energy</code></a> reads an animal’s
+<code>Species</code>, looks up that species’ rate, and subtracts it from the animal’s
+reserve. That is why one hare can eat without replenishing every hare, while
+the current shared hare rate applies to every hare.</p>
+<p>For two members of one species to have different upkeep, the rate needs a
+more specific owner. The proposed rule resolves a species default and an
+optional authored override when an animal is created. It stores the resulting
+maintenance rate in an <code>AnimalEnergyCosts</code> component on that animal.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Moment</th><th>Information needed</th></tr>
+</thead>
+<tbody>
+<tr><td>Construct the animal’s cost</td><td>Its configured species default and its optional authored override.</td></tr>
+<tr><td>Apply maintenance later</td><td>Its owned cost component and its current energy.</td></tr>
+</tbody>
+</table>
+</div>
+<p>This answers the question about repeated lookups. A maintenance tick does not
+need to walk an override/default chain under this design. Creation already
+resolved the instruction into a concrete value. The query reads that value
+beside <code>Energy</code> and applies the familiar subtraction.</p>
+<p>That choice also defines what <em>default</em> means. A species template supplies
+starting instructions; it is not a live parent whose fields are consulted
+whenever an animal needs a number. If we wanted a change to the template to
+immediately alter every non-overridden animal, we would need a different
+propagation contract. The two contracts answer different design questions;
+neither follows automatically from using ECS.</p>
+<p>Moss’s planned individual-cost policy keeps defaults fixed during a run.
+Reset rebuilds animals from the selected scenario’s authored inputs. Runtime
+changes to an individual disappear on reconstruction, while authored overrides
+are applied again. Retuning a running population would be an explicit later
+operation, with a decision about which individuals it changes.</p>
+<h2 id="missing-zero-and-equal-are-three-different-stories"><a class="header" href="#missing-zero-and-equal-are-three-different-stories">Missing, zero and equal are three different stories</a></h2>
+<p>An authored override uses <code>Option&lt;u32&gt;</code>. The meaning of the wrapper is part of
+the model:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Authored input with species default 1</th><th>Constructed maintenance rate</th></tr>
+</thead>
+<tbody>
+<tr><td><code>None</code>: no individual override</td><td>1, from the species default.</td></tr>
+<tr><td><code>Some(2)</code>: explicitly use two</td><td>2.</td></tr>
+<tr><td><code>Some(0)</code>: explicitly use zero</td><td>0.</td></tr>
+<tr><td><code>Some(1)</code>: explicitly use one</td><td>1, from the override.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Zero is a present value. A test such as “use the override if it is greater than
+zero” would erase that intent and charge an animal that was explicitly given
+free upkeep. <code>unwrap_or(default)</code> instead asks whether a value exists, then
+takes it as supplied.</p>
+<p>The last row is subtler. <code>None</code> and <code>Some(1)</code> produce the same number under a
+default of one. They still give different instructions. If a later scenario
+changes the default to nine, the unchanged inputs construct nine and one.
+An explicit one remains an explicit one even when an earlier default happened
+to match it.</p>
+<p><img src="../source/docs/tutorial/path/visuals/default-to-instance.svg" alt="At creation, a species default and an optional authored override produce an owned cost component. Maintenance later reads that resolved component directly."></p>
+<p>The arrow from template to individual happens during construction. There is
+no arrow reaching back from every future maintenance subtraction. This is why
+the original <code>Option</code> belongs in retained authoring data: reconstruction needs
+the instruction, not only its previous result.</p>
+<h3 id="at-the-workbench-reconstructing-owned-costs"><a class="header" href="#at-the-workbench-reconstructing-owned-costs">At the workbench: reconstructing owned costs</a></h3>
+<p>Give three authored hares the inputs <code>None</code>, <code>Some(1)</code> and <code>Some(0)</code>. With an
+active hare template of one, they begin with owned costs one, one and zero.
+Change the draft template to nine and watch those owned values stay put. The
+draft is a proposed configuration; <strong>Start configured run</strong> submits it and
+constructs a new set of individuals.</p>
+<p><strong>Reset</strong> has a different job: it reconstructs the current active configuration.
+To see that distinction, leave nine in the draft, apply a runtime cost of five
+to Fern, then Reset. Fern returns to one, while the unsubmitted draft remains
+nine. Starting the configured run now constructs nine, one and zero. This is
+the chapter’s selected future policy, illustrated independently of live Moss.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action in this sequence</th><th>Configuration and owned costs afterward</th></tr>
+</thead>
+<tbody>
+<tr><td>Begin</td><td>Active 1; draft 1. Fern / ID 7 / ID 8 own <strong>1 / 1 / 0</strong>.</td></tr>
+<tr><td>Edit the draft to nine</td><td>Active 1; draft <strong>9</strong>. Owned costs stay <strong>1 / 1 / 0</strong>.</td></tr>
+<tr><td>Apply runtime cost five to Fern</td><td>Active 1; draft 9. Owned costs become <strong>5 / 1 / 0</strong>.</td></tr>
+<tr><td>Reset the current run</td><td>Active 1; draft 9. Owned costs return to <strong>1 / 1 / 0</strong>.</td></tr>
+<tr><td>Start configured run</td><td>Active <strong>9</strong>; draft 9. New individuals own <strong>9 / 1 / 0</strong>.</td></tr>
+</tbody>
+</table>
+</div>
+<section class="lab" data-lab="defaults" aria-label="Authored inputs and owned maintenance costs">
+<div class="lab-heading"><span class="lab-kind">Independent teaching model · future policy</span><strong>A template makes three owned values</strong></div>
+
+<p>This JavaScript illustration does not execute Rust or live Moss. All three individuals are hares. The cards retain authored inputs so they can label initialization as Default-derived or Explicit override, even when the numbers match. Costs use whole energy units per tick; the controls accept 0–12 for this illustration.</p>
+
+<div class="lab-controls">
+<label>Draft hare template <input data-input="draft-template" type="number" min="0" max="12" step="1" value="1" disabled=""> energy units per tick</label>
+<label>Proposed runtime cost for Fern <input data-input="runtime-cost" type="number" min="0" max="12" step="1" value="5" disabled=""> energy units per tick</label>
+</div>
+
+<div class="lab-state" data-output="configuration"></div>
+
+<div class="lab-actions"><button type="button" data-action="start-configured" disabled="">Start configured run</button><button type="button" data-action="reset" disabled="">Reset current run</button><button type="button" data-action="edit-owned" disabled="">Apply runtime cost to Fern</button></div>
+
+<p>Each large number below is the individual's owned current cost. Its initialization label describes construction; a later runtime edit is shown separately.</p>
+
+<div class="lab-state" data-output="individuals"></div>
+
+<p class="lab-explanation" data-output="explanation" role="status" aria-live="polite" aria-atomic="true">Enable JavaScript to change the draft and reconstruct these individuals. The table above supplies the same sequence without interaction. Initially Fern (ID 1) uses None and owns 1; ID 7 uses Some(1) and owns 1; ID 8 uses Some(0) and owns 0.</p>
+
+</section>
+<h3 id="checkpoint-resolve-the-input-once"><a class="header" href="#checkpoint-resolve-the-input-once">Checkpoint: resolve the input once</a></h3>
+<p>The exact reference from
+<a href="../source/docs/tutorial/path/06-owned-costs.md.html">session 06</a> defines a small
+component and a resolver. Read the returned struct as an owned result. Then
+watch the test change its local template from one to nine: the already
+constructed values remain unchanged.</p>
+<p><strong>Reference check — expected: one named test.</strong> Run from the repository root:</p>
+<pre><code class="language-sh">python3 docs/tutorial/authoring/check_path_examples.py --session 06
+</code></pre>
+<!-- moss-example: session-06 -->
+<pre><code class="language-rust">use bevy_ecs::prelude::Component;
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AnimalEnergyCosts {
+    pub maintenance_units_per_tick: u32,
+}
+
+fn resolve_costs(
+    species_default: AnimalEnergyCosts,
+    maintenance_override: Option&lt;u32&gt;,
+) -&gt; AnimalEnergyCosts {
+    AnimalEnergyCosts {
+        maintenance_units_per_tick: maintenance_override
+            .unwrap_or(species_default.maintenance_units_per_tick),
+    }
+}
+
+#[test]
+fn session_06_an_override_is_resolved_at_creation() {
+    let mut hare_default = AnimalEnergyCosts {
+        maintenance_units_per_tick: 1,
+    };
+    let fern = resolve_costs(hare_default, None);
+    let explicit_one = resolve_costs(hare_default, Some(1));
+    let other_hare = resolve_costs(hare_default, Some(2));
+    let free_upkeep = resolve_costs(hare_default, Some(0));
+    assert_eq!(fern.maintenance_units_per_tick, 1);
+    assert_eq!(explicit_one, fern); // Equal results can have different authored inputs.
+    assert_eq!(other_hare.maintenance_units_per_tick, 2);
+    assert_eq!(free_upkeep.maintenance_units_per_tick, 0);
+
+    hare_default.maintenance_units_per_tick = 9;
+    assert_eq!(fern.maintenance_units_per_tick, 1);
+    assert_eq!(other_hare.maintenance_units_per_tick, 2);
+    assert_eq!(
+        resolve_costs(hare_default, None).maintenance_units_per_tick,
+        9
+    );
+    assert_eq!(
+        resolve_costs(hare_default, Some(1)).maintenance_units_per_tick,
+        1
+    );
+}</code></pre>
+<p><code>Copy</code> makes passing this small default value an independent value copy. The
+resolved <code>fern</code> contains its own number, not a reference into <code>hare_default</code>.
+The template mutation therefore affects a later construction, not an existing
+result. The example demonstrates ownership; it does not run Moss’s Reset or
+introduce a browser control for changing defaults.</p>
+<p><code>#[derive(Component)]</code> makes the type usable as a Bevy component. It does not
+attach a value to an entity. That is another step, performed by construction
+code. A component can be correctly declared and correctly initialized while
+still having no effect on the world because no animal carries it or no system
+reads it.</p>
+<p>The helper receives an already selected species default. It has no species
+argument and therefore cannot choose the right template itself. Future spawn
+wiring must pass a fox’s configured rate for a fox and a hare’s rate for a
+hare. An initializer test protects resolution; construction tests protect
+the connection from species to the initializer and then to the entity.</p>
+<h3 id="knowing-the-value-is-not-knowing-its-origin"><a class="header" href="#knowing-the-value-is-not-knowing-its-origin">Knowing the value is not knowing its origin</a></h3>
+<p>Suppose the inspector reads Fern’s resolved rate and sees one. Can it say
+“inherited from the species default”? Not from that number alone. The explicit
+<code>Some(1)</code> case is indistinguishable after resolution.</p>
+<p>This is a provenance question: which authored instruction produced the value?
+Maintenance needs only the resolved rate. An inspector explaining its origin
+needs the retained instruction or a recorded origin associated with that
+animal. If that information was not recorded, the correct description is
+unknown. It should not guess from equality with the current template.</p>
+<p>The distinction lets us keep runtime data small without losing the authoring
+model. Scenario inputs can preserve optional overrides while a frequently read
+component holds a plain number. These representations serve different jobs;
+they do not have to be the same struct. Adding origin display is separate
+plumbing, not a hidden field required to subtract upkeep.</p>
+<h2 id="make-the-query-read-the-new-owner"><a class="header" href="#make-the-query-read-the-new-owner">Make the query read the new owner</a></h2>
+<p>Now give Fern an owned cost of one and the other hare an owned cost of two.
+Nothing changes until maintenance reads those values. Continuing to look up
+<code>Species::Hare</code> in the shared resource would charge both animals the same rate,
+regardless of the components we attached.</p>
+<p>The proposed query is
+<code>Query&lt;(&amp;AnimalEnergyCosts, &amp;mut Energy), With&lt;Creature&gt;&gt;</code>. Read it as three
+requirements on one entity: it must carry costs, energy and <code>Creature</code>.
+Each matching row supplies read access to costs and write access to energy.
+<code>With&lt;Creature&gt;</code> checks membership without returning a third value.</p>
+<p>The arithmetic remains familiar. Starting from 60, a cost of one leaves 59;
+a cost of two leaves 58. Three passes give 57 and 54. The query changes the
+source of the rate, while <code>saturating_sub</code> still spends up to the remaining
+reserve and stops at zero. It still does not define a death rule.</p>
+<p>An entity missing required query data is skipped. That behavior is useful
+when absence means “this capability does not apply,” but it can also conceal
+a construction mistake. Every animal in this model owes maintenance, so
+forgetting to attach costs must not grant it free upkeep.</p>
+<h3 id="checkpoint-both-the-right-values-and-the-right-members"><a class="header" href="#checkpoint-both-the-right-values-and-the-right-members">Checkpoint: both the right values and the right members</a></h3>
+<p>The exact <a href="../source/docs/tutorial/path/07-querying-costs.md.html">session 07</a>
+reference constructs small Bevy worlds and installs only its local maintenance
+system. Its local component repeats the preceding concept so the reference can
+run independently. The future live integration uses the one component already
+prepared in <code>energy.rs</code>; it must not declare a competing second type.</p>
+<p>The first test uses valid animals and checks attachment as well as reserves.
+The second deliberately constructs three different component combinations.
+Use that second test to distinguish a query doing its job from spawn code
+failing to meet the world’s construction rule.</p>
+<p><strong>Reading excerpt — <code>spend_energy</code> from the complete isolated reference below.</strong>
+The imports, local types and test fixtures remain in the expandable answer.</p>
+<pre><code class="language-rust">fn spend_energy(mut animals: Query&lt;(&amp;AnimalEnergyCosts, &amp;mut Energy), With&lt;Creature&gt;&gt;) {
+    for (costs, mut energy) in &amp;mut animals {
+        energy.reserve = energy
+            .reserve
+            .saturating_sub(costs.maintenance_units_per_tick);
+    }
+}</code></pre>
+<p><strong>Reference check — expected: two named tests.</strong> Run from the repository root:</p>
+<pre><code class="language-sh">python3 docs/tutorial/authoring/check_path_examples.py --session 07
+</code></pre>
+<details class="worked-reference">
+<summary>Complete owned-cost query answer and tests (111 lines)</summary>
+<!-- moss-example: session-07 -->
+<pre><code class="language-rust">use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+use moss_sim::{Creature, Energy, Species};
+
+#[derive(Component)]
+struct AnimalEnergyCosts {
+    maintenance_units_per_tick: u32,
+}
+
+fn spend_energy(mut animals: Query&lt;(&amp;AnimalEnergyCosts, &amp;mut Energy), With&lt;Creature&gt;&gt;) {
+    for (costs, mut energy) in &amp;mut animals {
+        energy.reserve = energy
+            .reserve
+            .saturating_sub(costs.maintenance_units_per_tick);
+    }
+}
+
+#[test]
+fn session_07_same_species_can_have_different_costs() {
+    let mut world = World::new();
+    let first = world
+        .spawn((
+            Creature { name: "Fern" },
+            Species::Hare,
+            Energy {
+                reserve: 60,
+                capacity: 100,
+            },
+            AnimalEnergyCosts {
+                maintenance_units_per_tick: 1,
+            },
+        ))
+        .id();
+    let second = world
+        .spawn((
+            Creature {
+                name: "another hare",
+            },
+            Species::Hare,
+            Energy {
+                reserve: 60,
+                capacity: 100,
+            },
+            AnimalEnergyCosts {
+                maintenance_units_per_tick: 2,
+            },
+        ))
+        .id();
+    let grass = world.spawn(Species::Grass).id();
+
+    let animal_count = world
+        .query_filtered::&lt;Entity, With&lt;Creature&gt;&gt;()
+        .iter(&amp;world)
+        .count();
+    let cost_count = world
+        .query_filtered::&lt;&amp;AnimalEnergyCosts, With&lt;Creature&gt;&gt;()
+        .iter(&amp;world)
+        .count();
+    assert_eq!(animal_count, 2);
+    assert_eq!(cost_count, 2);
+    assert!(world.get::&lt;AnimalEnergyCosts&gt;(grass).is_none());
+
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems(spend_energy);
+    for _ in 0..3 {
+        schedule.run(&amp;mut world);
+    }
+    assert_eq!(world.get::&lt;Energy&gt;(first).unwrap().reserve, 57);
+    assert_eq!(world.get::&lt;Energy&gt;(second).unwrap().reserve, 54);
+
+    world.get_mut::&lt;Energy&gt;(second).unwrap().reserve = 1;
+    schedule.run(&amp;mut world);
+    assert_eq!(world.get::&lt;Energy&gt;(second).unwrap().reserve, 0);
+    assert!(world.get::&lt;Creature&gt;(second).is_some());
+}
+
+#[test]
+fn session_07_only_matching_entities_pay() {
+    let mut world = World::new();
+    let energy = Energy {
+        reserve: 60,
+        capacity: 100,
+    };
+    let eligible = world
+        .spawn((
+            Creature { name: "eligible" },
+            energy,
+            AnimalEnergyCosts {
+                maintenance_units_per_tick: 1,
+            },
+        ))
+        .id();
+    let missing_cost = world.spawn((Creature { name: "no cost" }, energy)).id();
+    let not_an_animal = world
+        .spawn((
+            energy,
+            AnimalEnergyCosts {
+                maintenance_units_per_tick: 1,
+            },
+        ))
+        .id();
+
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems(spend_energy);
+    schedule.run(&amp;mut world);
+
+    assert_eq!(world.get::&lt;Energy&gt;(eligible).unwrap().reserve, 59);
+    assert_eq!(world.get::&lt;Energy&gt;(missing_cost).unwrap().reserve, 60);
+    assert_eq!(world.get::&lt;Energy&gt;(not_an_animal).unwrap().reserve, 60);
+}</code></pre>
+</details>
+<p>The first test runs three passes through the local schedule. It inspects each
+specific entity, so one missed animal cannot hide inside a correct total.
+Afterward it gives the more expensive hare only one remaining unit. The next
+pass clamps its reserve to zero, and the final assertion confirms the creature
+still exists. Changing the rate’s owner has not changed the meaning of zero.</p>
+<p>The membership test deserves its three actors:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component combination</th><th>Observation after one maintenance pass</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Creature</code>, costs and energy</td><td>The positive control reaches 59, showing the system ran.</td></tr>
+<tr><td><code>Creature</code> and energy, without costs</td><td>It stays at 60 because required query data is missing. This synthetic animal is malformed for the planned production model.</td></tr>
+<tr><td>Costs and energy, without <code>Creature</code></td><td>It stays at 60 because the animal filter excludes it.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The last control has both data components. If the filter disappeared, it would
+start paying upkeep and the test would fail. A bare grass entity would not
+serve the same purpose: lacking energy and costs already excludes it, even
+without <code>With&lt;Creature&gt;</code>. The choice of control determines which mistake a
+green test can rule out.</p>
+<p>In the loop’s <code>(costs, mut energy)</code>, the immutable cost access keeps the
+baseline read-only. Bevy provides writable energy through its <code>Mut&lt;Energy&gt;</code>
+wrapper; the mutable binding lets the field assignment reach the component.
+This is Fern’s existing reserve, not a local copy discarded after the loop.
+The versioned <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Query.html">Bevy ECS 0.18.1 query documentation</a>
+explains the required data and filter access used here.</p>
+<p>When this becomes a live checkpoint, a no-food scenario isolates upkeep while
+leaving the real schedule installed. If both hares finish at 57, inspect whether
+maintenance still reads the species resource. If one stays at 60, inspect
+attachment and query membership before changing the subtraction.</p>
+<h2 id="how-many-components-should-these-attributes-become"><a class="header" href="#how-many-components-should-these-attributes-become">How many components should these attributes become?</a></h2>
+<p>The owned-cost example answers who owns a number. It does not require every
+attribute to occupy its own component, and it does not require all attributes
+to share one component. Group fields according to the rules that read and
+change them, their lifetime, and whether their presence has a useful meaning.</p>
+<p><code>Energy { reserve, capacity }</code> already groups two fields. Meals need them
+together to calculate room, and both describe the same reserve. Splitting
+them merely because one changes more often would add a boundary without yet
+solving a problem. Maintenance costs describe the rate at which that reserve
+is spent, so keeping them separately owned makes the baseline/state
+distinction visible.</p>
+<p>Now imagine an additional movement-pace rule. The existing
+<a href="../source/docs/tutorial/context/attributes-and-defaults.md.html#where-would-one-more-attribute-live">attribute comparison</a>
+uses a positive <code>step_interval_ticks</code>: how many simulation ticks separate
+steps. This is a future design example, not the current one-cell-per-tick rule.
+It gives us a specific reason to compare two layouts.</p>
+<p>If upkeep and pace live inside one hypothetical <code>AnimalProfile</code> component,
+maintenance reads that component while a pace adjustment writes that component.
+Ordinary query access is declared for the component, not just whichever field
+the body happens to touch. When both systems can reach the same animals, those
+declared accesses overlap. Putting a nested <code>Locomotion</code> struct inside that
+profile does not make it a separately attached component.</p>
+<p>Alternatively, upkeep can read <code>AnimalEnergyCosts</code> and a pace adjustment can
+write a separately attached <code>Locomotion</code>. Those particular accesses no longer
+overlap. This also permits an entity without locomotion to owe upkeep while
+being excluded from a locomotion query. The absence has a model meaning;
+absence of required upkeep costs would still be a construction defect.</p>
+<p>Both layouts can store individual values. Splitting fields changes an access
+or presence boundary, not their ownership. Moss’s schedule remains
+single-threaded, so this comparison is not evidence of a speedup. Systems
+that both mutate <code>Energy</code> still share that access regardless of how their
+other fields are grouped.</p>
+<p>A “bag of attributes” can describe several different arrangements: a concrete
+struct with named fields, several typed components on an entity, or a dynamic
+map of keys to values. The present rules need the first two. A maintenance
+query can state its required types and iterate costs beside energy without
+asking a generic lookup service to interpret an attribute name. A future
+data-driven authoring format could still resolve its inputs into these concrete
+runtime values. The editor’s representation need not dictate the tick loop’s
+representation.</p>
+<h3 id="a-speed-a-level-and-a-temporary-effect"><a class="header" href="#a-speed-a-level-and-a-temporary-effect">A speed, a level and a temporary effect</a></h3>
+<p>Here is a bounded design example to make the distinction useful beyond upkeep.
+It proposes no new Moss API or selected movement policy. Suppose an individual
+owns a baseline interval of <strong>4 ticks per step</strong>. For this illustration, a
+particular level adjustment halves that interval, and a temporary slowing
+effect doubles the adjusted interval.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Kind of value</th><th>Value in this example and its job</th></tr>
+</thead>
+<tbody>
+<tr><td>Baseline</td><td>4 ticks per step, owned by the individual. It remains available when an effect ends.</td></tr>
+<tr><td>Effective value</td><td><code>4 ÷ 2 × 2 = 4</code> ticks per step while the level adjustment and slowing effect apply. This is what the proposed pace rule would read.</td></tr>
+<tr><td>Current state</td><td>1 tick elapsed since the last accepted step. It describes progress, not the underlying capability.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Remove the slowing effect and recompute: the effective interval becomes
+<code>4 ÷ 2 = 2</code>, while the baseline stays four. A smaller interval permits more
+frequent steps under such a model. Applying the formula again next tick still
+produces two; repeatedly dividing the stored baseline would instead produce
+four, two, one and eventually an unintended zero.</p>
+<p>The current elapsed state has its own question: what happens when the required
+interval changes midway through waiting? Keeping or rescaling progress would
+be different policies. Naming state separately exposes that choice instead
+of hiding it inside a speed getter. This numerical example avoids rounding;
+a general rule would also need positive bounds and explicit rounding when
+division does not produce a whole tick.</p>
+<p>The same separation helps temporary maintenance effects. Combine the baseline
+with applicable conditions at a defined point; do not overwrite the baseline
+every tick and try to undo the accumulated changes later. If an effective
+value is eventually cached, removing an effect or changing a global condition
+must refresh it before a consumer runs. A cache introduces a dependency rule;
+it does not make that rule disappear.</p>
+<h2 id="what-this-layout-doesand-does-nottell-us-about-scale"><a class="header" href="#what-this-layout-doesand-does-nottell-us-about-scale">What this layout does—and does not—tell us about scale</a></h2>
+<p>The concrete query gives us an inspectable path from owned costs to reserves.
+It does not prove that copying a number is always faster than looking up a
+shared definition. The relevant comparison depends on the population,
+component layout, systems and update frequency we actually run.</p>
+<p>Small, frequently used individual values are reasonable candidates for owned
+components. A large, rarely read species description can stay shared behind a
+key or handle. Those choices can coexist. We do not need to copy every species
+definition onto every animal in order to give upkeep an individual owner.</p>
+<p>When scale becomes a question, measure simulation tick time separately from
+rendering, along with memory, allocations and the expensive systems. Compare
+the same entities, accepted inputs, executed ticks and outcomes before and
+after a representation change. Different numeric values within the same
+component types do not themselves create more archetypes; attaching different
+sets of components does. Neither statement is a benchmark of Moss’s eventual
+world.</p>
+<p>The <a href="../source/docs/research/attributes-and-energy.md.html">applied attribute research</a>
+and <a href="../source/docs/research/property-bags-and-defaults.md.html">property/default research</a>
+are optional comparisons when an actual requirement makes another design
+interesting. Today’s experiment has a smaller question: can two hares pay
+different upkeep for an explicit reason we can inspect?</p>
+<h2 id="give-the-difference-a-fair-journey"><a class="header" href="#give-the-difference-a-fair-journey">Give the difference a fair journey</a></h2>
+<p>The no-food experiment isolates maintenance. Next let both animals perform
+the same movement, so we can see the individual rate combine with an existing
+action. Both start at <code>(10, 10)</code>, reserve 60, seeking Meadow at <code>(16, 13)</code>.
+Fern pays upkeep one; the other hare pays two. Travel remains the shared
+<strong>2 energy units per accepted cell</strong>.</p>
+<p>The initial Seeking activity matters. Under the earlier threshold rule, an
+idle hare at reserve 60 would stay idle, while one already Seeking continues.
+Forgetting that input could turn the intended two-walker comparison into
+standing still, without any error in the cost component.</p>
+<p>After three x steps, both should reach <code>(13, 10)</code>. Neither has reached food,
+so Meadow’s biomass should remain 80. These are the expected values for the
+future controlled scenario:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Completed ticks</th><th>Shared position; Fern / other hare reserves</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td><code>(10, 10)</code>; 60 / 60</td></tr>
+<tr><td>1</td><td><code>(11, 10)</code>; 57 / 56</td></tr>
+<tr><td>2</td><td><code>(12, 10)</code>; 54 / 52</td></tr>
+<tr><td>3</td><td><code>(13, 10)</code>; 51 / 48</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each animal spends six on travel. Fern also spends three on upkeep; the
+other hare spends six. The three-unit gap now has one controlled cause: a
+one-unit difference on each of three maintenance ticks.</p>
+<p>The observations support one another. With the specified start and at most
+one cardinal step on each of three ticks, <code>(13, 10)</code> establishes three cells
+of accepted travel. Unchanged biomass rules out a meal in this fixture.
+Equal endpoints alone would not establish equal distance in a journey long
+enough to include a detour, so keep the input conditions in the explanation.</p>
+<h3 id="checkpoint-account-for-the-same-accepted-distance"><a class="header" href="#checkpoint-account-for-the-same-accepted-distance">Checkpoint: account for the same accepted distance</a></h3>
+<p>This exact <a href="../source/docs/tutorial/path/08-a-fair-comparison.md.html">session 08</a>
+reference starts with an already supplied movement trace. Its <code>Account</code> is
+local example data, not another component to install. Read <code>[1, 1, 1]</code> as
+one cell actually accepted on each of three ticks. The function does not
+choose or perform those steps.</p>
+<p><strong>Reading excerpt — <code>account_trace</code> from the complete isolated reference below.</strong>
+The imports, local types and test fixtures remain in the expandable answer.</p>
+<pre><code class="language-rust">fn account_trace(maintenance_units_per_tick: u32, accepted_cells: &amp;[u32]) -&gt; Account {
+    let mut result = Account {
+        reserve: 60,
+        maintenance_spent: 0,
+        travel_spent: 0,
+    };
+    for &amp;distance in accepted_cells {
+        let actual_maintenance = result.reserve.min(maintenance_units_per_tick);
+        result.reserve -= actual_maintenance;
+        result.maintenance_spent = result
+            .maintenance_spent
+            .checked_add(actual_maintenance)
+            .expect("maintenance total overflow");
+        let travel = distance.checked_mul(2).expect("travel cost overflow");
+        assert!(
+            travel &lt;= result.reserve,
+            "trace contains an unaffordable step"
+        );
+        result.reserve -= travel;
+        result.travel_spent = result
+            .travel_spent
+            .checked_add(travel)
+            .expect("travel total overflow");
+    }
+    result
+}</code></pre>
+<p><strong>Reference check — expected: one named test.</strong> Run from the repository root:</p>
+<pre><code class="language-sh">python3 docs/tutorial/authoring/check_path_examples.py --session 08
+</code></pre>
+<details class="worked-reference">
+<summary>Complete journey accounting answer and test (65 lines)</summary>
+<!-- moss-example: session-08 -->
+<pre><code class="language-rust">#[derive(Debug, PartialEq, Eq)]
+struct Account {
+    reserve: u32,
+    maintenance_spent: u32,
+    travel_spent: u32,
+}
+
+fn account_trace(maintenance_units_per_tick: u32, accepted_cells: &amp;[u32]) -&gt; Account {
+    let mut result = Account {
+        reserve: 60,
+        maintenance_spent: 0,
+        travel_spent: 0,
+    };
+    for &amp;distance in accepted_cells {
+        let actual_maintenance = result.reserve.min(maintenance_units_per_tick);
+        result.reserve -= actual_maintenance;
+        result.maintenance_spent = result
+            .maintenance_spent
+            .checked_add(actual_maintenance)
+            .expect("maintenance total overflow");
+        let travel = distance.checked_mul(2).expect("travel cost overflow");
+        assert!(
+            travel &lt;= result.reserve,
+            "trace contains an unaffordable step"
+        );
+        result.reserve -= travel;
+        result.travel_spent = result
+            .travel_spent
+            .checked_add(travel)
+            .expect("travel total overflow");
+    }
+    result
+}
+
+#[test]
+fn session_08_equal_journeys_reveal_the_upkeep_difference() {
+    let fern = account_trace(1, &amp;[1, 1, 1]);
+    let other = account_trace(2, &amp;[1, 1, 1]);
+    assert_eq!(
+        fern,
+        Account {
+            reserve: 51,
+            maintenance_spent: 3,
+            travel_spent: 6
+        }
+    );
+    assert_eq!(
+        other,
+        Account {
+            reserve: 48,
+            maintenance_spent: 6,
+            travel_spent: 6
+        }
+    );
+    assert_eq!(fern.reserve - other.reserve, 3);
+    assert_eq!(
+        fern.reserve + fern.maintenance_spent + fern.travel_spent,
+        60
+    );
+    assert_eq!(
+        other.reserve + other.maintenance_spent + other.travel_spent,
+        60
+    );
+    assert_eq!(account_trace(1, &amp;[0, 0, 0]).reserve, 57);
+}</code></pre>
+</details>
+<p>Maintenance records the amount actually available to deduct. Travel is
+calculated from accepted distance, then checked for affordability. The
+assertion rejects an impossible supplied trace rather than quietly granting
+movement on credit. This is an accounting model of observations, not a
+replacement for the movement helper’s acceptance rule.</p>
+<p>The equality back to 60 reconciles each starting reserve with its remaining
+reserve and both expenditures. It would not, by itself, prove equal journeys;
+the separate travel totals and the supplied traces provide that context.
+The live experiment must produce its positions through the real movement
+system and check the unchanged patch as well as reserves.</p>
+<p><strong>A nearby case:</strong> keep three executed ticks but supply <code>[1, 0, 1]</code> for both
+hares. What remains if one tick has no accepted travel?</p>
+<p><strong>Answer:</strong> both spend four on travel. Fern spends three on upkeep and finishes
+at 53; the other spends six and finishes at 50. The gap is still three because
+the upkeep difference still applied on three ticks. The zero-distance tick
+removes a travel charge, not a tick of maintenance. These values follow the
+reference’s accounting assumptions; they do not explain why movement was
+absent on that tick.</p>
+<h2 id="run-the-reference-then-check-the-live-connection"><a class="header" href="#run-the-reference-then-check-the-live-connection">Run the reference, then check the live connection</a></h2>
+<p>The four complete answers above are unchanged copies of their short-session
+references. Each has its exact command beside it. Expect one named reference
+test per command except session 07, which has two. The runner extracts the
+existing guide’s complete answer into an isolated workspace. It does not check whether a live learner edit is finished
+or install these proposed systems. The
+<a href="../source/docs/tutorial/path/verification.md.html#what-each-reference-establishes">reference evidence</a>
+records what those examples establish and where their scope ends.</p>
+<p>For actual integration, the agent prepares one selected checkpoint at a time:
+summary calculation, initialization, maintenance access, or the controlled
+comparison. Its named live symbol, test and stopping point belong in <code>NOW.md</code>.
+Spawn and Reset checks must establish that every animal receives the intended
+owned cost and that authored overrides survive reconstruction. The inspector
+must display the rate maintenance actually uses, not merely its old template.</p>
+<p>After the comparison is installed and reviewed, its browser check is short:
+Reset the comparison scene, Step three times and inspect both hares separately
+by ID. Their markers will overlap at <code>(13, 10)</code>, while reserves should be 51
+and 48. Check Meadow at 80 biomass before judging the account. These remain
+expected post-integration observations in this edition.</p>
+<p>We can now explain an individual number all the way through: an authored
+instruction chose it, construction gave it an owner, a matching query read it,
+and a controlled run exposed its consequence. The two hares do not need a
+different species or a universal attribute system to live differently. Their
+next constraint is shared: every successful meal still spends down Meadow’s
+finite supply. Giving that supply a source will let us ask what the world
+can support, as well as what each animal spends.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapters/03-let-the-animal-choose.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapters/05-a-world-that-feeds.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapters/03-let-the-animal-choose.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapters/05-a-world-that-feeds.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/moss-0803de9b.js"></script>
+        <script src="../theme/meal-lab-05f3c2a2.js"></script>
+        <script src="../theme/tick-lab-ba41a1af.js"></script>
+        <script src="../theme/defaults-lab-dd0d0a10.js"></script>
+        <script src="../theme/daylight-lab-ea4795d5.js"></script>
+        <script src="../theme/reading-a25554d2.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

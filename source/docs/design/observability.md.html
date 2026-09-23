@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/design/observability.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/design/observability.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>f2643ff915716093704b8c3c5c1c9ca32fdc963784532a16079e38161cbbb756</code></p><pre><span id="observability--one-life-one-population-one-world"></span><span id="L1"># Observability — one life, one population, one world</span>
+<span id="L2"></span>
+<span id="L3">**Status:** Shared logging direction. Implement only the pieces needed by the current behavior.</span>
+<span id="L4"></span>
+<span id="three-views-one-history"></span><span id="L5">## Three views, one history</span>
+<span id="L6"></span>
+<span id="L7">**Micro:** What is creature 17 doing, what can it currently perceive, and what happened to it?</span>
+<span id="L8"></span>
+<span id="L9">**Population:** Why did the grazer count change? Which births and deaths contributed? How do energy, age, or attributes differ across groups?</span>
+<span id="L10"></span>
+<span id="L11">**World:** How do resource supply, populations, and interventions develop across a run?</span>
+<span id="L12"></span>
+<span id="L13">The connection matters more than a sophisticated dashboard. Start with an inspector and a small timeline. Add population measurements as soon as they help answer a question, not as a prebuilt analytics platform.</span>
+<span id="L14"></span>
+<span id="keep-four-kinds-of-data-separate"></span><span id="L15">## Keep four kinds of data separate</span>
+<span id="L16"></span>
+<span id="L17">| Data | Example | Appropriate treatment |</span>
+<span id="L18">|---|---|---|</span>
+<span id="L19">| Current truth | Energy reserve is 42; creature is resting. | Authoritative ECS state, read by the inspector. |</span>
+<span id="L20">| Observed information | Food was visible at a location on tick 18. | Actor-specific data only when memory exists. |</span>
+<span id="L21">| Semantic history | Creature 17 ate from patch 3 on tick 20. | One event, linked to both participants. |</span>
+<span id="L22">| Measurements | There are 12 living grazers at tick 100. | Post-commit aggregate sample with explicit scope. |</span>
+<span id="L23"></span>
+<span id="L24">A sampled chart cannot reconstruct every event. An event log without pending work cannot necessarily resume a simulation. A selected creature&#x27;s inspector must not feed its omniscient information back into that creature&#x27;s policy.</span>
+<span id="L25"></span>
+<span id="stable-identity"></span><span id="L26">## Stable identity</span>
+<span id="L27"></span>
+<span id="L28">Assign a `SimId` to each significant creature and resource. Combine it with a run identifier when records leave the current run. Keep event IDs stable within the run and allocate them in defined resolution order.</span>
+<span id="L29"></span>
+<span id="L30">`SimId` is implemented. Separate event IDs remain proposed: current journal</span>
+<span id="L31">entries contain a tick, participants and an event kind. The numbered event below</span>
+<span id="L32">illustrates future recording rather than a current journal field.</span>
+<span id="L33"></span>
+<span id="L34">Do not persist Bevy `Entity` handles as identities. Later birth records link parent IDs to the child ID; a species/kind label is not a lineage. A dead creature can retain a small historical record after its live components are removed.</span>
+<span id="L35"></span>
+<span id="a-semantic-event"></span><span id="L36">## A semantic event</span>
+<span id="L37"></span>
+<span id="L38">Use a concrete Rust enum and a shared envelope before considering a generic event schema. The following is illustrative data, not a required JSON format:</span>
+<span id="L39"></span>
+<span id="L40">```text</span>
+<span id="L41">Event 81 — ConsumedFood</span>
+<span id="L42">Tick: 20</span>
+<span id="L43">Participants: eater=17, source=3</span>
+<span id="L44">Place: cell (9, 4)</span>
+<span id="L45">Cause: completed Eat activity, decision 76</span>
+<span id="L46">Inputs: available biomass=8, eater capacity remaining=6</span>
+<span id="L47">Changes: biomass 8→2, energy 42→48</span>
+<span id="L48">```</span>
+<span id="L49"></span>
+<span id="L50">Other events arrive with their features: activity changed, rest completed, birth, death with a recorded cause, predation, rejected interaction, parameter change, and explicit experiment intervention.</span>
+<span id="L51"></span>
+<span id="L52">Emit a single shared predation event or explicitly linked predation/death events with distinct meanings. Do not count the same death twice. Initialization is not reproduction: seeded population counts and later birth counts remain distinct.</span>
+<span id="L53"></span>
+<span id="explain-only-the-reasoning-that-exists"></span><span id="L54">## Explain only the reasoning that exists</span>
+<span id="L55"></span>
+<span id="L56">For a simple conditional policy, record the branch and its relevant inputs:</span>
+<span id="L57"></span>
+<span id="L58">```text</span>
+<span id="L59">Selected SeekFood because energy 18 was below the start threshold 45.</span>
+<span id="L60">Patch 3 was observed within range and won the distance/ID tie-break.</span>
+<span id="L61">```</span>
+<span id="L62"></span>
+<span id="L63">Do not invent a utility score, emotion, or rationale that was not computed. If later utility scoring exists, keep the actual factors and referenced observations. Label speculative analysis separately from the recorded explanation.</span>
+<span id="L64"></span>
+<span id="L65">Keep decision inputs distinct from the final state of the tick. In the proposed</span>
+<span id="L66">foraging loop, a seeking animal can decide at reserve 73, eat 4, and finish at</span>
+<span id="L67">77 while still Seeking; the next choice sees the replenished reserve. A post-tick</span>
+<span id="L68">snapshot alone cannot tell us which value the earlier policy read. When that</span>
+<span id="L69">distinction matters, inspect the actual input in a focused test or a bounded</span>
+<span id="L70">debug trace. Add lasting history only for an outcome or transition worth retaining;</span>
+<span id="L71">do not invent an earlier input by subtracting guessed costs from the final value.</span>
+<span id="L72"></span>
+<span id="L73">Record meaningful activity changes rather than emitting an identical “still walking” decision every tick. Repeated failures may be coalesced with a count and first/last ticks; do not disguise coalescing as individual event retention.</span>
+<span id="L74"></span>
+<span id="measurements-that-answer-concrete-questions"></span><span id="L75">## Measurements that answer concrete questions</span>
+<span id="L76"></span>
+<span id="L77">Initial population samples can contain living count by kind, total available food, mean/minimum energy for living creatures, and cumulative births/deaths by recorded cause. Include tick, sample scope, units, and count used by a mean. An empty population has an unavailable mean, not an invented zero-energy individual.</span>
+<span id="L78"></span>
+<span id="L79">Reconcile population accounting:</span>
+<span id="L80"></span>
+<span id="L81">```text</span>
+<span id="L82">living now = seeded population + births + explicit additions</span>
+<span id="L83">           - deaths - explicit removals</span>
+<span id="L84">```</span>
+<span id="L85"></span>
+<span id="L86">Measurements should cover the configured world, not just the camera viewport. Sampling frequency should be visible; no graph should imply exact per-tick data from coarse samples. Later attribute histograms and lineages can build on the same identities and samples.</span>
+<span id="L87"></span>
+<span id="bounded-memory-without-false-completeness"></span><span id="L88">## Bounded memory without false completeness</span>
+<span id="L89"></span>
+<span id="L90">Browser storage and memory are not an unlimited archive. Proposed stages:</span>
+<span id="L91"></span>
+<span id="L92">**First:** a bounded in-memory event ring, a small selected-entity view, and run-level counters. Show the earliest retained tick/event and the number of evicted events. Counters may cover the whole run even when details do not; label those different coverage windows.</span>
+<span id="L93"></span>
+<span id="L94">The earliest retained tick identifies the first surviving entry, not necessarily</span>
+<span id="L95">the start of complete coverage. With capacity 32, recording 35 events on tick 120</span>
+<span id="L96">evicts the first three but still leaves tick 120 as the oldest retained tick.</span>
+<span id="L97">Label that as **first retained event: tick 120**, not **complete since tick 120**.</span>
+<span id="L98">Future event sequence IDs can identify the retained suffix precisely; timestamps</span>
+<span id="L99">alone cannot distinguish events within the boundary tick.</span>
+<span id="L100"></span>
+<span id="L101">Separate retention from collection. The current journal records initialization;</span>
+<span id="L102">three maintenance ticks can change both animals&#x27; reserves from 60 to 57 while</span>
+<span id="L103">its four entries remain unchanged and its eviction count stays zero. Zero</span>
+<span id="L104">evictions means no recorded entries were dropped, not that every change was</span>
+<span id="L105">recorded. Future inspection needs to preserve these meanings:</span>
+<span id="L106"></span>
+<span id="L107">| Evidence available | What the view may say |</span>
+<span id="L108">| --- | --- |</span>
+<span id="L109">| An initialized counter covers every resolved death since run start and is zero. | No recorded deaths in this run. |</span>
+<span id="L110">| The counter reports deaths whose event details have been evicted. | The total is known; some individual details are unavailable. |</span>
+<span id="L111">| Death outcomes were not collected for the requested scope. | Uncollected or unknown, rather than a numeric zero. |</span>
+<span id="L112"></span>
+<span id="L113">Increment whole-run counters from actual resolved outcomes independently of</span>
+<span id="L114">detail retention. A total eviction count is not a per-kind count: one retained</span>
+<span id="L115">death and three evicted events does not tell us how many of those three were</span>
+<span id="L116">deaths. Do not reconstruct the death total by adding all evictions to visible</span>
+<span id="L117">death rows. This accounting rule belongs to future lifecycle integration; it</span>
+<span id="L118">does not add counters or death behavior to today&#x27;s foundation.</span>
+<span id="L119"></span>
+<span id="L120">**Next:** periodic bounded aggregate samples, lightweight dead-entity summaries, and explicit JSON/CSV export. Put a budget on tombstones and participant indexes too; removing old history must also remove or mark stale index links.</span>
+<span id="L121"></span>
+<span id="L122">**Later:** local persistence or richer export when a concrete workflow needs it. IndexedDB is a candidate, not a selected dependency. Browser-held data may be subject to quotas and eviction, so a stored run is not a promise of permanent archival. [R7](../research/README.md#r7-browser-storage)</span>
+<span id="L123"></span>
+<span id="L124">At a storage or memory limit, surface the policy: evict visibly, pause recording, or pause the run until export. Do not grow indefinitely or silently claim full lifetime coverage. No SQLite or remote database is required to begin.</span>
+<span id="L125"></span>
+<span id="exports-and-future-saves"></span><span id="L126">## Exports and future saves</span>
+<span id="L127"></span>
+<span id="L128">A useful export includes schema/rules/build identifiers, configuration, seed and random algorithm when used, run/tick coverage, units, event-retention information, and actual interventions. Export large IDs safely for browser tooling, for example as decimal strings rather than numbers that a JavaScript reader could round. [R9](../research/README.md#r9-numeric-ids-in-browser-exports)</span>
+<span id="L129"></span>
+<span id="L130">A future resumable snapshot additionally needs all authoritative state, ID allocation, random state, pending actions, relevant observations, counters, and version information. Validate imports; reject unsupported or corrupted data without silently resetting the world. Imports are not an early prerequisite.</span>
+<span id="L131"></span>
+<span id="debugging-is-not-telemetry"></span><span id="L132">## Debugging is not telemetry</span>
+<span id="L133"></span>
+<span id="L134">Console diagnostics are useful but are not the simulation&#x27;s history. Keep per-tick traces optional and bounded. Do not upload runs, diagnostics, or learning notes to any service by default.</span>
+<span id="L135"></span>
+<span id="L136">Minimal tests should eventually verify: one food source cannot be consumed twice; one death is counted once; parent links match real births; aggregates reconcile; camera changes do not affect samples; and history eviction is visible. Add each test alongside the behavior it protects.</span></pre></body></html>

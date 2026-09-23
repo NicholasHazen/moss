@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="720" viewBox="0 0 1000 720" role="img" aria-labelledby="title desc">
+  <title id="title">One disappearance, three kinds of evidence</title>
+  <desc id="desc">An illustrative future terminal resolver removes Fern once on tick 120. The live population falls from six to five. A whole-run death counter advances from zero to one. A separate bounded journal retains Fern's detail among 32 records, while three earlier records from the same tick have been evicted. The counter can cover the whole run even when event detail is partial.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#477052" stroke-width="1.5"/></marker>
+    <pattern id="missing" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M-2 2L2-2M0 8L8 0M6 10L10 6" stroke="#bb9780" stroke-width="1"/></pattern>
+  </defs>
+  <rect width="1000" height="720" rx="16" fill="#f7f7ee"/>
+  <g font-family="system-ui, sans-serif" fill="#293d2d">
+    <text x="40" y="43" font-size="13" letter-spacing="1.8" fill="#64715b">ILLUSTRATIVE FUTURE INTEGRATION · NO BIRTHS OR OTHER REMOVALS</text>
+    <text x="40" y="86" font-family="Georgia,serif" font-size="32">One disappearance, three kinds of evidence</text>
+    <rect x="40" y="116" width="920" height="102" rx="10" fill="#e6eedf" stroke="#bdcdb7"/>
+    <text x="62" y="146" font-size="14" font-weight="700" letter-spacing="1">THE COMMITTED OUTCOME · EXECUTING TICK 120</text>
+    <text x="62" y="180" font-size="22">Fern #1 is removed once, after meals leave reserve at zero.</text>
+    <text x="62" y="202" font-size="14" fill="#54644e">Only successful resolution updates the records below. A candidate is not another death.</text>
+    <g fill="none" stroke="#477052" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M240 218V257"/><path d="M760 218V257"/>
+    </g>
+    <rect x="40" y="264" width="440" height="165" rx="10" fill="#fffef9" stroke="#c7d2be"/>
+    <rect x="520" y="264" width="440" height="165" rx="10" fill="#fffef9" stroke="#c7d2be"/>
+    <text x="62" y="294" font-size="14" font-weight="700" letter-spacing="1">CURRENT WORLD</text>
+    <text x="542" y="294" font-size="14" font-weight="700" letter-spacing="1">WHOLE-RUN COUNTER</text>
+    <text x="62" y="346" font-size="42" fill="#285943">6 → 5</text>
+    <text x="542" y="346" font-size="42" fill="#285943">0 → 1</text>
+    <text x="62" y="379" font-size="17">Living hares, counted from the ECS.</text>
+    <text x="62" y="406" font-size="14" fill="#54644e">Fern's components are no longer present.</text>
+    <text x="542" y="379" font-size="17">Resolved deaths since run start.</text>
+    <text x="542" y="406" font-size="14" fill="#54644e">Independent of retained event-detail rows.</text>
+    <rect x="40" y="451" width="920" height="179" rx="10" fill="#fffef9" stroke="#c7d2be"/>
+    <text x="62" y="482" font-size="14" font-weight="700" letter-spacing="1">BOUNDED DETAIL · 35 RECORDS WRITTEN ON THE SAME TICK</text>
+    <rect x="62" y="502" width="175" height="42" rx="4" fill="url(#missing)" stroke="#b18c73" stroke-dasharray="4 3"/>
+    <rect x="249" y="502" width="687" height="42" rx="4" fill="#dce9d2" stroke="#78976b"/>
+    <text x="79" y="529" font-size="16">3 earlier evicted</text>
+    <text x="268" y="529" font-size="16">32 retained · including “Fern #1 · starvation · tick 120”</text>
+    <text x="62" y="579" font-size="18">First retained tick: 120. Detail coverage within tick 120 is partial.</text>
+    <text x="62" y="605" font-size="15" fill="#54644e">Eviction loses detail. It does not subtract from the independent whole-run counter.</text>
+    <text x="40" y="674" font-size="22" font-family="Georgia,serif">6 seeded + 0 births − 1 resolved death = 5 living</text>
+    <text x="40" y="702" font-size="14" fill="#54644e">If the counter was never collected, missing event details cannot tell us the total.</text>
+  </g>
+</svg>

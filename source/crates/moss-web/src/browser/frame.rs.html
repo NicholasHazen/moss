@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>crates/moss-web/src/browser/frame.rs · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>crates/moss-web/src/browser/frame.rs</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>0c35f742a5b02726d57b4580d01211c85d2edcb34ae977392a35b5eb99359a00</code></p><pre><span id="L1">//! Apply browser actions in order, request ticks, then publish the current view.</span>
+<span id="L2">use bevy::prelude::*;</span>
+<span id="L3">use moss_sim::{Position, SimId, WorldConfig};</span>
+<span id="L4"></span>
+<span id="L5">use super::{</span>
+<span id="L6">    MARKER_SIDE, Presentation,</span>
+<span id="L7">    bridge::{Action, Input, fail, render, take_input},</span>
+<span id="L8">    scene::sync_view,</span>
+<span id="L9">    snapshot::snapshot,</span>
+<span id="L10">};</span>
+<span id="L11"></span>
+<span id="L12">pub(super) fn frame(world: &amp;mut World) {</span>
+<span id="L13">    let input = match serde_json::from_str::&lt;Input&gt;(&amp;take_input()) {</span>
+<span id="L14">        Ok(input) =&gt; input,</span>
+<span id="L15">        Err(error) =&gt; {</span>
+<span id="L16">            fail(&amp;format!(&quot;Browser input could not be read: {error}&quot;));</span>
+<span id="L17">            return;</span>
+<span id="L18">        }</span>
+<span id="L19">    };</span>
+<span id="L20">    world.resource_scope(|world, mut ui: Mut&lt;Presentation&gt;| {</span>
+<span id="L21">        let width = world.resource::&lt;WorldConfig&gt;().width();</span>
+<span id="L22">        let height = world.resource::&lt;WorldConfig&gt;().height();</span>
+<span id="L23">        let new_size = [input.width.max(1.0), input.height.max(1.0)];</span>
+<span id="L24">        if ui.map.size != new_size {</span>
+<span id="L25">            ui.map.size = new_size;</span>
+<span id="L26">            if ui.map.fitted {</span>
+<span id="L27">                ui.map.fit(width, height);</span>
+<span id="L28">            }</span>
+<span id="L29">        }</span>
+<span id="L30">        ui.playback.visibility(input.hidden, input.hidden_epoch);</span>
+<span id="L31">        for action in input.actions {</span>
+<span id="L32">            match action {</span>
+<span id="L33">                Action::TogglePlay if !input.hidden =&gt; {</span>
+<span id="L34">                    let running = !ui.playback.running;</span>
+<span id="L35">                    ui.playback.set_running(running);</span>
+<span id="L36">                }</span>
+<span id="L37">                Action::Step if !input.hidden =&gt; {</span>
+<span id="L38">                    ui.playback.set_running(false);</span>
+<span id="L39">                    moss_sim::tick(world);</span>
+<span id="L40">                }</span>
+<span id="L41">                Action::Reset =&gt; {</span>
+<span id="L42">                    moss_sim::reset(world);</span>
+<span id="L43">                    ui.playback.set_running(false);</span>
+<span id="L44">                    ui.playback.suspended = false;</span>
+<span id="L45">                    ui.selected = None;</span>
+<span id="L46">                    ui.map.fit(width, height);</span>
+<span id="L47">                }</span>
+<span id="L48">                Action::Fit =&gt; ui.map.fit(width, height),</span>
+<span id="L49">                Action::Select { id } =&gt; ui.selected = id.parse::&lt;u64&gt;().ok().map(SimId),</span>
+<span id="L50">                Action::Pan { dx, dy } =&gt; ui.map.pan(dx, dy),</span>
+<span id="L51">                Action::Zoom { x, y, factor } =&gt; ui.map.zoom(x, y, factor),</span>
+<span id="L52">                Action::Click { x, y } =&gt; {</span>
+<span id="L53">                    let point = ui.map.world_at(x, y);</span>
+<span id="L54">                    // Accessible click targets can grow with zoom; biology never</span>
+<span id="L55">                    // reads this square hit area or the renderer&#x27;s marker size.</span>
+<span id="L56">                    let tolerance = (10.0 * ui.map.units_per_pixel).max(MARKER_SIDE / 2.0);</span>
+<span id="L57">                    ui.selected = world</span>
+<span id="L58">                        .query::&lt;(&amp;SimId, &amp;Position)&gt;()</span>
+<span id="L59">                        .iter(world)</span>
+<span id="L60">                        .filter_map(|(id, position)| {</span>
+<span id="L61">                            let dx = position.x as f32 + 0.5 - point[0];</span>
+<span id="L62">                            let dy = position.y as f32 + 0.5 - point[1];</span>
+<span id="L63">                            let distance = dx * dx + dy * dy;</span>
+<span id="L64">                            (dx.abs() &lt;= tolerance &amp;&amp; dy.abs() &lt;= tolerance)</span>
+<span id="L65">                                .then_some((*id, distance))</span>
+<span id="L66">                        })</span>
+<span id="L67">                        .min_by(|a, b| a.1.total_cmp(&amp;b.1).then(a.0.cmp(&amp;b.0)))</span>
+<span id="L68">                        .map(|(id, _)| id);</span>
+<span id="L69">                }</span>
+<span id="L70">                Action::TogglePlay | Action::Step =&gt; {}</span>
+<span id="L71">            }</span>
+<span id="L72">        }</span>
+<span id="L73">        for _ in 0..ui.playback.advance(input.now_ms) {</span>
+<span id="L74">            moss_sim::tick(world);</span>
+<span id="L75">        }</span>
+<span id="L76">        sync_view(world, &amp;ui);</span>
+<span id="L77">        let snapshot = snapshot(world, &amp;ui, width, height);</span>
+<span id="L78">        // UI is a projection of ECS state, sent only when its displayed values change.</span>
+<span id="L79">        let json = serde_json::to_string(&amp;snapshot).expect(&quot;finite presentation values&quot;);</span>
+<span id="L80">        if json != ui.last_snapshot {</span>
+<span id="L81">            render(&amp;json);</span>
+<span id="L82">            ui.last_snapshot = json;</span>
+<span id="L83">        }</span>
+<span id="L84">    });</span>
+<span id="L85">}</span></pre></body></html>

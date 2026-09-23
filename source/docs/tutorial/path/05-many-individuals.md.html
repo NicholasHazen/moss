@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/tutorial/path/05-many-individuals.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/tutorial/path/05-many-individuals.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>cd6d3c06b22d52cdd30fc92457ef084358fad51b84aa9fe5a51ef00ffc5a1644</code></p><pre><span id="05-read-the-population-without-losing-the-individuals"></span><span id="L1"># 05. Read the population without losing the individuals</span>
+<span id="L2"></span>
+<span id="L3">[Path home](README.md) · Previous: [when to seek](04-when-to-seek.md) · Next: [owned costs](06-owned-costs.md)</span>
+<span id="L4"></span>
+<span id="L5">**Future checkpoint · 20–30 minutes after autonomous foraging is reviewed.**</span>
+<span id="L6">The agent prepares the authored population scenario, deterministic reset, browser</span>
+<span id="L7">selector and species summary plumbing. Your edit is one small summary function</span>
+<span id="L8">at a prepared landmark in a simulation-owned observation module. Its exact live</span>
+<span id="L9">path is recorded before activation; no summary API exists in the current code.</span>
+<span id="L10"></span>
+<span id="L11">Watching Fern tells us whether one animal can feed. Watching six hares lets us</span>
+<span id="L12">ask whether the available food offers similar opportunities to different</span>
+<span id="L13">individuals. The new scene will contain six hares, two foxes and four grass</span>
+<span id="L14">patches, with authored positions and IDs. These counts create an experiment;</span>
+<span id="L15">they do not promise a sustainable ecosystem.</span>
+<span id="L16"></span>
+<span id="remember-what-a-group-means"></span><span id="L17">## Remember what a group means</span>
+<span id="L18"></span>
+<span id="L19">Fern is a nickname, Hare is a species, and Grazer is a food-web role. A species</span>
+<span id="L20">summary groups by `Species`, regardless of nickname. ECS archetype means a set</span>
+<span id="L21">of component types and does not tell us what species a creature belongs to.</span>
+<span id="L22">For example, adding `FoodTarget` can change an entity&#x27;s archetype without turning</span>
+<span id="L23">a hare into another kind of animal.</span>
+<span id="L24"></span>
+<span id="L25">The agent keeps the original three-entity diagnostic scene available. Selecting</span>
+<span id="L26">the population scene starts a fresh run; Reset restores its authored IDs,</span>
+<span id="L27">positions and starting values. We do not need births or random placement to</span>
+<span id="L28">obtain several animals. Keeping placement repeatable gives us a firm baseline</span>
+<span id="L29">for the individual-cost experiment in the next few sessions.</span>
+<span id="L30"></span>
+<span id="L31">At reset every animal has reserve 60 and capacity 100. The hare summary should</span>
+<span id="L32">therefore say count 6, minimum 60, maximum 60 and mean 60. Four patches at biomass</span>
+<span id="L33">80 contribute total biomass 320. Patch count describes local stands of plants,</span>
+<span id="L34">not the number of individual grass blades. Those are different units of observation.</span>
+<span id="L35"></span>
+<span id="summarize-values-that-already-exist"></span><span id="L36">## Summarize values that already exist</span>
+<span id="L37"></span>
+<span id="L38">Suppose the mean reserve is 50. That could describe two comfortable hares at</span>
+<span id="L39">`[50, 50]`, or one empty and one full at `[0, 100]`. The same average tells two</span>
+<span id="L40">different stories. Keeping minimum and maximum beside it lets us see that</span>
+<span id="L41">difference without pretending a summary replaces the individuals.</span>
+<span id="L42"></span>
+<span id="L43">The adapter supplies the reserves for one species. Your function computes their</span>
+<span id="L44">summary without modifying those reserves. This is a read-only projection of the</span>
+<span id="L45">authoritative world, much like the renderer derives a transform from `Position`.</span>
+<span id="L46">A summary never becomes a second place that owns animal energy.</span>
+<span id="L47"></span>
+<span id="L48">Your one edit is the prepared `summarize_energy` body. On `[20, 60]`, start with</span>
+<span id="L49">the first value: total, minimum and maximum are all 20. Visiting 60 changes the</span>
+<span id="L50">total to 80 and maximum to 60, while minimum stays 20. Two members give a mean</span>
+<span id="L51">of `80 / 2 = 40`. An empty slice needs a separate answer because it has no first</span>
+<span id="L52">member and no meaningful mean.</span>
+<span id="L53"></span>
+<span id="check-the-view-against-its-members"></span><span id="L54">## Check the view against its members</span>
+<span id="L55"></span>
+<span id="L56">Run the live summary test prepared alongside `summarize_energy`; the agent records</span>
+<span id="L57">its file and exact command before the session. The unfinished body should fail,</span>
+<span id="L58">then your edit should pass the mixed-values and empty-input cases. If `[20, 60]`</span>
+<span id="L59">reports 20 or 60 as its mean, inspect the accumulator and divisor rather than</span>
+<span id="L60">changing the fixture.</span>
+<span id="L61"></span>
+<span id="a-complete-summary-example"></span><span id="L62">## A complete summary example</span>
+<span id="L63"></span>
+<span id="L64">The **optional worked answer** below defines the return type and test locally.</span>
+<span id="L65">The agent prepares their live equivalents; you supply only the summary calculation.</span>
+<span id="L66">Notice that this function needs a borrowed slice of numbers, not mutable access</span>
+<span id="L67">to an ECS world.</span>
+<span id="L68"></span>
+<span id="L69">&lt;!-- runnable: session-05 --&gt;</span>
+<span id="L70">```rust</span>
+<span id="L71">#[derive(Debug, PartialEq)]</span>
+<span id="L72">struct EnergySummary {</span>
+<span id="L73">    count: usize,</span>
+<span id="L74">    minimum: u32,</span>
+<span id="L75">    maximum: u32,</span>
+<span id="L76">    mean: f64,</span>
+<span id="L77">}</span>
+<span id="L78"></span>
+<span id="L79">fn summarize_energy(reserves: &amp;[u32]) -&gt; Option&lt;EnergySummary&gt; {</span>
+<span id="L80">    let (&amp;first, rest) = reserves.split_first()?;</span>
+<span id="L81">    let mut total = u64::from(first);</span>
+<span id="L82">    let mut minimum = first;</span>
+<span id="L83">    let mut maximum = first;</span>
+<span id="L84">    for &amp;reserve in rest {</span>
+<span id="L85">        total = total</span>
+<span id="L86">            .checked_add(u64::from(reserve))</span>
+<span id="L87">            .expect(&quot;population energy total overflow&quot;);</span>
+<span id="L88">        minimum = minimum.min(reserve);</span>
+<span id="L89">        maximum = maximum.max(reserve);</span>
+<span id="L90">    }</span>
+<span id="L91">    Some(EnergySummary {</span>
+<span id="L92">        count: reserves.len(),</span>
+<span id="L93">        minimum,</span>
+<span id="L94">        maximum,</span>
+<span id="L95">        mean: total as f64 / reserves.len() as f64,</span>
+<span id="L96">    })</span>
+<span id="L97">}</span>
+<span id="L98"></span>
+<span id="L99">#[test]</span>
+<span id="L100">fn session_05_a_mean_has_members_and_limits() {</span>
+<span id="L101">    assert_eq!(</span>
+<span id="L102">        summarize_energy(&amp;[20, 60]),</span>
+<span id="L103">        Some(EnergySummary {</span>
+<span id="L104">            count: 2,</span>
+<span id="L105">            minimum: 20,</span>
+<span id="L106">            maximum: 60,</span>
+<span id="L107">            mean: 40.0,</span>
+<span id="L108">        })</span>
+<span id="L109">    );</span>
+<span id="L110">    assert_eq!(</span>
+<span id="L111">        summarize_energy(&amp;[60; 6]),</span>
+<span id="L112">        Some(EnergySummary {</span>
+<span id="L113">            count: 6,</span>
+<span id="L114">            minimum: 60,</span>
+<span id="L115">            maximum: 60,</span>
+<span id="L116">            mean: 60.0,</span>
+<span id="L117">        })</span>
+<span id="L118">    );</span>
+<span id="L119">    assert_eq!(summarize_energy(&amp;[]), None);</span>
+<span id="L120">    assert_eq!(summarize_energy(&amp;[20, 21]).unwrap().mean, 20.5);</span>
+<span id="L121">    let unequal = summarize_energy(&amp;[0, 100]).unwrap();</span>
+<span id="L122">    let equal = summarize_energy(&amp;[50, 50]).unwrap();</span>
+<span id="L123">    assert_eq!(unequal.mean, equal.mean);</span>
+<span id="L124">    assert_eq!((unequal.minimum, unequal.maximum), (0, 100));</span>
+<span id="L125">    assert_eq!((equal.minimum, equal.maximum), (50, 50));</span>
+<span id="L126">}</span>
+<span id="L127">```</span>
+<span id="L128"></span>
+<span id="L129">For `[20, 60]`, `split_first` returns borrowed pieces: a reference to `20` and a</span>
+<span id="L130">slice containing `60`. In `let (&amp;first, rest)`, the `&amp;first` pattern copies that</span>
+<span id="L131">first `u32` into a local number; `rest` remains a borrowed slice. Neither operation</span>
+<span id="L132">removes an element from the caller&#x27;s data. The `?` unwraps the pair when present,</span>
+<span id="L133">or returns `None` from this summary immediately when the input is empty.</span>
+<span id="L134"></span>
+<span id="L135">This is a compact use of the absence we encountered when no food qualified. Here</span>
+<span id="L136">an empty group has no mean, minimum or maximum; displaying zero would invent a</span>
+<span id="L137">measurement and make “no hares” resemble “hares with no energy.”</span>
+<span id="L138"></span>
+<span id="L139">The first member supplies valid initial minimum and maximum values. We accumulate</span>
+<span id="L140">in `u64` to provide more room than an individual `u32` reserve, still checking</span>
+<span id="L141">addition. Division uses floating point so a mean such as 20.5 is not truncated.</span>
+<span id="L142">These small diagnostic populations fit comfortably; this display calculation is</span>
+<span id="L143">not a promise of exact floating-point summaries at arbitrary scale.</span>
+<span id="L144"></span>
+<span id="L145">**Optional:** run the complete answer; expect one passing reference test.</span>
+<span id="L146"></span>
+<span id="L147">```sh</span>
+<span id="L148">python3 docs/tutorial/authoring/check_path_examples.py --session 05</span>
+<span id="L149">```</span>
+<span id="L150"></span>
+<span id="L151">[What this checks](README.md#checking-your-work) · [Recorded evidence](verification.md)</span>
+<span id="L152"></span>
+<span id="L153">After integration, select the population scene and inspect two hares before and</span>
+<span id="L154">after several Steps. Travel and eating may produce different reserves even when</span>
+<span id="L155">maintenance rates match. Those two inspections give the summary a concrete</span>
+<span id="L156">meaning; they cannot verify a six-hare mean. The agent also gathers all six hare</span>
+<span id="L157">reserves, checks their count and sum, and compares the derived minimum, maximum</span>
+<span id="L158">and mean with the display. Foxes and grass patches are checked separately so a</span>
+<span id="L159">correct formula cannot hide incorrect species filtering. Do not expect every</span>
+<span id="L160">food-containing scene to follow a maintenance-only prediction. Reset should</span>
+<span id="L161">restore the literal starting counts and values above.</span>
+<span id="L162"></span>
+<span id="L163">Send: **“Session 05&#x27;s summary is green. Review the empty-group case and compare</span>
+<span id="L164">the browser summary with individuals; keep the diagnostic scenario available.”**</span>
+<span id="L165">The summary gives unequal outcomes somewhere visible to appear. Next we will</span>
+<span id="L166">make one controlled difference belong to an individual rather than to its species.</span></pre></body></html>

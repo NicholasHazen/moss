@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/tutorial/context/a-tick-through-moss.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/tutorial/context/a-tick-through-moss.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>33838c9a7332accd6dc217e3892cd7a958c2f0e116c57c7e74f527e21fb122f1</code></p><pre><span id="follow-one-step-through-moss"></span><span id="L1"># Follow one Step through Moss</span>
+<span id="L2"></span>
+<span id="L3">[Context shelf](README.md) · [Guide home](../README.md) · [Species energy](../01-species-energy.md)</span>
+<span id="L4"></span>
+<span id="L5">Fern has 60 energy. You press Step, and the inspector shows 59. Several files</span>
+<span id="L6">cooperate to make that happen, but only one short loop decides the energy</span>
+<span id="L7">change. Following that single number gives us a useful tour of the codebase.</span>
+<span id="L8"></span>
+<span id="L9">This source walkthrough was reviewed on September 23, 2026. The</span>
+<span id="L10">[runtime record](../../development/verification.md) retains the earlier native</span>
+<span id="L11">species-rate and default-rate browser checks. Custom-rate browser acceptance</span>
+<span id="L12">remains pending. Foraging remains planned work.</span>
+<span id="L13"></span>
+<span id="on-this-page"></span><span id="L14">## On this page</span>
+<span id="L15"></span>
+<span id="L16">- [The browser requests a tick](#the-browser-requests-a-tick)</span>
+<span id="L17">- [The schedule gives the tick an order](#the-schedule-gives-the-tick-an-order)</span>
+<span id="L18">- [The query reaches both animals](#the-query-reaches-both-animals)</span>
+<span id="L19">- [The inspector reads the result](#the-inspector-reads-the-result)</span>
+<span id="L20">- [A test takes the same route](#a-test-takes-the-same-route)</span>
+<span id="L21"></span>
+<span id="the-browser-requests-a-tick"></span><span id="L22">## The browser requests a tick</span>
+<span id="L23"></span>
+<span id="L24">The controls live in [shell.js](../../../crates/moss-web/shell.js).</span>
+<span id="L25">[browser.rs](../../../crates/moss-web/src/browser.rs) sets up the application;</span>
+<span id="L26">[browser/bridge.rs](../../../crates/moss-web/src/browser/bridge.rs) defines its</span>
+<span id="L27">JavaScript connection and input messages. The `frame` function in</span>
+<span id="L28">[browser/frame.rs](../../../crates/moss-web/src/browser/frame.rs) applies those</span>
+<span id="L29">messages in order. Step pauses continuous playback and requests one complete</span>
+<span id="L30">simulation tick. Play requests ticks as time accumulates. Neither control</span>
+<span id="L31">contains the rule that subtracts energy.</span>
+<span id="L32"></span>
+<span id="L33">Drawing another frame does not itself spend energy. Autonomous biological rules</span>
+<span id="L34">advance through executed simulation ticks. Compare outcomes after the same ticks</span>
+<span id="L35">and accepted inputs, starting from the same world and rules. An explicit Reset</span>
+<span id="L36">replaces the run through the</span>
+<span id="L37">separate `moss_sim::reset` command; it is not another tick.</span>
+<span id="L38">[playback.rs](../../../crates/moss-web/src/playback.rs) handles timing decisions,</span>
+<span id="L39">including bounded automatic playback and hidden-tab suspension. Returning to a hidden</span>
+<span id="L40">page leaves playback paused; there is no offline progress.</span>
+<span id="L41"></span>
+<span id="L42">Equal wall time is a different comparison. During Play, a delayed frame requests</span>
+<span id="L43">at most four automatic ticks and discards excess elapsed time. It does not save</span>
+<span id="L44">that excess for later. Here are two calls-to-ticks traces, each starting with</span>
+<span id="L45">Play enabled, a baseline frame at 0 ms, and the default reserve of 60:</span>
+<span id="L46"></span>
+<span id="L47">| Automatic playback updates over two seconds | Result after those updates |</span>
+<span id="L48">| --- | --- |</span>
+<span id="L49">| Every 250 ms, through 2,000 ms | Eight ticks; each animal&#x27;s reserve is 52. |</span>
+<span id="L50">| One late update at 2,000 ms | Four ticks; each reserve is 56; playback reports that it slowed. |</span>
+<span id="L51"></span>
+<span id="L52">In both cases, a following update at 2,250 ms requests one tick. The delayed</span>
+<span id="L53">case does not recover the discarded four. The animals experienced different</span>
+<span id="L54">amounts of simulation time during the same two seconds of wall time; their</span>
+<span id="L55">maintenance rule still costs one per executed tick. Manual Step continues to</span>
+<span id="L56">request exactly one complete tick. An [isolated native check](../../history/tutorial/2026-09-23.md#wall-time-and-executed-ticks)</span>
+<span id="L57">verified these numbers using the existing playback code and installed simulation;</span>
+<span id="L58">it did not simulate a real browser stall.</span>
+<span id="L59"></span>
+<span id="the-schedule-gives-the-tick-an-order"></span><span id="L60">## The schedule gives the tick an order</span>
+<span id="L61"></span>
+<span id="L62">In [simulation.rs](../../../crates/moss-sim/src/simulation.rs), `install` creates</span>
+<span id="L63">`SimTick`, an explicitly ordered, single-threaded schedule. This is an excerpt</span>
+<span id="L64">from the existing installation code, not a new edit:</span>
+<span id="L65"></span>
+<span id="L66">```rust</span>
+<span id="L67">schedule.add_systems((lessons::spend_energy, complete_tick).chain());</span>
+<span id="L68">```</span>
+<span id="L69"></span>
+<span id="L70">`chain()` orders the two functions. Maintenance changes reserves first;</span>
+<span id="L71">`complete_tick` advances the completed-tick counter afterward. `tick(&amp;mut world)`</span>
+<span id="L72">runs this schedule once. At the point the inspector says tick 1, that tick&#x27;s</span>
+<span id="L73">maintenance is already complete.</span>
+<span id="L74"></span>
+<span id="L75">A schedule is where execution order belongs. Movement is the next planned</span>
+<span id="L76">addition between maintenance and completion. Its adapter exists but remains</span>
+<span id="L77">unscheduled until the helper is implemented and reviewed. Choice and eating</span>
+<span id="L78">are later rules. A named function is not a running rule merely because it</span>
+<span id="L79">appears in `lessons.rs`.</span>
+<span id="L80"></span>
+<span id="the-query-reaches-both-animals"></span><span id="L81">## The query reaches both animals</span>
+<span id="L82"></span>
+<span id="L83">Chapter 1 updated this function in</span>
+<span id="L84">[lessons.rs](../../../crates/moss-sim/src/lessons.rs). This block shows its</span>
+<span id="L85">current implementation for reading:</span>
+<span id="L86"></span>
+<span id="L87">```rust</span>
+<span id="L88">pub fn spend_energy(</span>
+<span id="L89">    rules: Res&lt;SpeciesEnergyRules&gt;,</span>
+<span id="L90">    mut creatures: Query&lt;(&amp;Species, &amp;mut Energy), With&lt;Creature&gt;&gt;,</span>
+<span id="L91">) {</span>
+<span id="L92">    for (species, mut energy) in &amp;mut creatures {</span>
+<span id="L93">        if let Some(cost) = rules.maintenance_units_per_tick(*species) {</span>
+<span id="L94">            energy.reserve = energy.reserve.saturating_sub(cost);</span>
+<span id="L95">        }</span>
+<span id="L96">    }</span>
+<span id="L97">}</span>
+<span id="L98">```</span>
+<span id="L99"></span>
+<span id="L100">The query requests `Species` and mutable `Energy` from entities carrying `Creature`.</span>
+<span id="L101">Fern and Flint both match. Meadow has `FoodPatch` instead of `Creature`, so</span>
+<span id="L102">this loop never treats its biomass as an animal reserve. The query does not</span>
+<span id="L103">look up either animal by nickname.</span>
+<span id="L104"></span>
+<span id="L105">With the default rate of 1, starting at 60 leaves 59 after one pass. Starting</span>
+<span id="L106">at 0, `saturating_sub(cost)` leaves</span>
+<span id="L107">0 rather than underflowing an unsigned integer. No code here despawns the animal.</span>
+<span id="L108">That is why zero energy currently means an exhausted reserve, not a defined</span>
+<span id="L109">death event.</span>
+<span id="L110"></span>
+<span id="the-inspector-reads-the-result"></span><span id="L111">## The inspector reads the result</span>
+<span id="L112"></span>
+<span id="L113">Back in the browser, `sync_view` in</span>
+<span id="L114">[browser/scene.rs](../../../crates/moss-web/src/browser/scene.rs) updates the</span>
+<span id="L115">visible markers. Then `snapshot` in</span>
+<span id="L116">[browser/snapshot.rs](../../../crates/moss-web/src/browser/snapshot.rs) reads</span>
+<span id="L117">simulation components into presentation data for the DOM inspector. It shows the</span>
+<span id="L118">same authoritative reserve that the rule changed. It does not maintain its own</span>
+<span id="L119">copy of Fern&#x27;s metabolism.</span>
+<span id="L120"></span>
+<span id="L121">Similarly, simulation `Position` contains the cell coordinates. A view transform</span>
+<span id="L122">places a marker on screen. Panning changes how you see the cell; it does not</span>
+<span id="L123">move the animal through the world. These boundaries are conventions in our</span>
+<span id="L124">code, not a claim that ECS prevents every accidental mutation automatically.</span>
+<span id="L125"></span>
+<span id="a-test-takes-the-same-route"></span><span id="L126">## A test takes the same route</span>
+<span id="L127"></span>
+<span id="L128">[maintenance.rs](../../../crates/moss-sim/tests/maintenance.rs) constructs an empty</span>
+<span id="L129">`World`, calls the real `install`, and executes `tick`. No browser or renderer</span>
+<span id="L130">is involved. The existing maintenance regression checks this trace:</span>
+<span id="L131"></span>
+<span id="L132">| Executed ticks | Each animal&#x27;s reserve |</span>
+<span id="L133">| --- | --- |</span>
+<span id="L134">| 0 | 60 |</span>
+<span id="L135">| 3 | 57 |</span>
+<span id="L136">| 63 | 0, with both animals still present |</span>
+<span id="L137"></span>
+<span id="L138">Run that existing test from the workspace root:</span>
+<span id="L139"></span>
+<span id="L140">```sh</span>
+<span id="L141">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test maintenance maintenance_spends_energy_and_stops_at_zero -- --exact</span>
+<span id="L142">```</span>
+<span id="L143"></span>
+<span id="L144">Expect one passing test. It proves the installed native simulation follows this</span>
+<span id="L145">trace; it does not prove that the browser loaded the WASM bundle or displayed it</span>
+<span id="L146">correctly. That is why a completed behavior also gets a browser check.</span>
+<span id="L147"></span>
+<span id="L148">An optional prediction: at the current default rate, what remains after ten</span>
+<span id="L149">executed ticks? The answer is 50 for each animal, independent of how many frames</span>
+<span id="L150">were drawn between those ticks. Reset and ten Steps let you inspect that same</span>
+<span id="L151">prediction in the browser.</span>
+<span id="L152"></span>
+<span id="L153">We have now located the whole 60 → 59 change: input requests a tick, the schedule</span>
+<span id="L154">calls a query-based rule, and presentation reads the resulting state. Chapter 1</span>
+<span id="L155">changed the rate lookup inside this route; the route itself stayed intact.</span></pre></body></html>

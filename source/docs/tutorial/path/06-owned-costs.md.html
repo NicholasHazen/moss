@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/tutorial/path/06-owned-costs.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/tutorial/path/06-owned-costs.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>f99948d76fe401fa4f4dc879b6cc3ab84a7a25ff77c19fb65f6ef2933f0944a7</code></p><pre><span id="06-give-each-animal-a-baseline-it-owns"></span><span id="L1"># 06. Give each animal a baseline it owns</span>
+<span id="L2"></span>
+<span id="L3">[Path home](README.md) · Previous: [many individuals](05-many-individuals.md) · Next: [querying costs](07-querying-costs.md)</span>
+<span id="L4"></span>
+<span id="L5">**Future checkpoint · 20–30 minutes after the population observation is reviewed.**</span>
+<span id="L6">The agent prepares a current green baseline and reconciles the existing</span>
+<span id="L7">[individual-cost chapter](../01d-energy-profiles.md). The component, public</span>
+<span id="L8">re-export and test are preparation. Your edit is the body of `resolve_costs` in</span>
+<span id="L9">`crates/moss-sim/src/energy.rs`: decide whether a spawn uses an override or its</span>
+<span id="L10">species default. Spawn attachment follows through review; maintenance changes</span>
+<span id="L11">in session 07.</span>
+<span id="L12"></span>
+<span id="L13">Two hares can share a species and still differ in upkeep. We might author Fern</span>
+<span id="L14">at the hare default of 1 unit per tick and another hare at 2. A species lookup</span>
+<span id="L15">alone cannot express that difference. We need to decide who owns the value</span>
+<span id="L16">the maintenance rule will actually read.</span>
+<span id="L17"></span>
+<span id="a-template-answers-a-different-question-from-an-instance"></span><span id="L18">## A template answers a different question from an instance</span>
+<span id="L19"></span>
+<span id="L20">Recall that `Energy` is already individual: a meal changes Fern&#x27;s reserve without</span>
+<span id="L21">changing every hare. `SpeciesEnergyRules` is shared configuration. We will retain</span>
+<span id="L22">species defaults as starting instructions and resolve each animal&#x27;s maintenance</span>
+<span id="L23">rate when the animal is created. The resolved value lives in a small component</span>
+<span id="L24">on that animal. During a run, it is the authoritative baseline.</span>
+<span id="L25"></span>
+<span id="L26">This choice addresses the earlier concern about repeated attribute lookups.</span>
+<span id="L27">Maintenance will read a concrete value beside `Energy`, rather than search a</span>
+<span id="L28">chain of individual override, species default and fallback on every tick. It</span>
+<span id="L29">also gives the number a straightforward ownership story. It is a maintainability</span>
+<span id="L30">decision, not a measured claim that this layout is fastest for every population.</span>
+<span id="L31"></span>
+<span id="L32">An authored override needs to distinguish **missing** from **zero**. We already</span>
+<span id="L33">used `Option` when there might be no food target and no population mean. Here</span>
+<span id="L34">`None` means use the species default, while `Some(0)` means this animal explicitly</span>
+<span id="L35">has zero maintenance. Testing `override &gt; 0` would destroy that distinction.</span>
+<span id="L36"></span>
+<span id="L37">Equal numbers can also come from different instructions. With default 1, both</span>
+<span id="L38">`None` and `Some(1)` create a cost of 1. If a later scenario uses default 9,</span>
+<span id="L39">the same authored inputs create 9 and 1. The explicit override still means</span>
+<span id="L40">“this animal costs 1.” Keep that authored input for reconstruction; the resolved</span>
+<span id="L41">number alone cannot tell us whether an override was supplied.</span>
+<span id="L42"></span>
+<span id="L43">![At spawn, a species default of 1 combines with authored overrides None, Some(2) and Some(0) to create three owned cost components containing 1, 2 and 0. Later maintenance reads each component directly.](visuals/default-to-instance.svg)</span>
+<span id="L44"></span>
+<span id="L45">Read the diagram in two moments. During creation, the initializer needs the</span>
+<span id="L46">template and an optional override. During maintenance, that decision is already</span>
+<span id="L47">settled: the query needs only the animal&#x27;s cost component. The template is not</span>
+<span id="L48">consulted again every time Fern pays upkeep. This separates authoring a default</span>
+<span id="L49">from owning a runtime value.</span>
+<span id="L50"></span>
+<span id="keep-the-component-small-and-concrete"></span><span id="L51">## Keep the component small and concrete</span>
+<span id="L52"></span>
+<span id="L53">The prepared component has one field, `maintenance_units_per_tick`. Your helper</span>
+<span id="L54">returns a component populated from `Some(value)`, or from the species default</span>
+<span id="L55">when the override is `None`. This is the same two-way `Option` choice we used for</span>
+<span id="L56">food selection. Here `unwrap_or(fallback)` expresses it directly: take the value</span>
+<span id="L57">inside `Some`, including zero, otherwise use the fallback.</span>
+<span id="L58"></span>
+<span id="L59">One field is enough for this rule; it is not a rule that every number needs its</span>
+<span id="L60">own component. The optional [component-boundary comparison](../context/attributes-and-defaults.md#where-would-one-more-attribute-live)</span>
+<span id="L61">shows when another attribute might belong alongside existing fields or separately.</span>
+<span id="L62"></span>
+<span id="check-initialization-before-attachment"></span><span id="L63">## Check initialization before attachment</span>
+<span id="L64"></span>
+<span id="L65">Run the live `resolve_costs` test prepared with your helper. Its exact file and</span>
+<span id="L66">command are part of the agent&#x27;s handoff before you start. The test must call the</span>
+<span id="L67">live helper and check all three override cases: `None → 1`, `Some(2) → 2`, and</span>
+<span id="L68">`Some(0) → 0`. It should fail at the unfinished body, then pass after your edit.</span>
+<span id="L69">If explicit zero becomes 1, inspect how absence is handled.</span>
+<span id="L70"></span>
+<span id="trace-a-resolved-value"></span><span id="L71">## Trace a resolved value</span>
+<span id="L72"></span>
+<span id="L73">The **optional worked answer below** includes its own component and ownership</span>
+<span id="L74">test so it can run independently. Edit only the prepared live helper body.</span>
+<span id="L75">`MovementRules` continues to supply the shared travel rate of 2 units per cell;</span>
+<span id="L76">no new travel setting or attribute framework is part of this change.</span>
+<span id="L77"></span>
+<span id="L78">&lt;!-- runnable: session-06 --&gt;</span>
+<span id="L79">```rust</span>
+<span id="L80">use bevy_ecs::prelude::Component;</span>
+<span id="L81"></span>
+<span id="L82">#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]</span>
+<span id="L83">pub struct AnimalEnergyCosts {</span>
+<span id="L84">    pub maintenance_units_per_tick: u32,</span>
+<span id="L85">}</span>
+<span id="L86"></span>
+<span id="L87">fn resolve_costs(</span>
+<span id="L88">    species_default: AnimalEnergyCosts,</span>
+<span id="L89">    maintenance_override: Option&lt;u32&gt;,</span>
+<span id="L90">) -&gt; AnimalEnergyCosts {</span>
+<span id="L91">    AnimalEnergyCosts {</span>
+<span id="L92">        maintenance_units_per_tick: maintenance_override</span>
+<span id="L93">            .unwrap_or(species_default.maintenance_units_per_tick),</span>
+<span id="L94">    }</span>
+<span id="L95">}</span>
+<span id="L96"></span>
+<span id="L97">#[test]</span>
+<span id="L98">fn session_06_an_override_is_resolved_at_creation() {</span>
+<span id="L99">    let mut hare_default = AnimalEnergyCosts {</span>
+<span id="L100">        maintenance_units_per_tick: 1,</span>
+<span id="L101">    };</span>
+<span id="L102">    let fern = resolve_costs(hare_default, None);</span>
+<span id="L103">    let explicit_one = resolve_costs(hare_default, Some(1));</span>
+<span id="L104">    let other_hare = resolve_costs(hare_default, Some(2));</span>
+<span id="L105">    let free_upkeep = resolve_costs(hare_default, Some(0));</span>
+<span id="L106">    assert_eq!(fern.maintenance_units_per_tick, 1);</span>
+<span id="L107">    assert_eq!(explicit_one, fern); // Equal results can have different authored inputs.</span>
+<span id="L108">    assert_eq!(other_hare.maintenance_units_per_tick, 2);</span>
+<span id="L109">    assert_eq!(free_upkeep.maintenance_units_per_tick, 0);</span>
+<span id="L110"></span>
+<span id="L111">    hare_default.maintenance_units_per_tick = 9;</span>
+<span id="L112">    assert_eq!(fern.maintenance_units_per_tick, 1);</span>
+<span id="L113">    assert_eq!(other_hare.maintenance_units_per_tick, 2);</span>
+<span id="L114">    assert_eq!(</span>
+<span id="L115">        resolve_costs(hare_default, None).maintenance_units_per_tick,</span>
+<span id="L116">        9</span>
+<span id="L117">    );</span>
+<span id="L118">    assert_eq!(</span>
+<span id="L119">        resolve_costs(hare_default, Some(1)).maintenance_units_per_tick,</span>
+<span id="L120">        1</span>
+<span id="L121">    );</span>
+<span id="L122">}</span>
+<span id="L123">```</span>
+<span id="L124"></span>
+<span id="L125">`#[derive(Component)]` lets Bevy store this type on an entity; it does not attach</span>
+<span id="L126">it automatically. `Copy` means passing this small value copies its fields. There</span>
+<span id="L127">is no shared pointer back to the template in `fern`. Changing the template in</span>
+<span id="L128">the reference therefore leaves existing values alone and affects only a later</span>
+<span id="L129">construction.</span>
+<span id="L130"></span>
+<span id="L131">The last two calls construct new values from the changed test template. They</span>
+<span id="L132">explain why `None` and `Some(1)` must remain distinct in authored scenario data;</span>
+<span id="L133">they do not run Moss&#x27;s Reset or retune an existing animal. The initializer tests</span>
+<span id="L134">the resolution rule. Later construction and Reset tests must check that the</span>
+<span id="L135">scenario retained the intended input.</span>
+<span id="L136"></span>
+<span id="L137">Moss keeps defaults fixed during a run. The template mutation above demonstrates</span>
+<span id="L138">ownership, not a proposed browser control. Live retuning could be added later as</span>
+<span id="L139">an explicit operation with rules for preserving overrides. Reset instead rebuilds</span>
+<span id="L140">animals from their authored scenario, so runtime-only changes disappear while</span>
+<span id="L141">authored overrides are applied again.</span>
+<span id="L142"></span>
+<span id="L143">There is no universal default hidden in this helper. If a scenario configures</span>
+<span id="L144">Fox maintenance as 2, spawn code must pass that configured value rather than</span>
+<span id="L145">the hare&#x27;s 1. The helper does not need to know which species supplied the value.</span>
+<span id="L146">The agent&#x27;s construction tests check that each animal receives the right input</span>
+<span id="L147">and that grass receives no animal cost component.</span>
+<span id="L148"></span>
+<span id="a-declaration-is-a-useful-checkpoint-not-runtime-behavior"></span><span id="L149">&lt;a id=&quot;a-declaration-is-a-useful-checkpoint-not-runtime-behavior&quot;&gt;&lt;/a&gt;</span>
+<span id="L150"></span>
+<span id="L151">Defining and constructing a component does not attach it to Fern or make</span>
+<span id="L152">maintenance read it. Those are separate connections. The agent prepares the</span>
+<span id="L153">declaration and deliberate re-export through `lib.rs`, preserving existing energy</span>
+<span id="L154">exports. A re-export gives callers another path to the same type; it does not</span>
+<span id="L155">create a copy of the type. The helper lives in `energy.rs`; an external integration</span>
+<span id="L156">test needs a public helper and a deliberate root re-export. Other helpers can</span>
+<span id="L157">stay private until a caller requires access.</span>
+<span id="L158"></span>
+<span id="L159">**Optional:** run the complete answer; expect one passing reference test.</span>
+<span id="L160"></span>
+<span id="L161">```sh</span>
+<span id="L162">python3 docs/tutorial/authoring/check_path_examples.py --session 06</span>
+<span id="L163">```</span>
+<span id="L164"></span>
+<span id="L165">[What this checks](README.md#checking-your-work) · [Recorded evidence](verification.md)</span>
+<span id="L166"></span>
+<span id="L167">Send: **“Session 06&#x27;s initializer test is green. Review ownership and the zero override,</span>
+<span id="L168">then prepare attachment checks and the same-species maintenance regression.”**</span>
+<span id="L169">Stop with the initialization understood. Next the query will read these individual values,</span>
+<span id="L170">which is the point at which they begin to affect Fern&#x27;s world.</span></pre></body></html>

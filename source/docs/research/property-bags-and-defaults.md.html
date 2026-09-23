@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/research/property-bags-and-defaults.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/research/property-bags-and-defaults.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>bcd1dbb69f941084e3af4c1ac829860c40bbc207382c16f57b47fe074b6952d2</code></p><pre><span id="large-property-sets-defaults-and-overrides"></span><span id="L1"># Large property sets, defaults and overrides</span>
+<span id="L2"></span>
+<span id="L3">[Research index](README.md) · [Earlier ECS examples](attributes-and-energy.md) · [Attributes context](../tutorial/context/attributes-and-defaults.md)</span>
+<span id="L4"></span>
+<span id="L5">**Checked:** September 21, 2026. Nick broadened the question beyond games to</span>
+<span id="L6">systems with many attributes and defaults. Two bounded helpers researched</span>
+<span id="L7">configuration and scene-description systems; the lead researched UI properties</span>
+<span id="L8">and CSS. These are documented designs, not benchmarks run for Moss.</span>
+<span id="L9"></span>
+<span id="L10">The broader lesson is to separate **what can be configured**, **what someone</span>
+<span id="L11">actually supplied**, and **what a consumer reads**. A large property model need</span>
+<span id="L12">not have the same representation at all three stages.</span>
+<span id="L13"></span>
+<span id="on-this-page"></span><span id="L14">## On this page</span>
+<span id="L15"></span>
+<span id="L16">- [Practical precedents](#practical-precedents)</span>
+<span id="L17">- [The recurring design](#the-recurring-design)</span>
+<span id="L18">- [Choosing storage](#choosing-storage)</span>
+<span id="L19">- [What this changes for Moss](#what-this-changes-for-moss)</span>
+<span id="L20"></span>
+<span id="practical-precedents"></span><span id="L21">## Practical precedents</span>
+<span id="L22"></span>
+<span id="wpf-many-possible-properties-sparse-instance-storage"></span><span id="L23">### WPF: many possible properties, sparse instance storage</span>
+<span id="L24"></span>
+<span id="L25">Microsoft&#x27;s WPF architecture describes sparse property storage specifically for</span>
+<span id="L26">objects with dozens or hundreds of properties. Each instance need not carry</span>
+<span id="L27">every value when defaults, inheritance or styles provide it. The framework also</span>
+<span id="L28">tracks dependencies and revalidates values when those dependencies change.</span>
+<span id="L29">This is a documented architectural rationale, not a memory benchmark.</span>
+<span id="L30">[WPF architecture](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/wpf-architecture).</span>
+<span id="L31"></span>
+<span id="L32">Its precedence rules distinguish metadata defaults, inherited values, styles,</span>
+<span id="L33">local values, animation and coercion. Clearing a local value exposes the next</span>
+<span id="L34">applicable source; it does not necessarily restore the metadata default.</span>
+<span id="L35">Consequently, “set this to the default&#x27;s current number” and “remove my override”</span>
+<span id="L36">are different operations.</span>
+<span id="L37">[Property precedence](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/properties/dependency-property-value-precedence).</span>
+<span id="L38"></span>
+<span id="css-authored-declarations-and-computed-values-are-different-stages"></span><span id="L39">### CSS: authored declarations and computed values are different stages</span>
+<span id="L40"></span>
+<span id="L41">The CSS Cascade Level 5 specification separates declarations, cascade winners,</span>
+<span id="L42">defaulting, computed values and later layout-dependent values. Inheritance is a</span>
+<span id="L43">property-specific rule, not something every field does automatically. Its</span>
+<span id="L44">`initial`, `inherit`, `unset` and `revert` keywords have distinct meanings.</span>
+<span id="L45">This is a useful precedent for explicit resolution stages; the standard does</span>
+<span id="L46">not prescribe a particular browser&#x27;s memory layout or caching implementation.</span>
+<span id="L47">[CSS value processing](https://www.w3.org/TR/css-cascade-5/#value-stages).</span>
+<span id="L48"></span>
+<span id="openusd-schemas-authored-layers-and-resolved-attributes"></span><span id="L49">### OpenUSD: schemas, authored layers and resolved attributes</span>
+<span id="L50"></span>
+<span id="L51">OpenUSD&#x27;s scene-description model supports schema fallback values without</span>
+<span id="L52">requiring every object to author them. Layers contribute edits, and composition</span>
+<span id="L53">determines which contributions take precedence. Strength follows composition</span>
+<span id="L54">rules rather than the timestamp of the last write. Some data composes by key</span>
+<span id="L55">or through list-edit operations, so one generic replacement rule is insufficient.</span>
+<span id="L56">The reviewed release documentation identifies itself as **26.08**.</span>
+<span id="L57">[USD terms and concepts](https://openusd.org/release/glossary.html).</span>
+<span id="L58"></span>
+<span id="L59">`UsdResolveInfo` exposes information about where a resolved value comes from.</span>
+<span id="L60">`UsdAttributeQuery` speeds repeated reads by caching source information. That</span>
+<span id="L61">query does not listen for change notifications: consumers must discard it when</span>
+<span id="L62">the associated attribute is resynchronized. This is a concrete example of</span>
+<span id="L63">selective caching with an explicit invalidation obligation.</span>
+<span id="L64">[Resolve information](https://openusd.org/release/api/class_usd_resolve_info.html),</span>
+<span id="L65">[attribute queries](https://openusd.org/release/api/class_usd_attribute_query.html).</span>
+<span id="L66"></span>
+<span id="figment-compose-flexible-data-extract-typed-rust-values"></span><span id="L67">### Figment: compose flexible data, extract typed Rust values</span>
+<span id="L68"></span>
+<span id="L69">Figment **0.10.19** combines configuration providers and extracts results into</span>
+<span id="L70">types implementing `Deserialize`. It tracks source metadata through composition</span>
+<span id="L71">and errors. Its profiles have their own precedence: default, selected, then</span>
+<span id="L72">global. Sources are read when added; it does not provide automatic live reloading.</span>
+<span id="L73">This gives a practical Rust example of flexible input paired with concrete</span>
+<span id="L74">consumer structs. Retain the Figment if later inspection of source metadata is</span>
+<span id="L75">needed; ordinary struct fields do not become provenance records automatically.</span>
+<span id="L76">[Figment documentation](https://docs.rs/figment/0.10.19/figment/).</span>
+<span id="L77"></span>
+<span id="L78">Its operations also distinguish replacement from concatenation: `merge`</span>
+<span id="L79">recursively combines dictionaries but replaces arrays; `admerge` concatenates</span>
+<span id="L80">arrays. These are explicit policies, not an intrinsic meaning of “merge.”</span>
+<span id="L81">[Composition API](https://docs.rs/figment/0.10.19/figment/struct.Figment.html).</span>
+<span id="L82"></span>
+<span id="typesafe-config-missing-and-null-have-different-meanings"></span><span id="L83">### Typesafe Config: missing and null have different meanings</span>
+<span id="L84"></span>
+<span id="L85">Typesafe Config&#x27;s immutable configurations compose with `withFallback`.</span>
+<span id="L86">The primary configuration wins, objects merge recursively, and explicit null</span>
+<span id="L87">can suppress a fallback even though ordinary getters reject null. Dedicated</span>
+<span id="L88">APIs distinguish absent and null. Substitutions should be resolved against the</span>
+<span id="L89">complete configuration after composition. The official repository lists</span>
+<span id="L90">**1.4.4**; the linked API uses a moving `latest` URL.</span>
+<span id="L91">[Config API](https://lightbend.github.io/config/latest/api/com/typesafe/config/Config.html),</span>
+<span id="L92">[project](https://github.com/lightbend/config).</span>
+<span id="L93"></span>
+<span id="the-recurring-design"></span><span id="L94">## The recurring design</span>
+<span id="L95"></span>
+<span id="L96">The following is our synthesis of these systems. They do not all implement the</span>
+<span id="L97">same pipeline or promise the same update behavior.</span>
+<span id="L98"></span>
+<span id="L99">| Responsibility | What it answers |</span>
+<span id="L100">| --- | --- |</span>
+<span id="L101">| Definition or schema | Which properties exist, their types, units, defaults and validation rules. |</span>
+<span id="L102">| Authored values | Which fields this source or object explicitly supplies. |</span>
+<span id="L103">| Resolution | Which sources win, which values combine, and how missing values behave. |</span>
+<span id="L104">| Consumer representation | The values a particular reader needs, possibly as a typed snapshot or selective query. |</span>
+<span id="L105">| Provenance | Why a value has its result and which source or sources contributed. |</span>
+<span id="L106"></span>
+<span id="L107">For a generic configuration example, suppose a default `retry_limit` is 3,</span>
+<span id="L108">a profile supplies 5, and one object explicitly supplies 0. If the policy is</span>
+<span id="L109">default &lt; profile &lt; object, the result is 0. Removing the object override reveals</span>
+<span id="L110">5. Setting the object to 3 pins it to 3; it does not reconnect it to the default.</span>
+<span id="L111">This example selects its own simple policy and does not reproduce every cited</span>
+<span id="L112">framework&#x27;s precedence rules.</span>
+<span id="L113"></span>
+<span id="L114">The distinction remains important when values happen to be equal. An omitted</span>
+<span id="L115">property and an explicit value matching today&#x27;s default can react differently</span>
+<span id="L116">to tomorrow&#x27;s default change. Comparing numbers cannot recover that intent.</span>
+<span id="L117"></span>
+<span id="L118">Collections need their own contract. An override might replace a list, append</span>
+<span id="L119">to it, merge entries by identity, or deliberately clear it. Arithmetic modifiers</span>
+<span id="L120">also need an equation and order; they are not ordinary scalar replacement.</span>
+<span id="L121">Use only the operations the domain needs, but name them precisely.</span>
+<span id="L122"></span>
+<span id="L123">Validate after composition as well as during parsing. A value can have the right</span>
+<span id="L124">type yet violate a range or a relationship with another field. An invalid</span>
+<span id="L125">explicit value should not silently masquerade as an absent value and fall back.</span>
+<span id="L126"></span>
+<span id="choosing-storage"></span><span id="L127">## Choosing storage</span>
+<span id="L128"></span>
+<span id="L129">“Many attributes” alone does not choose a representation. The relevant questions</span>
+<span id="L130">include how many properties are actually present, how often they are read or</span>
+<span id="L131">changed, whether new property kinds must be introduced at runtime, and whether</span>
+<span id="L132">default changes should propagate.</span>
+<span id="L133"></span>
+<span id="L134">| Approach | Useful fit and cost to consider |</span>
+<span id="L135">| --- | --- |</span>
+<span id="L136">| Ordinary typed structs or components | Known fields and frequent reads; direct access and compiler help, with storage for the fields present in each value. |</span>
+<span id="L137">| Schema-backed sparse property storage | Many optional or extensible fields; avoids storing every value but adds lookup, validation and resolution work. |</span>
+<span id="L138">| Layered input with typed consumer views | Flexible authoring plus focused reads; requires an explicit rule for when views are rebuilt and what provenance is retained. |</span>
+<span id="L139"></span>
+<span id="L140">These can coexist. Large shared definitions need not be expanded into every</span>
+<span id="L141">consumer view, and seldom-read properties need not be eagerly resolved. Conversely,</span>
+<span id="L142">a dynamic authoring format need not force string-key lookup on every hot read.</span>
+<span id="L143">These are design options, not measured winners.</span>
+<span id="L144"></span>
+<span id="L145">A typed snapshot is independent once created. A live resolved view must react</span>
+<span id="L146">to changes. A cache intended to reflect changing inputs needs invalidation or</span>
+<span id="L147">versioning; a cache tied to an immutable snapshot can remain valid indefinitely.</span>
+<span id="L148">Make that contract explicit before choosing a storage optimization.</span>
+<span id="L149"></span>
+<span id="what-this-changes-for-moss"></span><span id="L150">## What this changes for Moss</span>
+<span id="L151"></span>
+<span id="L152">The broader research strengthens the separation between authored configuration</span>
+<span id="L153">and runtime data. It also makes sparse overrides and explainable resolution</span>
+<span id="L154">first-class alternatives to copying an entire attribute catalog per entity.</span>
+<span id="L155">The earlier component recommendation applies to small, frequently used individual</span>
+<span id="L156">values; it does not settle how every future attribute should be represented.</span>
+<span id="L157"></span>
+<span id="L158">Keep authored scenario overrides separately from initialized runtime values so</span>
+<span id="L159">reset and future inspection can distinguish intent from the resulting number.</span>
+<span id="L160">We can express today&#x27;s defaults and overrides with concrete Rust types. A</span>
+<span id="L161">general registry, new configuration dependency or live dependency graph would</span>
+<span id="L162">need an actual use case before implementation.</span>
+<span id="L163"></span>
+<span id="L164">The active paired edit remains unchanged. No code, dependency or tutorial code</span>
+<span id="L165">example changed during this research. No native tests, browser runs or performance</span>
+<span id="L166">measurements were performed; these sources establish contracts and precedents.</span>
+<span id="L167"></span>
+<span id="L168">[Research index](README.md) · [Attributes context](../tutorial/context/attributes-and-defaults.md)</span></pre></body></html>

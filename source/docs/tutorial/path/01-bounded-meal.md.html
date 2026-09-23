@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/tutorial/path/01-bounded-meal.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/tutorial/path/01-bounded-meal.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>fbb9583ffd0e35cc2ff1dbdd52fb90a40baed0fadf25db0115d0c2bed84a4523</code></p><pre><span id="01-turn-contact-into-a-finite-meal"></span><span id="L1"># 01. Turn contact into a finite meal</span>
+<span id="L2"></span>
+<span id="L3">[Path home](README.md) · Previous: [today&#x27;s movement](../today-v2.md) · Next: [sharing one patch](02-a-shared-meal.md)</span>
+<span id="L4"></span>
+<span id="L5">**Future checkpoint · 20–30 minutes after reviewed movement.** The agent first</span>
+<span id="L6">prepares `eat_from_patch` in `crates/moss-sim/src/lessons.rs`, its focused test</span>
+<span id="L7">and the required imports. Your edit is the helper body. If today&#x27;s stretch</span>
+<span id="L8">already completed this helper, keep it: run its existing test, trace the case</span>
+<span id="L9">below, then continue to session 02. There is no second implementation to write.</span>
+<span id="L10"></span>
+<span id="L11">Fern has reached Meadow, but standing on grass is not yet eating. Movement gave</span>
+<span id="L12">us an affordable change of position. Now we want an equally explainable transfer:</span>
+<span id="L13">some biomass leaves the patch and becomes energy in Fern. Both</span>
+<span id="L14">numbers must describe the same transfer.</span>
+<span id="L15"></span>
+<span id="carry-the-movement-pattern-forward"></span><span id="L16">## Carry the movement pattern forward</span>
+<span id="L17"></span>
+<span id="L18">Recall the useful pause inside `move_one_cell`: it calculates a proposed change</span>
+<span id="L19">before writing through either mutable reference. `&amp;mut Position` and `&amp;mut Energy`</span>
+<span id="L20">let the helper update existing values without taking ownership of the whole</span>
+<span id="L21">world. We can reuse that shape with `&amp;mut Energy` and `&amp;mut FoodPatch`. Rust&#x27;s</span>
+<span id="L22">borrows provide exclusive access during the call; the biological rule still has</span>
+<span id="L23">to decide how much food is allowed.</span>
+<span id="L24"></span>
+<span id="L25">Suppose Fern has reserve 98, capacity 100, and Meadow has 5 biomass. Our proposed</span>
+<span id="L26">bite limit is 4 biomass per eating action. A bite of 4 would overfill Fern, while</span>
+<span id="L27">removing 4 and awarding only 2 would make food disappear. The allowed transfer</span>
+<span id="L28">is bounded by three quantities: available room, available biomass, and bite size.</span>
+<span id="L29">Here the smallest is 2. Fern reaches 100 and Meadow keeps 3.</span>
+<span id="L30"></span>
+<span id="L31">![The caller keeps Fern and Meadow. During the call, mutable borrows let the helper transfer the minimum of room 2, biomass 5 and bite limit 4. Afterward the same values contain reserve 100 and biomass 3.](visuals/meal-borrow.svg)</span>
+<span id="L32"></span>
+<span id="L33">Follow the two values through the call. The helper does not return a replacement</span>
+<span id="L34">Fern or Meadow; it writes into the caller&#x27;s existing values. Its returned `2`</span>
+<span id="L35">answers a different question: how much actually changed? After the call ends,</span>
+<span id="L36">the caller can inspect both values again. The Rust book&#x27;s</span>
+<span id="L37">[borrowing explanation](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html)</span>
+<span id="L38">is optional background for that temporary exclusive access.</span>
+<span id="L39"></span>
+<span id="L40">We use one biomass unit per energy unit for this first model. That conversion is</span>
+<span id="L41">a chosen game rule, not a claim that biomass and energy are interchangeable</span>
+<span id="L42">units. Giving the variables different names preserves the distinction when a</span>
+<span id="L43">later food type has a different nutritional value. There is no separate eating</span>
+<span id="L44">charge in this session; maintenance and travel retain their existing rules.</span>
+<span id="L45"></span>
+<span id="one-helper-two-changed-values"></span><span id="L46">## One helper, two changed values</span>
+<span id="L47"></span>
+<span id="L48">Your edit is the prepared `eat_from_patch` body in `lessons.rs`. Calculate one</span>
+<span id="L49">allowed amount, use it for both mutations, and return it. The agent supplies the</span>
+<span id="L50">test and imports. That is the whole change for this session.</span>
+<span id="L51"></span>
+<span id="L52">The helper&#x27;s arguments contain no position, species or target, so it cannot</span>
+<span id="L53">establish whether eating is allowed here. The later ECS adapter checks that an</span>
+<span id="L54">eligible grazer has reached its food before calling it. This repeats movement&#x27;s</span>
+<span id="L55">division of work: the adapter supplies an eligible interaction, and the helper</span>
+<span id="L56">calculates its bounded effect.</span>
+<span id="L57"></span>
+<span id="check-it-then-stop-at-the-helper"></span><span id="L58">## Check it, then stop at the helper</span>
+<span id="L59"></span>
+<span id="L60">After the agent prepares the [live meal test](../05-eating.md#checkpoint-a--a-bounded-transfer),</span>
+<span id="L61">run this command from the repository root:</span>
+<span id="L62"></span>
+<span id="L63">```sh</span>
+<span id="L64">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test eating meals_respect_capacity_bite_size_and_shared_food -- --exact</span>
+<span id="L65">```</span>
+<span id="L66"></span>
+<span id="L67">Exactly one test should initially fail at your unfinished helper, then pass after</span>
+<span id="L68">your edit. A compiler error or zero matching tests means the preparation needs</span>
+<span id="L69">repair. This command imports the live helper, so it checks the code you changed.</span>
+<span id="L70"></span>
+<span id="L71">If Fern ends at 100 but Meadow ends at 1, inspect which amount you subtract.</span>
+<span id="L72">Using the nominal bite for the patch and the bounded amount for the animal</span>
+<span id="L73">breaks the transfer even though Fern&#x27;s individual result looks correct.</span>
+<span id="L74"></span>
+<span id="a-worked-answer-to-trace-when-useful"></span><span id="L75">## A worked answer to trace when useful</span>
+<span id="L76"></span>
+<span id="L77">The optional complete reference below includes a test that makes the same call</span>
+<span id="L78">a second time. Trace that second call: reserve is now 100, so room is zero and</span>
+<span id="L79">Meadow must keep its remaining 3. Later, the test resets reserve to zero to arrange</span>
+<span id="L80">new cases; no maintenance or other ECS system runs. A smaller bite of 2 takes 2</span>
+<span id="L81">from those 3 biomass. A following bite of 4 can take only the remaining 1.</span>
+<span id="L82">Each limit gets a chance to determine the result: the nearly full animal alone</span>
+<span id="L83">would not reveal a missing food-supply limit.</span>
+<span id="L84"></span>
+<span id="L85">&lt;!-- runnable: session-01 --&gt;</span>
+<span id="L86">```rust</span>
+<span id="L87">use moss_sim::{Energy, FoodPatch};</span>
+<span id="L88"></span>
+<span id="L89">fn eat_from_patch(energy: &amp;mut Energy, patch: &amp;mut FoodPatch, bite_limit: u32) -&gt; u32 {</span>
+<span id="L90">    let room = energy.capacity.saturating_sub(energy.reserve);</span>
+<span id="L91">    let consumed = room.min(patch.biomass).min(bite_limit);</span>
+<span id="L92">    energy.reserve = energy</span>
+<span id="L93">        .reserve</span>
+<span id="L94">        .checked_add(consumed)</span>
+<span id="L95">        .expect(&quot;meal energy overflow&quot;);</span>
+<span id="L96">    patch.biomass -= consumed;</span>
+<span id="L97">    consumed</span>
+<span id="L98">}</span>
+<span id="L99"></span>
+<span id="L100">#[test]</span>
+<span id="L101">fn session_01_a_meal_changes_both_participants() {</span>
+<span id="L102">    let mut fern = Energy {</span>
+<span id="L103">        reserve: 98,</span>
+<span id="L104">        capacity: 100,</span>
+<span id="L105">    };</span>
+<span id="L106">    let mut meadow = FoodPatch {</span>
+<span id="L107">        name: &quot;Meadow&quot;,</span>
+<span id="L108">        biomass: 5,</span>
+<span id="L109">    };</span>
+<span id="L110"></span>
+<span id="L111">    assert_eq!(eat_from_patch(&amp;mut fern, &amp;mut meadow, 4), 2);</span>
+<span id="L112">    assert_eq!(fern.reserve, 100);</span>
+<span id="L113">    assert_eq!(meadow.biomass, 3);</span>
+<span id="L114">    assert_eq!(eat_from_patch(&amp;mut fern, &amp;mut meadow, 4), 0);</span>
+<span id="L115">    assert_eq!(meadow.biomass, 3);</span>
+<span id="L116"></span>
+<span id="L117">    fern.reserve = 0;</span>
+<span id="L118">    assert_eq!(eat_from_patch(&amp;mut fern, &amp;mut meadow, 0), 0);</span>
+<span id="L119">    assert_eq!(fern.reserve, 0);</span>
+<span id="L120">    assert_eq!(meadow.biomass, 3);</span>
+<span id="L121"></span>
+<span id="L122">    assert_eq!(eat_from_patch(&amp;mut fern, &amp;mut meadow, 2), 2);</span>
+<span id="L123">    assert_eq!(fern.reserve, 2);</span>
+<span id="L124">    assert_eq!(meadow.biomass, 1);</span>
+<span id="L125"></span>
+<span id="L126">    assert_eq!(eat_from_patch(&amp;mut fern, &amp;mut meadow, 4), 1);</span>
+<span id="L127">    assert_eq!(fern.reserve, 3);</span>
+<span id="L128">    assert_eq!(meadow.biomass, 0);</span>
+<span id="L129">    assert_eq!(eat_from_patch(&amp;mut fern, &amp;mut meadow, 4), 0);</span>
+<span id="L130">    assert_eq!(fern.reserve, 3);</span>
+<span id="L131">    assert_eq!(meadow.biomass, 0);</span>
+<span id="L132">}</span>
+<span id="L133">```</span>
+<span id="L134"></span>
+<span id="L135">`saturating_sub` gives zero room if reserve already meets or exceeds capacity.</span>
+<span id="L136">It does not repair an overfull animal; it simply grants no additional food.</span>
+<span id="L137">The subsequent `min` calls successively tighten an upper bound. Because</span>
+<span id="L138">`consumed` cannot exceed current biomass, subtracting it cannot underflow.</span>
+<span id="L139">The checked energy addition would report an unexpected overflow explicitly.</span>
+<span id="L140"></span>
+<span id="L141">The final `consumed` expression returns the actual transfer. That is useful</span>
+<span id="L142">information for an event later: a request for 4 is not evidence of a meal of 4.</span>
+<span id="L143">Notice also that the full-animal case needs no separate mutation branch. Zero</span>
+<span id="L144">is a valid transfer, and applying zero changes neither participant.</span>
+<span id="L145"></span>
+<span id="L146">**Optional:** run the complete answer; expect one passing reference test.</span>
+<span id="L147"></span>
+<span id="L148">```sh</span>
+<span id="L149">python3 docs/tutorial/authoring/check_path_examples.py --session 01</span>
+<span id="L150">```</span>
+<span id="L151"></span>
+<span id="L152">[What this checks](README.md#checking-your-work) · [Recorded evidence](verification.md)</span>
+<span id="L153"></span>
+<span id="L154">Send: **“Session 01&#x27;s meal helper is green. Review the shared transfer amount</span>
+<span id="L155">and boundary cases, then prepare session 02&#x27;s installed meal regression.”**</span>
+<span id="L156">Stop once that small rule is understood. Next we will keep the helper unchanged</span>
+<span id="L157">and ask what happens when another hare reaches the same finite patch.</span></pre></body></html>

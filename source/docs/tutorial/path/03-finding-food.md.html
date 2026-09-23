@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/tutorial/path/03-finding-food.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/tutorial/path/03-finding-food.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>dba210caf3d69ba323cc6b3f32c274131200d3e9d87098935c5d5e6bbcd06a8a</code></p><pre><span id="03-replace-an-authored-destination-with-a-choice"></span><span id="L1"># 03. Replace an authored destination with a choice</span>
+<span id="L2"></span>
+<span id="L3">[Path home](README.md) · Previous: [sharing a patch](02-a-shared-meal.md) · Next: [when to seek](04-when-to-seek.md)</span>
+<span id="L4"></span>
+<span id="L5">**Future checkpoint · 20–30 minutes after the installed meal works.** The agent</span>
+<span id="L6">prepares `nearest_food` in `crates/moss-sim/src/lessons.rs`, its imports and focused</span>
+<span id="L7">selection test. Your edit is its body. Movement and eating keep their reviewed</span>
+<span id="L8">implementations; this helper does not move an animal or mutate a patch.</span>
+<span id="L9"></span>
+<span id="L10">Fern has followed the `FoodTarget` placed on her by the fixture. You have already</span>
+<span id="L11">made that target meaningful: movement resolves its stable ID, and eating requires</span>
+<span id="L12">contact with the corresponding patch. We can now change where the target comes</span>
+<span id="L13">from while keeping those consequences intact. A small choice can reuse quite a</span>
+<span id="L14">lot of behavior.</span>
+<span id="L15"></span>
+<span id="describe-the-choice-before-the-loop"></span><span id="L16">## Describe the choice before the loop</span>
+<span id="L17"></span>
+<span id="L18">Among nearby, nonempty grass patches, choose the nearest. Nearby means within a</span>
+<span id="L19">configured Manhattan distance: absolute x difference plus absolute y difference.</span>
+<span id="L20">This matches the cardinal movement model because a step changes only one axis.</span>
+<span id="L21">Fern&#x27;s original route from `(10, 10)` to `(16, 13)` is therefore nine cells, even</span>
+<span id="L22">though a straight line drawn between the sprites looks shorter.</span>
+<span id="L23"></span>
+<span id="L24">The shape of that reach matters. In a separate small example, put Fern at `(6, 6)`</span>
+<span id="L25">with radius 4. A patch at `(10, 6)` is exactly four steps away and qualifies.</span>
+<span id="L26">A patch at `(9, 8)` needs three x steps and two y steps, so it falls outside—even</span>
+<span id="L27">though its straight-line distance is less than four. In this obstacle-free model,</span>
+<span id="L28">Manhattan distance gives the fewest cardinal steps. It does not simulate blocked</span>
+<span id="L29">routes or line of sight.</span>
+<span id="L30"></span>
+<span id="L31">![A radius-four Manhattan neighborhood around cell 6,6 forms a diamond of eligible cells. Patch 9 at 10,6 is four steps away and qualifies; patch 8 at 9,8 needs five steps and is excluded. Both patches contain food.](visuals/perception-distance.svg)</span>
+<span id="L32"></span>
+<span id="L33">Recall why the meal adapter used stable IDs rather than query order. The same</span>
+<span id="L34">issue appears when two patches are equally near. We will compare distance first</span>
+<span id="L35">and ID second. That makes the tie rule visible, repeatable and independent of</span>
+<span id="L36">storage order. Radius 10 allows Fern to perceive Meadow in the diagnostic scene;</span>
+<span id="L37">it is a demonstration setting, not a species claim.</span>
+<span id="L38"></span>
+<span id="L39">Sometimes no patch qualifies. Returning a made-up ID would postpone that fact</span>
+<span id="L40">until movement tries to resolve it. Rust&#x27;s `Option&lt;SimId&gt;` states the result</span>
+<span id="L41">directly: `Some(id)` contains a choice, while `None` means no eligible food.</span>
+<span id="L42">The function therefore has two kinds of successful result: finding a patch,</span>
+<span id="L43">and establishing that none qualifies. Neither requires inventing a destination.</span>
+<span id="L44"></span>
+<span id="a-borrowed-slice-and-a-running-best-candidate"></span><span id="L45">## A borrowed slice and a running best candidate</span>
+<span id="L46"></span>
+<span id="L47">The helper receives a borrowed slice of patch observations. It can inspect those</span>
+<span id="L48">values without owning or changing the caller&#x27;s collection. Each observation is</span>
+<span id="L49">a small tuple of stable ID, position and available biomass; the adapter supplies</span>
+<span id="L50">grass patches only. `best` remembers the strongest candidate encountered so far.</span>
+<span id="L51">These observations help select an opportunity; they do not reserve its biomass.</span>
+<span id="L52">Another hare may eat before Fern, so the meal resolver still checks the current</span>
+<span id="L53">patch, as the [shared-meal trace](02-a-shared-meal.md#make-the-order-visible-in-a-small-example)</span>
+<span id="L54">shows.</span>
+<span id="L55"></span>
+<span id="L56">Before writing the loop, follow its working memory through three observations.</span>
+<span id="L57">Fern stands at `(2, 2)`. Patches 9 and 4 are one step away; patch 3 is two away.</span>
+<span id="L58"></span>
+<span id="L59">| Observation | `best` after considering it |</span>
+<span id="L60">| --- | --- |</span>
+<span id="L61">| Nothing inspected yet | `None`: there is no candidate to beat. |</span>
+<span id="L62">| Patch 9, distance 1 | `Some((1, SimId(9)))`: accept the first candidate. |</span>
+<span id="L63">| Patch 4, distance 1 | `Some((1, SimId(4)))`: equal distance, lower ID wins. |</span>
+<span id="L64">| Patch 3, distance 2 | Still `Some((1, SimId(4)))`: a lower ID cannot beat a closer patch. |</span>
+<span id="L65"></span>
+<span id="L66">That pair stores distance first because Rust compares tuples from left to right.</span>
+<span id="L67">We retain both fields while deciding, then return only the chosen ID. Empty and</span>
+<span id="L68">out-of-range patches skip this comparison entirely.</span>
+<span id="L69"></span>
+<span id="L70">Your live edit is the prepared `nearest_food` body in `lessons.rs`. Keep the</span>
+<span id="L71">existing movement and eating functions.</span>
+<span id="L72"></span>
+<span id="check-one-decision-without-running-a-whole-life"></span><span id="L73">## Check one decision without running a whole life</span>
+<span id="L74"></span>
+<span id="L75">After preparation, run the live helper&#x27;s test from the repository root:</span>
+<span id="L76"></span>
+<span id="L77">```sh</span>
+<span id="L78">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test foraging nearest_food_is_local_nonempty_and_stable -- --exact</span>
+<span id="L79">```</span>
+<span id="L80"></span>
+<span id="L81">The [selection chapter](../03-food-choice.md#checkpoint-a--a-test-for-selection)</span>
+<span id="L82">describes this prepared test. It should fail at the unfinished helper before your</span>
+<span id="L83">edit and pass exactly one test afterward. It imports your live `nearest_food`,</span>
+<span id="L84">so changing that function changes the result. Patch 4 should win the tie even</span>
+<span id="L85">after reversal; empty patches never qualify. Radius zero still permits nonempty</span>
+<span id="L86">food on the current cell.</span>
+<span id="L87"></span>
+<span id="L88">If patch 3 wins, inspect whether you compare ID before distance. If patch 1</span>
+<span id="L89">wins, inspect the biomass filter. Neither mistake requires changing movement:</span>
+<span id="L90">the defect is in the instruction being supplied to it.</span>
+<span id="L91"></span>
+<span id="follow-the-choice-through-rust"></span><span id="L92">## Follow the choice through Rust</span>
+<span id="L93"></span>
+<span id="L94">The optional complete answer is available to trace or copy into the prepared</span>
+<span id="L95">helper body. Its `match` spells out each form of `Option`; the local test makes</span>
+<span id="L96">the reference runnable independently. This checks selection; the scheduled</span>
+<span id="L97">`FoodTarget` update follows in session 04.</span>
+<span id="L98"></span>
+<span id="L99">&lt;!-- runnable: session-03 --&gt;</span>
+<span id="L100">```rust</span>
+<span id="L101">use moss_sim::{Position, SimId};</span>
+<span id="L102"></span>
+<span id="L103">fn nearest_food(</span>
+<span id="L104">    origin: Position,</span>
+<span id="L105">    patches: &amp;[(SimId, Position, u32)],</span>
+<span id="L106">    radius_cells: u32,</span>
+<span id="L107">) -&gt; Option&lt;SimId&gt; {</span>
+<span id="L108">    let mut best: Option&lt;(u32, SimId)&gt; = None;</span>
+<span id="L109">    for &amp;(id, position, biomass) in patches {</span>
+<span id="L110">        if biomass == 0 {</span>
+<span id="L111">            continue;</span>
+<span id="L112">        }</span>
+<span id="L113">        let distance = origin</span>
+<span id="L114">            .x</span>
+<span id="L115">            .abs_diff(position.x)</span>
+<span id="L116">            .checked_add(origin.y.abs_diff(position.y))</span>
+<span id="L117">            .expect(&quot;grid distance overflow&quot;);</span>
+<span id="L118">        if distance &gt; radius_cells {</span>
+<span id="L119">            continue;</span>
+<span id="L120">        }</span>
+<span id="L121">        let candidate = (distance, id);</span>
+<span id="L122">        let improves_choice = match best {</span>
+<span id="L123">            None =&gt; true,</span>
+<span id="L124">            Some(previous) =&gt; candidate &lt; previous,</span>
+<span id="L125">        };</span>
+<span id="L126">        if improves_choice {</span>
+<span id="L127">            best = Some(candidate);</span>
+<span id="L128">        }</span>
+<span id="L129">    }</span>
+<span id="L130">    best.map(|(_, id)| id)</span>
+<span id="L131">}</span>
+<span id="L132"></span>
+<span id="L133">#[test]</span>
+<span id="L134">fn session_03_choices_survive_reordered_observations() {</span>
+<span id="L135">    let origin = Position { x: 2, y: 2 };</span>
+<span id="L136">    let mut patches = vec![</span>
+<span id="L137">        (SimId(9), Position { x: 1, y: 2 }, 80),</span>
+<span id="L138">        (SimId(4), Position { x: 3, y: 2 }, 80),</span>
+<span id="L139">        (SimId(3), Position { x: 4, y: 2 }, 80),</span>
+<span id="L140">        (SimId(1), origin, 0),</span>
+<span id="L141">        (SimId(2), Position { x: 7, y: 2 }, 80),</span>
+<span id="L142">    ];</span>
+<span id="L143">    assert_eq!(nearest_food(origin, &amp;patches, 2), Some(SimId(4)));</span>
+<span id="L144">    patches.reverse();</span>
+<span id="L145">    assert_eq!(nearest_food(origin, &amp;patches, 2), Some(SimId(4)));</span>
+<span id="L146">    assert_eq!(nearest_food(origin, &amp;patches, 0), None);</span>
+<span id="L147">    assert_eq!(nearest_food(origin, &amp;[], 2), None);</span>
+<span id="L148">    assert_eq!(</span>
+<span id="L149">        nearest_food(origin, &amp;[(SimId(8), origin, 1)], 0),</span>
+<span id="L150">        Some(SimId(8))</span>
+<span id="L151">    );</span>
+<span id="L152"></span>
+<span id="L153">    let diagonal_case = [</span>
+<span id="L154">        (SimId(8), Position { x: 9, y: 8 }, 80),</span>
+<span id="L155">        (SimId(9), Position { x: 10, y: 6 }, 80),</span>
+<span id="L156">    ];</span>
+<span id="L157">    assert_eq!(</span>
+<span id="L158">        nearest_food(Position { x: 6, y: 6 }, &amp;diagonal_case, 4),</span>
+<span id="L159">        Some(SimId(9))</span>
+<span id="L160">    );</span>
+<span id="L161">}</span>
+<span id="L162">```</span>
+<span id="L163"></span>
+<span id="L164">The slice yields borrowed observations. In `for &amp;(id, position, biomass)`, the</span>
+<span id="L165">leading `&amp;` pattern opens one borrowed tuple; the names receive copies because</span>
+<span id="L166">all three fields are small `Copy` values. The caller keeps its collection, and</span>
+<span id="L167">this loop never changes it. `continue` advances to the next observation, which</span>
+<span id="L168">is why an empty or distant patch never enters the choice table above.</span>
+<span id="L169"></span>
+<span id="L170">The `match` chooses one arm and produces its value: `None` accepts the first</span>
+<span id="L171">candidate; `Some(previous)` asks whether we have a better one. At the end, `map`</span>
+<span id="L172">does a simpler job: `Some((distance, id))` becomes `Some(id)`, and `None` remains</span>
+<span id="L173">`None`. Its `|(_, id)| id` argument is a closure, a small unnamed function that</span>
+<span id="L174">returns the ID and ignores the distance. It runs only when a value is present.</span>
+<span id="L175">Rust&#x27;s [Option reference](https://doc.rust-lang.org/std/option/enum.Option.html)</span>
+<span id="L176">is optional background for that operation.</span>
+<span id="L177"></span>
+<span id="L178">The last case checks the geometry, not just the loop. The earlier candidates</span>
+<span id="L179">lie on one axis, where straight-line and Manhattan distance agree. Patch 8 in</span>
+<span id="L180">the diagonal case would win under straight-line distance; expecting patch 9</span>
+<span id="L181">makes that different rule visible to the test. It also checks that a patch</span>
+<span id="L182">exactly at the permitted radius remains eligible.</span>
+<span id="L183"></span>
+<span id="L184">**Optional:** run the complete answer; expect one passing reference test.</span>
+<span id="L185"></span>
+<span id="L186">```sh</span>
+<span id="L187">python3 docs/tutorial/authoring/check_path_examples.py --session 03</span>
+<span id="L188">```</span>
+<span id="L189"></span>
+<span id="L190">[What this checks](README.md#checking-your-work) · [Recorded evidence](verification.md)</span>
+<span id="L191"></span>
+<span id="L192">Send: **“Session 03&#x27;s nearest-food helper is green. Review the loop, absence and</span>
+<span id="L193">tie rule; prepare the hunger-state helper before activating automatic choice.”**</span>
+<span id="L194">Stop at that decision. Next we will give Fern a reason to choose food now and</span>
+<span id="L195">keep seeking it long enough to finish a useful meal.</span></pre></body></html>

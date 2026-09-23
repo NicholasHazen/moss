@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/tutorial/03-food-choice.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/tutorial/03-food-choice.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>05d6ec409f761090078c2f541d003d70a0c85ee60ca2ea63aaaaf72e62d39838</code></p><pre><span id="3-choose-nearby-food-without-moving-yet"></span><span id="L1">&lt;a id=&quot;3-choose-nearby-food-without-moving-yet&quot;&gt;&lt;/a&gt;</span>
+<span id="L2"></span>
+<span id="3-let-fern-choose-nearby-food"></span><span id="L3"># 3. Let Fern choose nearby food</span>
+<span id="L4"></span>
+<span id="L5">[Guide home](README.md) · Lessons: [03, choose food](path/03-finding-food.md) and [04, remember seeking](path/04-when-to-seek.md)</span>
+<span id="L6"></span>
+<span id="L7">**Future integration companion for sessions 03–04.** Those two</span>
+<span id="L8">[short sessions](path/03-finding-food.md) own the learner edits and complete</span>
+<span id="L9">worked answers: first `nearest_food`, then `next_foraging_state`. This page</span>
+<span id="L10">explains how the agent connects them to existing movement and meals. The helper</span>
+<span id="L11">and activity data are not installed yet. `FoodTarget` already exists for today&#x27;s</span>
+<span id="L12">authored journey and will be reused. [Verification](authoring/verification.md)</span>
+<span id="L13">separates recorded example checks from future activation.</span>
+<span id="L14"></span>
+<span id="L15">Fern&#x27;s first journey follows the target we authored. Movement and meals make</span>
+<span id="L16">that instruction useful; choice changes where it comes from. The future policy</span>
+<span id="L17">uses her condition and nearby food to decide where to go and when to stop seeking.</span>
+<span id="L18"></span>
+<span id="L19">The selection helper itself changes no position or energy. That boundary lets</span>
+<span id="L20">its tests isolate the choice. In the complete simulation, the chosen target then</span>
+<span id="L21">flows into the movement and eating rules already running later in the tick.</span>
+<span id="L22">The path tests ordinary Rust functions first. Agent integration then checks</span>
+<span id="L23">their ECS adapter and the complete behavior in the browser. These are different</span>
+<span id="L24">levels of evidence for the same behavior, not another curriculum to complete.</span>
+<span id="L25"></span>
+<span id="on-this-page"></span><span id="L26">## On this page</span>
+<span id="L27"></span>
+<span id="L28">- [The small rule](#the-small-rule)</span>
+<span id="L29">- [A: a test for selection](#checkpoint-a--a-test-for-selection)</span>
+<span id="L30">- [B: choosing becomes an ECS behavior](#checkpoint-b--choosing-becomes-an-ecs-behavior)</span>
+<span id="L31">- [Optional: why a tie needs a rule](#optional-why-a-tie-needs-a-rule)</span>
+<span id="L32"></span>
+<span id="the-small-rule"></span><span id="L33">## The small rule</span>
+<span id="L34"></span>
+<span id="L35">Among nonempty grass patches within a bounded Manhattan distance, choose the</span>
+<span id="L36">nearest. Manhattan distance counts cardinal grid steps: horizontal distance</span>
+<span id="L37">plus vertical distance. Equal distance chooses the lowest `SimId`, independent</span>
+<span id="L38">of spawn or query order. No eligible food returns `None`.</span>
+<span id="L39"></span>
+<span id="L40">For the first choice-only experiment, use a diagnostic radius of 10 cells:</span>
+<span id="L41">Fern at (10, 10) is 9 steps from Meadow at (16, 13). A smaller radius would make</span>
+<span id="L42">that existing patch invisible. This is an authored demonstration setting,</span>
+<span id="L43">not a claim about real hare vision.</span>
+<span id="L44"></span>
+<span id="L45">Hunger and eligibility belong in the system around this helper. These are</span>
+<span id="L46">future policy rules, not prerequisites for today&#x27;s movement session. Proposed</span>
+<span id="L47">initial settings are: begin seeking below 45 reserve, stop at 75, and preserve</span>
+<span id="L48">the previous seeking state between those thresholds. These are energy units</span>
+<span id="L49">for the current capacity-100 animals. Maintenance runs first, so the decision</span>
+<span id="L50">uses the reserve after that tick&#x27;s passive cost. Foxes do not become grass eaters.</span>
+<span id="L51"></span>
+<span id="L52">Using separate start and stop thresholds gives the animal a reason to continue</span>
+<span id="L53">an activity. With one threshold, a small meal could make it stop, the next</span>
+<span id="L54">maintenance cost could make it start, and the activity label could alternate</span>
+<span id="L55">every tick. The gap gives the previous state a defined role. This technique is</span>
+<span id="L56">often called *hysteresis*: the same current reserve can produce a different</span>
+<span id="L57">decision depending on whether the animal was already seeking.</span>
+<span id="L58"></span>
+<span id="checkpoint-a--a-test-for-selection"></span><span id="L59">## Checkpoint A — a test for selection</span>
+<span id="L60"></span>
+<span id="L61">[Session 03](path/03-finding-food.md) contains the candidate trace, complete</span>
+<span id="L62">selection helper, test and Rust explanation. That is the canonical answer;</span>
+<span id="L63">there is no second implementation to reconcile here.</span>
+<span id="L64">Older execution records describe this chapter&#x27;s former printed examples; the</span>
+<span id="L65">[path verification](path/verification.md) records checks of the revised answer.</span>
+<span id="L66"></span>
+<span id="L67">Before that session, the agent prepares the public helper</span>
+<span id="L68">`moss_sim::lessons::nearest_food` in `lessons.rs` with a `todo!()` body. Its inputs</span>
+<span id="L69">are `origin: Position`, a borrowed `patches: &amp;[(SimId, Position, u32)]`, and</span>
+<span id="L70">`radius_cells: u32`; its return type is `Option&lt;SimId&gt;`. The tuple holds stable</span>
+<span id="L71">identity, position and available biomass. The adapter supplies grass patches</span>
+<span id="L72">only; the helper filters emptiness and distance and resolves ties.</span>
+<span id="L73"></span>
+<span id="L74">The agent also prepares `nearest_food_is_local_nonempty_and_stable` in</span>
+<span id="L75">`crates/moss-sim/tests/foraging.rs`. That live test imports the public helper;</span>
+<span id="L76">it must not declare a local duplicate. It checks reordered observations,</span>
+<span id="L77">empty food, an empty candidate list, and the radius boundary. Include the</span>
+<span id="L78">diagonal counterexample from session 03 so a straight-line metric cannot pass</span>
+<span id="L79">as Manhattan distance. The planned</span>
+<span id="L80">focused command, **after preparation**, is:</span>
+<span id="L81"></span>
+<span id="L82">```sh</span>
+<span id="L83">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test foraging nearest_food_is_local_nonempty_and_stable -- --exact</span>
+<span id="L84">```</span>
+<span id="L85"></span>
+<span id="L86">Exactly one test should reach the unfinished helper before the learner edit,</span>
+<span id="L87">then pass after it. Missing imports, a missing target or zero matching tests</span>
+<span id="L88">mean preparation is incomplete. The independent printed-answer check in the</span>
+<span id="L89">short-session guide tests the reference, not this live function. Their</span>
+<span id="L90">[different roles](path/README.md#checking-your-work) matter when deciding whether</span>
+<span id="L91">there is anything ready to activate.</span>
+<span id="L92"></span>
+<span id="checkpoint-b--choosing-becomes-an-ecs-behavior"></span><span id="L93">## Checkpoint B — choosing becomes an ECS behavior</span>
+<span id="L94"></span>
+<span id="L95">[Session 04](path/04-when-to-seek.md) owns the next paired edit: the body of</span>
+<span id="L96">`next_foraging_state`. The agent prepares its `ForagingState` enum and focused</span>
+<span id="L97">test. That helper decides when to start, continue or stop seeking; it changes</span>
+<span id="L98">neither position nor energy. Its complete answer and state diagram live with</span>
+<span id="L99">the lesson.</span>
+<span id="L100"></span>
+<span id="L101">After helper review, the agent prepares the system around it: check grazer</span>
+<span id="L102">eligibility, update activity, gather eligible patches while seeking, call</span>
+<span id="L103">`nearest_food`, and write the selected stable `FoodTarget`.</span>
+<span id="L104">Missing or empty targets must be cleared or replaced. Target IDs resolve within</span>
+<span id="L105">the current run, and stopping seeking clears the food target so the existing</span>
+<span id="L106">movement adapter does not continue toward a stale instruction. The diagnostic</span>
+<span id="L107">fixture moves from an authored initial target to policy-owned target updates.</span>
+<span id="L108"></span>
+<span id="L109">The completed schedule is maintenance → choice → movement → eating → complete</span>
+<span id="L110">tick. Choice reads the reserve after maintenance; movement and meals may change</span>
+<span id="L111">it again later in the same tick. That ordering makes both the decision and the</span>
+<span id="L112">final reserve explainable.</span>
+<span id="L113"></span>
+<span id="L114">A focused adapter harness applies maintenance, then choice, with movement and</span>
+<span id="L115">eating outside that isolated harness. It must prove the following **selection-only**</span>
+<span id="L116">expectations; they are not end-of-tick values for the full simulation:</span>
+<span id="L117"></span>
+<span id="L118">| Before a tick, maintenance = 1 | After the tick |</span>
+<span id="L119">| --- | --- |</span>
+<span id="L120">| Idle hare at 45, nearby food | Reserve 44; seeking that patch; position unchanged. |</span>
+<span id="L121">| Idle hare at 60 | Reserve 59; remains idle. |</span>
+<span id="L122">| Seeking hare at 60 | Reserve 59; remains seeking with valid nearby food. |</span>
+<span id="L123">| Seeking hare at 76 | Reserve 75; stops seeking. |</span>
+<span id="L124">| Hungry hare, no eligible food | No target; no food or energy invented. |</span>
+<span id="L125">| Hungry fox beside grass | No grass target. |</span>
+<span id="L126"></span>
+<span id="L127">The adapter tests also reverse patch spawn order and confirm the same stable</span>
+<span id="L128">target. Calling choice directly twice must not spend energy or change position.</span>
+<span id="L129">Record actual target changes without filling the bounded journal with an</span>
+<span id="L130">identical event every tick.</span>
+<span id="L131"></span>
+<span id="L132">A separate full-schedule regression proves the policy reaches the existing</span>
+<span id="L133">executors: a hungry grazer chooses, takes an affordable step, and eats only when</span>
+<span id="L134">it reaches the target cell. Assert the maintenance and actual travel charges</span>
+<span id="L135">alongside any actual meal. A stop decision clears the target before movement;</span>
+<span id="L136">a missing or empty patch cannot supply an invented destination or meal. The</span>
+<span id="L137">agent prepares literal values against the then-current fixture before this</span>
+<span id="L138">checkpoint becomes active.</span>
+<span id="L139"></span>
+<span id="L140">**Browser:** let the diagnostic hare drop below the seeking threshold. The</span>
+<span id="L141">inspector should show its activity and target, then its cell should change as</span>
+<span id="L142">movement executes. Once contact occurs, Meadow loses biomass and Fern gains the</span>
+<span id="L143">actual meal energy. After she reaches the stop threshold, the next choice pass</span>
+<span id="L144">stops seeking if her post-maintenance reserve still meets it. User selection</span>
+<span id="L145">only changes inspection; it does not choose the animal&#x27;s food.</span>
+<span id="L146"></span>
+<span id="L147">The agent finishes activation when the helper, isolated adapter and full-schedule</span>
+<span id="L148">checks agree with the browser sequence. [Session 04&#x27;s review stop](path/04-when-to-seek.md#turn-the-decision-into-behavior)</span>
+<span id="L149">owns that handoff. The route then continues to [session 05&#x27;s population summary](path/05-many-individuals.md),</span>
+<span id="L150">with scenario and reset details in the [population companion](02-populations.md).</span>
+<span id="L151"></span>
+<span id="optional-why-a-tie-needs-a-rule"></span><span id="L152">## Optional: why a tie needs a rule</span>
+<span id="L153"></span>
+<span id="L154">If two patches are equally near, either could make sense for the animal. Why</span>
+<span id="L155">choose the lower ID? It gives this version a repeatable answer that survives a</span>
+<span id="L156">change in spawn order. We can later choose randomness deliberately and control</span>
+<span id="L157">its seed; relying on storage traversal order would make the choice accidental.</span>
+<span id="L158"></span>
+<span id="L159">The [session 03 worked test](path/03-finding-food.md#a-borrowed-slice-and-a-running-best-candidate)</span>
+<span id="L160">already gives you a check: reversing the input leaves the</span>
+<span id="L161">answer at patch 4. If we moved patch 9 onto the origin while leaving it nonempty,</span>
+<span id="L162">patch 9 should win because distance is compared before ID. You can reason that</span>
+<span id="L163">out from `(distance, id)` without adding another feature.</span>
+<span id="L164"></span>
+<span id="L165">[Guide home](README.md) · Lessons: [03, choose food](path/03-finding-food.md) and [04, remember seeking](path/04-when-to-seek.md)</span></pre></body></html>

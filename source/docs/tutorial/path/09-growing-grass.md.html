@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>docs/tutorial/path/09-growing-grass.md · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>docs/tutorial/path/09-growing-grass.md</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>6a1430d36e40afb59e52f1de4de218e01c0848670aa321a6ee213e3349d3eebe</code></p><pre><span id="09-give-meadow-a-way-to-recover"></span><span id="L1"># 09. Give Meadow a way to recover</span>
+<span id="L2"></span>
+<span id="L3">[Path home](README.md) · [Previous: a fair comparison](08-a-fair-comparison.md) · [Next: growth meets meals](10-growth-meets-meals.md)</span>
+<span id="L4"></span>
+<span id="L5">**Future session · 20–30 minutes.** Your edit is a bounded `grow_biomass`</span>
+<span id="L6">helper, planned in `crates/moss-sim/src/lessons.rs`. Before activation, the agent</span>
+<span id="L7">prepares its stub and focused test, plus typed patch growth settings with a</span>
+<span id="L8">capacity of 100 biomass units and a rate of 1 unit per tick. Neither those</span>
+<span id="L9">settings nor scheduled growth exists in the current browser. Today&#x27;s movement</span>
+<span id="L10">exercise remains unchanged.</span>
+<span id="L11"></span>
+<span id="reconnect-with-the-world"></span><span id="L12">## Reconnect with the world</span>
+<span id="L13"></span>
+<span id="L14">Fern can take something away from Meadow. We now want Meadow to recover a little</span>
+<span id="L15">between visits. Recall how a meal worked: compute the amount permitted by every</span>
+<span id="L16">limit, then apply exactly that amount to both participants. Growth reuses the</span>
+<span id="L17">same pattern with one participant and one source: the environment supplies new</span>
+<span id="L18">biomass, while the patch&#x27;s capacity limits how much it can retain.</span>
+<span id="L19"></span>
+<span id="L20">Meadow is a stand of grass represented by one entity. Increasing its biomass</span>
+<span id="L21">does not create neighboring patches, alter its footprint, or change its species.</span>
+<span id="L22">Those would be separate rules. A cellular automaton, which updates cells using</span>
+<span id="L23">their neighbors, could eventually describe spread. Local recovery needs no</span>
+<span id="L24">neighbor lookup, so we can learn this rule without also learning a grid engine.</span>
+<span id="L25"></span>
+<span id="work-out-what-actually-fits"></span><span id="L26">## Work out what actually fits</span>
+<span id="L27"></span>
+<span id="L28">Suppose Meadow holds 99 units and its capacity is 100. A request for</span>
+<span id="L29">3 can retain only 1, producing 100. On the next tick the same request produces</span>
+<span id="L30">nothing. This focused boundary uses a larger request than the default rate of 1</span>
+<span id="L31">so it can expose partial capacity; the configured request and actual outcome</span>
+<span id="L32">differ. Returning that outcome lets the inspector and later accounting report</span>
+<span id="L33">what happened without reconstructing it from a configured rate.</span>
+<span id="L34"></span>
+<span id="L35">This is the same distinction you used for travel: a cost per cell is a setting;</span>
+<span id="L36">distance actually moved determines the charge. Here capacity and growth rate</span>
+<span id="L37">are settings, while actual growth is a result. Keeping these meanings separate</span>
+<span id="L38">makes later lighting changes smaller. Darkness will change the requested rate,</span>
+<span id="L39">and the capacity rule will continue to protect the patch.</span>
+<span id="L40"></span>
+<span id="L41">Rust&#x27;s `&amp;mut FoodPatch` gives the function temporary permission to change the</span>
+<span id="L42">caller&#x27;s patch. The helper owns neither the entity nor the world. Its small</span>
+<span id="L43">signature makes the rule testable with an ordinary value, exactly as you tested</span>
+<span id="L44">energy transfer before putting it inside an ECS system.</span>
+<span id="L45"></span>
+<span id="make-one-bounded-change"></span><span id="L46">## Make one bounded change</span>
+<span id="L47"></span>
+<span id="L48">Implement `grow_biomass` using remaining capacity to bound the request. The</span>
+<span id="L49">agent will put the live test command beside that helper when preparing this</span>
+<span id="L50">session. Its first check starts Meadow at 99 with capacity 100 and requests 3:</span>
+<span id="L51">expect a return value of 1 and biomass 100. Calling again must return 0. If</span>
+<span id="L52">biomass stays at 100 but the call reports 3, check whether you returned the</span>
+<span id="L53">requested amount instead of the amount retained.</span>
+<span id="L54"></span>
+<span id="L55">The **optional worked reference** below includes the complete helper and its</span>
+<span id="L56">test. It uses the existing `FoodPatch`; it is not another module to paste into</span>
+<span id="L57">production code. [Checking your work](README.md#checking-your-work) explains</span>
+<span id="L58">how the live checkpoint differs from running this printed answer.</span>
+<span id="L59"></span>
+<span id="L60">&lt;!-- runnable: session-09 --&gt;</span>
+<span id="L61">```rust</span>
+<span id="L62">use moss_sim::FoodPatch;</span>
+<span id="L63"></span>
+<span id="L64">fn grow_biomass(patch: &amp;mut FoodPatch, capacity: u32, requested: u32) -&gt; u32 {</span>
+<span id="L65">    assert!(patch.biomass &lt;= capacity, &quot;biomass exceeds capacity&quot;);</span>
+<span id="L66">    let actual = requested.min(capacity - patch.biomass);</span>
+<span id="L67">    patch.biomass = patch.biomass.checked_add(actual).expect(&quot;biomass overflow&quot;);</span>
+<span id="L68">    actual</span>
+<span id="L69">}</span>
+<span id="L70"></span>
+<span id="L71">#[test]</span>
+<span id="L72">fn session_09_growth_reports_only_what_fits() {</span>
+<span id="L73">    let mut meadow = FoodPatch {</span>
+<span id="L74">        name: &quot;Meadow&quot;,</span>
+<span id="L75">        biomass: 99,</span>
+<span id="L76">    };</span>
+<span id="L77">    assert_eq!(grow_biomass(&amp;mut meadow, 100, 3), 1);</span>
+<span id="L78">    assert_eq!(meadow.biomass, 100);</span>
+<span id="L79">    assert_eq!(grow_biomass(&amp;mut meadow, 100, 3), 0);</span>
+<span id="L80">    assert_eq!(meadow.biomass, 100);</span>
+<span id="L81"></span>
+<span id="L82">    meadow.biomass = 95;</span>
+<span id="L83">    assert_eq!(grow_biomass(&amp;mut meadow, 100, 3), 3);</span>
+<span id="L84">    assert_eq!(meadow.biomass, 98);</span>
+<span id="L85"></span>
+<span id="L86">    meadow.biomass = 0;</span>
+<span id="L87">    assert_eq!(grow_biomass(&amp;mut meadow, 100, 1), 1);</span>
+<span id="L88">    assert_eq!(meadow.biomass, 1);</span>
+<span id="L89">    assert_eq!(grow_biomass(&amp;mut meadow, 100, 0), 0);</span>
+<span id="L90">    assert_eq!(meadow.biomass, 1);</span>
+<span id="L91">}</span>
+<span id="L92">```</span>
+<span id="L93"></span>
+<span id="L94">The assertion at entry distinguishes an invalid starting patch from an ordinary</span>
+<span id="L95">full patch. Silently clamping an already invalid value would hide a setup bug.</span>
+<span id="L96">The agent must validate or construct growth settings consistently before the</span>
+<span id="L97">system calls this helper. Intentional saturation and error concealment can look</span>
+<span id="L98">similar in arithmetic; their domain meanings decide which is appropriate.</span>
+<span id="L99"></span>
+<span id="keep-a-useful-stopping-point"></span><span id="L100">## Keep a useful stopping point</span>
+<span id="L101"></span>
+<span id="L102">An empty patch regrows because zero currently means cropped grass, not extinct</span>
+<span id="L103">grass. That is a model choice, and the empty-patch assertion preserves it. Plant</span>
+<span id="L104">death or seed availability can change the rule later through an explicit edit.</span>
+<span id="L105">For now, being able to explain that one assertion is enough context to resume.</span>
+<span id="L106"></span>
+<span id="L107">Stop after the helper test passes and ask: **“Review my bounded growth helper,</span>
+<span id="L108">especially the reported amount and empty-patch case. Keep the system unscheduled</span>
+<span id="L109">until the next integration checkpoint.”** The next session lets Fern eat during</span>
+<span id="L110">the same tick that Meadow grows. We will use a tiny energy account to make the</span>
+<span id="L111">order visible instead of trusting that two correct helpers automatically compose.</span></pre></body></html>

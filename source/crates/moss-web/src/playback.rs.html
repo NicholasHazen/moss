@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>crates/moss-web/src/playback.rs · Moss source snapshot</title>
+<style>body{max-width:1000px;margin:40px auto;padding:0 24px;color:#25392b;background:#fcfbf6;font:16px/1.65 system-ui}a{color:#285943}pre{overflow:auto;padding:20px;border:1px solid #cbd5c6;background:#f0f3e9;font:13px/1.7 ui-monospace,monospace}code{overflow-wrap:anywhere}pre span:target{background:#dee9c0}h1{font:32px Georgia,serif}.meta{color:#55654c;font-size:14px}</style></head>
+<body><a href="../../../../index.html">← Textbook home</a><h1>Source snapshot</h1>
+<p><code>crates/moss-web/src/playback.rs</code></p>
+<p>This file was captured from the local working tree when this book was built.
+It is reference material; the live checkout may have changed. Markdown is shown
+as source, so it does not publish the pages it links to.</p>
+<p class="meta">SHA-256: <code>4bff9353b4f152f10d8f8491fbf7a8bf6ccfde3c9dcad7512caabe090c2499bf</code></p><pre><span id="L1">//! Wall time requests complete ticks. The simulation itself never reads this clock.</span>
+<span id="L2">#![cfg_attr(not(target_arch = &quot;wasm32&quot;), allow(dead_code))]</span>
+<span id="L3"></span>
+<span id="L4">const MAX_TICKS_PER_FRAME: u32 = 4;</span>
+<span id="L5"></span>
+<span id="L6">#[derive(Default)]</span>
+<span id="L7">pub struct Playback {</span>
+<span id="L8">    pub running: bool,</span>
+<span id="L9">    pub slowed: bool,</span>
+<span id="L10">    pub suspended: bool,</span>
+<span id="L11">    last_ms: Option&lt;f64&gt;,</span>
+<span id="L12">    accumulated_seconds: f64,</span>
+<span id="L13">    hidden_epoch: u32,</span>
+<span id="L14">}</span>
+<span id="L15"></span>
+<span id="L16">impl Playback {</span>
+<span id="L17">    pub fn set_running(&amp;mut self, running: bool) {</span>
+<span id="L18">        self.running = running;</span>
+<span id="L19">        self.last_ms = None;</span>
+<span id="L20">        self.accumulated_seconds = 0.0;</span>
+<span id="L21">        self.slowed = false;</span>
+<span id="L22">        if running {</span>
+<span id="L23">            self.suspended = false;</span>
+<span id="L24">        }</span>
+<span id="L25">    }</span>
+<span id="L26"></span>
+<span id="L27">    pub fn visibility(&amp;mut self, hidden: bool, epoch: u32) {</span>
+<span id="L28">        // The epoch catches hide+show even if no render frame ran while hidden.</span>
+<span id="L29">        if hidden || epoch != self.hidden_epoch {</span>
+<span id="L30">            self.set_running(false);</span>
+<span id="L31">            self.suspended = true;</span>
+<span id="L32">        }</span>
+<span id="L33">        self.hidden_epoch = epoch;</span>
+<span id="L34">    }</span>
+<span id="L35"></span>
+<span id="L36">    pub fn advance(&amp;mut self, now_ms: f64) -&gt; u32 {</span>
+<span id="L37">        let previous = self.last_ms.replace(now_ms);</span>
+<span id="L38">        if !self.running {</span>
+<span id="L39">            return 0;</span>
+<span id="L40">        }</span>
+<span id="L41">        let elapsed = previous.map_or(0.0, |last| ((now_ms - last) / 1000.0).max(0.0));</span>
+<span id="L42">        let tick_seconds = f64::from(moss_sim::TICK_SECONDS);</span>
+<span id="L43">        let budget = tick_seconds * f64::from(MAX_TICKS_PER_FRAME);</span>
+<span id="L44">        self.slowed = elapsed &gt; budget;</span>
+<span id="L45">        // Discard excess wall time under load; never build a hidden catch-up queue.</span>
+<span id="L46">        self.accumulated_seconds += elapsed.min(budget);</span>
+<span id="L47">        let ticks = (self.accumulated_seconds / tick_seconds).floor() as u32;</span>
+<span id="L48">        self.accumulated_seconds -= f64::from(ticks) * tick_seconds;</span>
+<span id="L49">        ticks</span>
+<span id="L50">    }</span>
+<span id="L51">}</span>
+<span id="L52"></span>
+<span id="L53">#[cfg(test)]</span>
+<span id="L54">mod tests {</span>
+<span id="L55">    use super::*;</span>
+<span id="L56"></span>
+<span id="L57">    #[test]</span>
+<span id="L58">    fn pause_resume_and_hidden_return_discard_backlog() {</span>
+<span id="L59">        let mut playback = Playback::default();</span>
+<span id="L60">        assert_eq!(playback.advance(0.0), 0);</span>
+<span id="L61">        playback.set_running(true);</span>
+<span id="L62">        assert_eq!(playback.advance(0.0), 0);</span>
+<span id="L63">        assert_eq!(playback.advance(250.0), 1);</span>
+<span id="L64">        playback.visibility(false, 1); // hidden and shown between frames</span>
+<span id="L65">        assert!(!playback.running);</span>
+<span id="L66">        assert_eq!(playback.advance(60_000.0), 0);</span>
+<span id="L67">        playback.set_running(true);</span>
+<span id="L68">        assert_eq!(playback.advance(60_000.0), 0);</span>
+<span id="L69">        assert_eq!(playback.advance(60_250.0), 1);</span>
+<span id="L70">    }</span>
+<span id="L71"></span>
+<span id="L72">    #[test]</span>
+<span id="L73">    fn render_frequency_does_not_change_requested_ticks() {</span>
+<span id="L74">        fn count(frame_ms: f64) -&gt; u32 {</span>
+<span id="L75">            let mut playback = Playback::default();</span>
+<span id="L76">            playback.set_running(true);</span>
+<span id="L77">            playback.advance(0.0);</span>
+<span id="L78">            (1..=(2000.0 / frame_ms) as u32)</span>
+<span id="L79">                .map(|frame| playback.advance(f64::from(frame) * frame_ms))</span>
+<span id="L80">                .sum()</span>
+<span id="L81">        }</span>
+<span id="L82">        assert_eq!(count(125.0), 8);</span>
+<span id="L83">        assert_eq!(count(250.0), 8);</span>
+<span id="L84">    }</span>
+<span id="L85"></span>
+<span id="L86">    #[test]</span>
+<span id="L87">    fn slow_frames_are_bounded_and_reported() {</span>
+<span id="L88">        let mut playback = Playback::default();</span>
+<span id="L89">        playback.set_running(true);</span>
+<span id="L90">        playback.advance(0.0);</span>
+<span id="L91">        assert_eq!(playback.advance(60_000.0), MAX_TICKS_PER_FRAME);</span>
+<span id="L92">        assert!(playback.slowed);</span>
+<span id="L93">        assert_eq!(playback.advance(60_250.0), 1);</span>
+<span id="L94">    }</span>
+<span id="L95">}</span></pre></body></html>
