@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="450" viewBox="0 0 820 450" role="img" aria-labelledby="title desc">
+<title id="title">Resolve a species default once into each animal's owned component</title>
+<desc id="desc">Future proposal: three hares share a species maintenance default of one energy unit per tick. At spawn, no override resolves to one, Some two resolves to two, and Some zero resolves to zero. Each animal receives its own AnimalEnergyCosts component. Maintenance reads those components directly. Starting at 60 without food or travel, three ticks leave reserves 57, 54 and 60. A later change to the template alone does not update existing components.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#496c54"/></marker></defs>
+<rect width="820" height="450" rx="14" fill="#f6f7f1"/>
+<g font-family="system-ui, sans-serif" fill="#20382c">
+<text x="28" y="38" font-size="25" font-weight="700">A starting instruction becomes an owned value</text>
+<text x="28" y="68" font-size="17">Future proposal · maintenance is measured in energy units per tick</text>
+<text x="28" y="109" font-size="18" font-weight="650">Shared species default: Hare = 1</text>
+<text x="28" y="146" font-size="17" font-weight="650">Authored override</text>
+<text x="316" y="146" font-size="17" font-weight="650">Resolve at spawn</text>
+<text x="552" y="146" font-size="17" font-weight="650">Owned component value</text>
+<g font-size="18">
+<rect x="28" y="161" width="214" height="45" rx="8" fill="#fff" stroke="#477d59"/>
+<text x="46" y="190">Fern: None</text>
+<path d="M248 183H303" stroke="#496c54" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="317" y="190">use species default</text>
+<path d="M492 183H538" stroke="#496c54" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="552" y="161" width="240" height="45" rx="8" fill="#e3eddf"/>
+<text x="569" y="190">Fern's rate: 1</text>
+<rect x="28" y="224" width="214" height="45" rx="8" fill="#fff" stroke="#477d59"/>
+<text x="46" y="253">Hare B: Some(2)</text>
+<path d="M248 246H303" stroke="#496c54" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="317" y="253">use explicit value</text>
+<path d="M492 246H538" stroke="#496c54" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="552" y="224" width="240" height="45" rx="8" fill="#e3eddf"/>
+<text x="569" y="253">Hare B's rate: 2</text>
+<rect x="28" y="287" width="214" height="45" rx="8" fill="#fff" stroke="#477d59"/>
+<text x="46" y="316">Hare C: Some(0)</text>
+<path d="M248 309H303" stroke="#496c54" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="317" y="316">use explicit zero</text>
+<path d="M492 309H538" stroke="#496c54" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="552" y="287" width="240" height="45" rx="8" fill="#e3eddf"/>
+<text x="569" y="316">Hare C's rate: 0</text>
+</g>
+<text x="28" y="371" font-size="17">Every tick: the query reads each animal's costs alongside its mutable energy.</text>
+<text x="28" y="401" font-size="17">From reserve 60, three maintenance-only ticks leave 57, 54 and 60.</text>
+<text x="28" y="431" font-size="17">Changing the template alone does not rewrite these existing components.</text>
+</g></svg>

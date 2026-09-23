@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Moss - Maintenance test" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
     <option name="buildProfileId" value="test" />
-    <option name="command" value="test -p moss-sim --locked --test bootstrap -- maintenance_spends_energy_and_stops_at_zero --exact" />
+    <option name="command" value="test -p moss-sim --locked --test maintenance -- maintenance_spends_energy_and_stops_at_zero --exact" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <envs />
     <option name="emulateTerminal" value="false" />

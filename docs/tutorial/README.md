@@ -1,18 +1,21 @@
 # Building Moss, one explainable change at a time
 
-**Start with [Chapter 1A: species settings](01-species-energy.md#checkpoint-a--describe-the-settings).**
-Add the configuration type and its defaults, run the existing simulation tests,
-then stop for review. You do not need to read ahead to begin.
+**Start with [today's v2 lesson: give Fern one affordable step](today-v2.md).**
+[NOW.md](../../NOW.md) keeps the active edit and stopping point.
+This guide explains how each small change works and how to check it. The
+[documentation index](../README.md) leads to setup, design, research and history.
 
-Fern and Flint both start with 60 energy. Step three times and both have 57.
-That is the rule you wrote, running in the browser and in a renderer-free test.
-Our next change lets a fox and a hare pay different passive costs. From there,
-we can ask what a hungry animal notices, how it reaches food, and what happens
-when two animals reach the same finite patch.
+For the weeks after today, use [the short-session learning path](path/README.md):
+16 guides organized into four adaptable arcs, with worked examples, returning
+reminders and visible results. The intended focus block is 20–30 minutes; actual
+progress and useful questions can change the route. V2 keeps today's movement
+exercise and brings its explanation, worked answer and review into one page.
 
-This guide follows those questions through the actual project. The coding path
-stays small. Optional context pages explain the surrounding Rust, ECS, and
-ecology ideas when you want more of the picture.
+Fern and Flint both start with 60 energy. Three ticks at the default rate leave
+57. The next visible result is Fern walking to Meadow, then eating a finite meal.
+We introduce autonomous choice and individual differences after that loop can
+be observed. The short-session path owns that future sequence; the older chapter
+filenames remain available as references for existing bookmarks.
 
 ## Find your place
 
@@ -23,81 +26,68 @@ ecology ideas when you want more of the picture.
 
 ## The coding chapters
 
-**Ready to start:** Chapter 1A. The later checkpoints and chapters require the
-agent preparation named on their pages. They describe future behavior, not
-features already running in Moss. [NOW.md](../../NOW.md) records your current
-edit and stopping point.
+Use one route. [Today's v2 lesson](today-v2.md) connects the active movement edit to a
+browser result and an optional meal stretch. After that, the agent resumes the
+first unfinished outcome in the [short-session path](path/README.md), preparing
+its plumbing before your coding block. Reading ahead does not activate a task.
 
-1. **[Species energy settings](01-species-energy.md).** The reserve belongs to
-   the animal; the rate belongs to shared configuration. Keep the existing
-   default, then prove that three ticks can leave the hare at 57 and fox at 54.
-2. **[Authored populations](02-populations.md).** Keep the diagnostic chamber,
-   add six hares, two foxes and four grass patches, and inspect species totals.
-   This is agent scaffolding, followed by a short test walkthrough together.
-3. **[Choosing nearby food](03-food-choice.md).** Give a hungry grazer a target
-   without moving it. A stable tie rule makes an otherwise ambiguous choice
-   explainable and repeatable.
-4. **[Paying to move](04-movement.md).** Turn the target into an affordable
-   one-cell step. Charge for the accepted distance, after passive maintenance.
-5. **[A finite meal](05-eating.md).** Transfer only the food that exists and
-   the energy that fits. Two grazers must share the actual remaining biomass.
+| Visible progress | What you learn |
+| --- | --- |
+| **Completed reference:** [species maintenance](01-species-energy.md) | Revisit the rule already running: components hold reserves, a resource supplies rates, and a query updates animals. No edit is assigned here. |
+| **Today:** [an affordable step, v2](today-v2.md) | Copy a proposed position, borrow real values mutably, validate before mutation, then connect a helper to ECS. |
+| **Next / today's stretch:** [a finite meal](05-eating.md) | Transfer bounded quantities; account for actual consumption and competing eaters. Agent preparation follows movement review. |
+| **After today:** [sixteen short sessions](path/README.md) | Develop finite food, autonomous foraging, individual costs, growth, daylight and an explainable response to scarcity. |
 
-Each chapter supplies code placement, a worked example, an observable
-checkpoint and a review stop. I prepare the mechanical prerequisites and
-reconcile later instructions with your current code before you reach them.
-The guide does not require you to manage those dependencies.
+If today's stretch already covers a meal checkpoint, keep the reviewed work;
+the agent skips that duplicate exercise. `NOW.md` remains the one place recording
+your actual next edit. The [checking guidance](path/README.md#checking-your-work)
+distinguishes testing that edit from running a guide's complete printed answer.
+
+The stable [food-choice chapter](03-food-choice.md), [population chapter](02-populations.md)
+and [individual-cost chapter](01d-energy-profiles.md) explain integration and
+design beside the corresponding short sessions. They are companions, not a
+second curriculum to complete. Their opening links take an old bookmark to the
+current lesson. The broader [conceptual map](context/learning-path.md) connects
+later ideas without making them prerequisites for visible progress.
 
 ## Context when you want it
 
-The [context shelf](context/README.md) is optional. These pages answer questions
-you can carry back to the code:
+The [context shelf](context/README.md) is optional reading:
 
-- **[Follow one Step through Moss](context/a-tick-through-moss.md):** where the
-  button becomes a rule, and why the browser and native tests agree.
-- **[Rust at the point of use](context/rust-at-point-of-use.md):** references,
-  mutable bindings, loops, tuple patterns and `Option` in this codebase.
-- **[ECS through Fern and Flint](context/ecs-in-moss.md):** components, resources,
-  queries, schedules and the different meanings of identity and species.
-- **[From a meal to an ecosystem](context/from-meals-to-ecosystems.md):** why
-  finite food comes before sunlight, growth, weather and population experiments.
+- [Follow one Step through Moss](context/a-tick-through-moss.md) connects the
+  browser button, rule and native test.
+- [Rust at the point of use](context/rust-at-point-of-use.md) explains modules,
+  public paths, borrowing and query syntax.
+- [Read a test as a small experiment](context/reading-a-test.md) follows the
+  maintenance regression you already have, including how to interpret its result.
+- [ECS through Fern and Flint](context/ecs-in-moss.md) connects components,
+  resources, queries, schedules and identity.
+- [Attributes and defaults](context/attributes-and-defaults.md) explores
+  templates, individual values and future temporary effects.
+- [From a meal to an ecosystem](context/from-meals-to-ecosystems.md) connects
+  finite food to growth, daylight and population experiments.
+- [The learning path](context/learning-path.md) shows the broader conceptual
+  progression; the [ecology plan](../design/ecology.md) holds model decisions.
 
 ## Reading and running in RustRover
 
-Open this file in the Project tree under `docs/tutorial`. Use **Preview** for
-reading or **Editor and Preview** when comparing prose and code. Chapter pages
-have a local contents list and links back here; the files also remain readable
-as plain Markdown. [The reading setup](reading-in-rustrover.md) describes the
-layout and navigation without requiring a theme or diagram plugin.
+Open this file under `docs/tutorial` and use **Preview** or **Editor and Preview**.
+[The reading setup](reading-in-rustrover.md) explains navigation. Use the exact
+checkpoint command from the repository root; [development commands](../development/README.md)
+and [the IDE guide](../development/rustrover.md) cover setup and run configurations.
 
-All shell commands assume the workspace root, `/Users/nick/Code/moss`. Use the
-existing **Run** configurations or a terminal command printed beside the
-checkpoint. Native Debug has a known stall on this machine; normal test Run
-works. [The IDE guide](../RUSTROVER.md) keeps those setup details in one place.
-
-When a focused test runs, check its name and result. Zero matching tests is
-not a green checkpoint. A separate line saying zero *doc-tests* is normal.
-The chapter explains any intended red result and the edit that should make it
-green. For an unexpected failure, send the output with your current edit.
-
-Once green, send the chapter's review request. I will review the rule and Rust
-usage, handle broader checks and browser plumbing, and update `NOW.md`.
-A helper test proves its calculation; a completed behavior also needs the real
-installed schedule and a browser observation. Those are different kinds of
-evidence, and the chapters label them separately.
+Check that the named test ran: zero matches is not green. Send an unexpected
+failure with your edit. Once green, send the active guide's review request; the agent
+reviews the rule, completes remaining checks and updates `NOW.md`.
 
 ## How the guide grows
 
-The chapters use the [TutorBro Tutorial Writing skill](https://chatgpt.com/skills?skill_id=6ab16fad9a7881919144924b499536e8):
-keep a familiar example while one idea changes, explain why each change is
-needed, and check its effect before continuing. The source skill and both
-writing references were read for this revision.
+The chapters use [TutorBro](https://chatgpt.com/skills?skill_id=6ab16fad9a7881919144924b499536e8):
+keep a familiar example, explain why a change matters and check its effect.
+The agent maintains chapters and links using the
+[authoring contract and template](authoring/README.md).
 
-Plans remain in [ECOLOGY_PLAN.md](../ECOLOGY_PLAN.md); the broader journey remains
-in [LEARNING_PATH.md](../LEARNING_PATH.md). As those change, the agent updates
-the relevant chapter and its evidence, preserving existing links where possible.
-The [authoring notes and template](authoring/README.md) make that maintenance
-repeatable. You do not need to read them to use the guide.
-
-The [verification record](authoring/verification.md) distinguishes tested examples
-from future acceptance checks. The source code is the running implementation;
-a worked example in this guide does not install a biological rule.
+[Current example verification](authoring/verification.md) distinguishes executed
+checks from future acceptance. A helper test does not prove installed-schedule
+behavior, and a native test does not prove browser behavior. Writing an example
+in this guide does not install its rule into Moss.

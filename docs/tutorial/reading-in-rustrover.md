@@ -1,6 +1,6 @@
 # Reading the guide in RustRover
 
-[Guide home](README.md) · [Start Chapter 1A](01-species-energy.md#checkpoint-a--describe-the-settings)
+[Guide home](README.md) · [Today's movement session](today-v2.md)
 
 The useful arrangement is the lesson beside the file you are editing. You
 should be able to follow a link, run one test, and return to the same checkpoint
@@ -14,7 +14,7 @@ without searching through the rest of the project.
 
 ## Choose a reading view
 
-Open `docs/tutorial/README.md` from the Project tree. Markdown's **Preview** mode
+Open `docs/tutorial/today-v2.md` from the Project tree. Markdown's **Preview** mode
 gives the prose the available width; **Editor and Preview** shows its source and
 rendering together. Use the controls at the top right of the Markdown editor.
 These modes and relative file/heading links are supported by
@@ -22,13 +22,24 @@ These modes and relative file/heading links are supported by
 
 For coding, keep a chapter open and open the linked Rust file beside it. The
 chapter's contents list jumps to a checkpoint, while **Guide home**, **Previous**
-and **Next** links connect the pages. The filenames stay numbered so the Project
-tree gives the same order as the guide.
+and **Next** links connect the pages. Filenames stay numbered to preserve old
+links; today's route in the guide home takes precedence over filename order.
+
+With `lessons.rs` already open, an alternative is **Search Everywhere**: search
+for `today-v2.md`, select the file result and choose **Open In Right Split** at
+the bottom of the search window. Set that Markdown pane to **Preview**. This
+keeps the Rust source on the left and the rendered lesson on the right; you do
+not need a second Markdown-source pane while writing Rust.
 
 If the text feels small, adjust **Preview font size** under
 **Settings → Languages & Frameworks → Markdown**. The guide uses ordinary
 Markdown and your IDE's existing colors. There is no custom CSS to maintain.
 Tables stay narrow, and code fences name their language for syntax highlighting.
+The diagrams are local SVG images with descriptive alt text and no extra
+plugin requirement. V2's two diagrams and section links were inspected in the
+installed RustRover preview. The [native preview record](../history/tutorial/2026-09-22.md#native-reading-checkpoint-september-22-2026)
+describes the checked layout and a repaint issue encountered during background
+automation; it does not establish rendering across every IDE version or theme.
 
 ## Move between the lesson and code
 
@@ -49,10 +60,11 @@ context page links back to the chapter where its idea first matters.
 
 ## Run a checkpoint
 
-Use **Moss - Simulation tests** for Chapter 1A. For a single later regression,
+For today's edit use **Moss - Movement test**; it intentionally starts red at
+the helper's `todo!()`. Use **Moss - Simulation tests** for a broader run. For a single later regression,
 use the Run gutter beside its `#[test]` in the Rust file, or the exact terminal
 command in the lesson. Choose normal **Run** while the native debugger stall
-remains unresolved. Build and preview setup lives in [the IDE guide](../RUSTROVER.md).
+remains unresolved. Build and preview setup lives in [the IDE guide](../development/rustrover.md).
 
 Check that the named test actually ran. If you pasted a command into a terminal,
 its working directory should be `/Users/nick/Code/moss`. A “could not find

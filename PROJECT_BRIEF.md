@@ -60,7 +60,7 @@ species should be available through authored population scenarios before
 reproduction is implemented. The current design also includes local plant
 renewal followed by a simulation-tick day/night cycle supplying light; weather
 may later affect light, moisture, and energy costs through explicit rules.
-[The ecology plan](docs/ECOLOGY_PLAN.md) distinguishes these future steps from
+[The ecology plan](docs/design/ecology.md) distinguishes these future steps from
 the working foundation and explains sizes, shapes, and optional plant spread.
 
 ## 6. A bounded world that can grow

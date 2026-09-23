@@ -1,23 +1,27 @@
-# 3. Choose nearby food without moving yet
+<a id="3-choose-nearby-food-without-moving-yet"></a>
 
-[Guide home](README.md) · Previous: [populations](02-populations.md) · Next: [movement](04-movement.md)
+# 3. Let Fern choose nearby food
 
-**Future chapter; preparation follows Chapter 2's review.** The helper and
-activity data below are not installed. See [verification](authoring/verification.md)
-for which worked examples were tested separately.
+[Guide home](README.md) · Lessons: [03, choose food](path/03-finding-food.md) and [04, remember seeking](path/04-when-to-seek.md)
 
-Fern can now spend energy, but the loss does not make anything happen. Meadow
-could be nearby or across the chamber and the maintenance loop would behave
-the same way. The first step toward feeding is to turn the animal's state and
-nearby food into a choice we can inspect.
+**Future integration companion for sessions 03–04.** Those two
+[short sessions](path/03-finding-food.md) own the learner edits and complete
+worked answers: first `nearest_food`, then `next_foraging_state`. This page
+explains how the agent connects them to existing movement and meals. The helper
+and activity data are not installed yet. `FoodTarget` already exists for today's
+authored journey and will be reused. [Verification](authoring/verification.md)
+separates recorded example checks from future activation.
 
-We will give a hungry grazer a target while leaving its position unchanged.
-That makes a useful boundary: if the inspector names the wrong patch, we can
-investigate the choice without also wondering whether movement or eating caused
-it. The first edit is an ordinary Rust function; then we connect that function
-to the ECS system and check a complete tick.
+Fern's first journey follows the target we authored. Movement and meals make
+that instruction useful; choice changes where it comes from. The future policy
+uses her condition and nearby food to decide where to go and when to stop seeking.
 
-> Prepare Chapter 3 with a hungry-grazer fixture, explicit activity/target data and inspector fields. Leave target selection for me. Keep movement and eating unscheduled, and reconcile this guide with the current code first.
+The selection helper itself changes no position or energy. That boundary lets
+its tests isolate the choice. In the complete simulation, the chosen target then
+flows into the movement and eating rules already running later in the tick.
+The path tests ordinary Rust functions first. Agent integration then checks
+their ECS adapter and the complete behavior in the browser. These are different
+levels of evidence for the same behavior, not another curriculum to complete.
 
 ## On this page
 
@@ -38,7 +42,8 @@ Fern at (10, 10) is 9 steps from Meadow at (16, 13). A smaller radius would make
 that existing patch invisible. This is an authored demonstration setting,
 not a claim about real hare vision.
 
-Hunger and eligibility belong in the system around this helper. Proposed
+Hunger and eligibility belong in the system around this helper. These are
+future policy rules, not prerequisites for today's movement session. Proposed
 initial settings are: begin seeking below 45 reserve, stop at 75, and preserve
 the previous seeking state between those thresholds. These are energy units
 for the current capacity-100 animals. Maintenance runs first, so the decision
@@ -53,107 +58,62 @@ decision depending on whether the animal was already seeking.
 
 ## Checkpoint A — a test for selection
 
-During preparation I will add the helper signature below to `lessons.rs` with
-a `todo!()` body, retaining the existing `choose_food` system stub for integration.
-I will create `crates/moss-sim/tests/foraging.rs` with the required imports.
-Its small input is a slice of `(stable ID, position, available biomass)` tuples;
-the ECS adapter will supply grass patches only.
+[Session 03](path/03-finding-food.md) contains the candidate trace, complete
+selection helper, test and Rust explanation. That is the canonical answer;
+there is no second implementation to reconcile here.
+Older execution records describe this chapter's former printed examples; the
+[path verification](path/verification.md) records checks of the revised answer.
 
-<!-- example: choice-test -->
-```rust
-use moss_sim::{Position, SimId, lessons::nearest_food};
+Before that session, the agent prepares the public helper
+`moss_sim::lessons::nearest_food` in `lessons.rs` with a `todo!()` body. Its inputs
+are `origin: Position`, a borrowed `patches: &[(SimId, Position, u32)]`, and
+`radius_cells: u32`; its return type is `Option<SimId>`. The tuple holds stable
+identity, position and available biomass. The adapter supplies grass patches
+only; the helper filters emptiness and distance and resolves ties.
 
-#[test]
-fn nearest_food_is_local_nonempty_and_stable() {
-    let origin = Position { x: 2, y: 2 };
-    let mut patches = vec![
-        (SimId(9), Position { x: 1, y: 2 }, 80),
-        (SimId(4), Position { x: 3, y: 2 }, 80),
-        (SimId(3), Position { x: 4, y: 2 }, 80), // Eligible, but farther away.
-        (SimId(1), origin, 0), // Closest, but empty.
-        (SimId(2), Position { x: 7, y: 2 }, 80), // Outside radius.
-    ];
-
-    assert_eq!(nearest_food(origin, &patches, 2), Some(SimId(4)));
-    patches.reverse();
-    assert_eq!(nearest_food(origin, &patches, 2), Some(SimId(4)));
-    assert_eq!(nearest_food(origin, &patches, 0), None);
-    assert_eq!(nearest_food(origin, &[], 2), None);
-}
-```
-
-Run after preparation:
+The agent also prepares `nearest_food_is_local_nonempty_and_stable` in
+`crates/moss-sim/tests/foraging.rs`. That live test imports the public helper;
+it must not declare a local duplicate. It checks reordered observations,
+empty food, an empty candidate list, and the radius boundary. Include the
+diagonal counterexample from session 03 so a straight-line metric cannot pass
+as Manhattan distance. The planned
+focused command, **after preparation**, is:
 
 ```sh
 scripts/with-toolchain.sh cargo test -p moss-sim --locked --test foraging nearest_food_is_local_nonempty_and_stable -- --exact
 ```
 
-**Red:** one test reaches the unfinished helper and fails. **Green:** it passes
-once your selection loop handles distance, availability and ties.
-
-Here is a complete worked implementation. Add `Position` and `SimId` to the
-existing `use crate::{...};` imports in `lessons.rs`; don't replace earlier imports.
-
-<!-- example: choice-helper -->
-```rust
-pub fn nearest_food(
-    origin: Position,
-    patches: &[(SimId, Position, u32)],
-    radius_cells: u32,
-) -> Option<SimId> {
-    let mut best: Option<(u32, SimId)> = None;
-
-    for &(id, position, biomass) in patches {
-        if biomass == 0 {
-            continue;
-        }
-        let distance = origin.x.abs_diff(position.x)
-            .checked_add(origin.y.abs_diff(position.y))
-            .expect("grid distance overflow");
-        if distance > radius_cells {
-            continue;
-        }
-
-        let candidate = (distance, id);
-        if best.is_none_or(|previous| candidate < previous) {
-            best = Some(candidate);
-        }
-    }
-
-    best.map(|(_, id)| id)
-}
-```
-
-`&[...]` borrows a slice; it does not take ownership of the caller's vector.
-`for &(...)` copies each small tuple out of its reference because all three
-values are `Copy`. `continue` skips this iteration. Rust compares tuples from
-left to right, so `(distance, id)` makes distance primary and stable ID the tie rule.
-
-`|previous| ...` is a closure, a small unnamed function. `is_none_or` accepts the
-first candidate or one better than the previous best. The final `map` turns
-`Some((distance, id))` into `Some(id)` and leaves `None` alone. We could write
-both using `match`; no iterator tricks are required to understand the rule.
-The optional [Option method reference](https://doc.rust-lang.org/std/option/enum.Option.html#method.is_none_or)
-shows `is_none_or` and `map` in isolation.
-
-**Send:**
-
-> The Chapter 3 selection test is green. Review the loop and tie rule, then help me connect it to choose_food. Do not add movement yet.
+Exactly one test should reach the unfinished helper before the learner edit,
+then pass after it. Missing imports, a missing target or zero matching tests
+mean preparation is incomplete. The independent printed-answer check in the
+short-session guide tests the reference, not this live function. Their
+[different roles](path/README.md#checking-your-work) matter when deciding whether
+there is anything ready to activate.
 
 ## Checkpoint B — choosing becomes an ECS behavior
 
-This is another prepared pairing session. I will turn the acceptance cases
-below into a concrete fixture and one next edit before you begin; they are not
-one large assignment to implement all at once. Start with hungry versus idle,
-then add target invalidation and the remaining boundary cases through review.
+[Session 04](path/04-when-to-seek.md) owns the next paired edit: the body of
+`next_foraging_state`. The agent prepares its `ForagingState` enum and focused
+test. That helper decides when to start, continue or stop seeking; it changes
+neither position nor energy. Its complete answer and state diagram live with
+the lesson.
 
-I will prepare the query/resource parameters and activity component. Together
-we fill in the system: check grazer eligibility and hunger, gather eligible
-patches, call the helper and write the selected stable target. Missing or empty
-targets must be cleared or replaced; target IDs are resolved in the current run.
-The agent wires the completed system before `complete_tick`, after maintenance.
+After helper review, the agent prepares the system around it: check grazer
+eligibility, update activity, gather eligible patches while seeking, call
+`nearest_food`, and write the selected stable `FoodTarget`.
+Missing or empty targets must be cleared or replaced. Target IDs resolve within
+the current run, and stopping seeking clears the food target so the existing
+movement adapter does not continue toward a stale instruction. The diagnostic
+fixture moves from an authored initial target to policy-owned target updates.
 
-The installed-schedule regression must prove:
+The completed schedule is maintenance → choice → movement → eating → complete
+tick. Choice reads the reserve after maintenance; movement and meals may change
+it again later in the same tick. That ordering makes both the decision and the
+final reserve explainable.
+
+A focused adapter harness applies maintenance, then choice, with movement and
+eating outside that isolated harness. It must prove the following **selection-only**
+expectations; they are not end-of-tick values for the full simulation:
 
 | Before a tick, maintenance = 1 | After the tick |
 | --- | --- |
@@ -165,16 +125,29 @@ The installed-schedule regression must prove:
 | Hungry fox beside grass | No grass target. |
 
 The adapter tests also reverse patch spawn order and confirm the same stable
-target. Calling choice directly twice must not spend energy or change position;
-the installed tick still charges its one maintenance cost. Record actual target
-changes without filling the bounded journal with an identical event every tick.
+target. Calling choice directly twice must not spend energy or change position.
+Record actual target changes without filling the bounded journal with an
+identical event every tick.
+
+A separate full-schedule regression proves the policy reaches the existing
+executors: a hungry grazer chooses, takes an affordable step, and eats only when
+it reaches the target cell. Assert the maintenance and actual travel charges
+alongside any actual meal. A stop decision clears the target before movement;
+a missing or empty patch cannot supply an invented destination or meal. The
+agent prepares literal values against the then-current fixture before this
+checkpoint becomes active.
 
 **Browser:** let the diagnostic hare drop below the seeking threshold. The
-inspector should show its activity and target, while its position and Meadow's
-biomass stay fixed. Selection by the user does not select food for the animal.
+inspector should show its activity and target, then its cell should change as
+movement executes. Once contact occurs, Meadow loses biomass and Fern gains the
+actual meal energy. After she reaches the stop threshold, the next choice pass
+stops seeking if her post-maintenance reserve still meets it. User selection
+only changes inspection; it does not choose the animal's food.
 
-Finish only when helper and installed-schedule tests pass and this browser
-observation works. Review and stop before [movement](04-movement.md).
+The agent finishes activation when the helper, isolated adapter and full-schedule
+checks agree with the browser sequence. [Session 04's review stop](path/04-when-to-seek.md#turn-the-decision-into-behavior)
+owns that handoff. The route then continues to [session 05's population summary](path/05-many-individuals.md),
+with scenario and reset details in the [population companion](02-populations.md).
 
 ## Optional: why a tie needs a rule
 
@@ -183,9 +156,10 @@ choose the lower ID? It gives this version a repeatable answer that survives a
 change in spawn order. We can later choose randomness deliberately and control
 its seed; relying on storage traversal order would make the choice accidental.
 
-The worked test already gives you a check: reversing the input leaves the
+The [session 03 worked test](path/03-finding-food.md#a-borrowed-slice-and-a-running-best-candidate)
+already gives you a check: reversing the input leaves the
 answer at patch 4. If we moved patch 9 onto the origin while leaving it nonempty,
 patch 9 should win because distance is compared before ID. You can reason that
 out from `(distance, id)` without adding another feature.
 
-[Guide home](README.md) · Previous: [populations](02-populations.md) · Next after review: [movement](04-movement.md)
+[Guide home](README.md) · Lessons: [03, choose food](path/03-finding-food.md) and [04, remember seeking](path/04-when-to-seek.md)

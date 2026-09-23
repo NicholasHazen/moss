@@ -10,7 +10,7 @@ can reach it before the supply runs out?
 
 This page explains the planned direction. Growth, daylight, weather, death and
 reproduction are not implemented. The detailed model decisions remain in
-[ECOLOGY_PLAN.md](../../ECOLOGY_PLAN.md); reading this page does not activate them.
+[ecology plan](../../design/ecology.md); reading this page does not activate them.
 
 ## On this page
 
@@ -60,13 +60,15 @@ inferred from the picture.
 ## Let the simulation own the day
 
 Once constant-light renewal is understandable, daylight can change its input.
-The proposed cycle lasts 240 executed ticks, with the first half in day and the
-second in night. Light belongs to simulation state, so Pause freezes the day
+The proposed cycle has 240 phase values: 0–119 are day, 120–239 are night.
+Light belongs to simulation state, so Pause freezes the day
 and changing a display tint cannot grow grass.
 
 Under the planned boundary convention, the environment for executing tick
 `n = completed + 1` uses phase `n % 240`. Completed tick 120 displays night;
 completed tick 240 displays day. Those exact boundaries need their own tests.
+Tick 0 initializes state without a growth update, so the first light interval
+executes ticks 1–119; later full daylight intervals contain 120 updates.
 They are part of our demonstration model, not a mapping to real physiology.
 
 An authored cloudy interval can then reduce the light supplied to the same

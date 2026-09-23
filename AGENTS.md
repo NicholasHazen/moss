@@ -1,69 +1,103 @@
-# Moss — Agent Instructions
+# Moss — agent instructions
 
-## Mission
+## Start with the current project
 
-Help Nick build and understand a browser-first Rust/ECS ecosystem. Remove mechanical friction without taking over the meaningful learning. This is an independent fork; do not import Aftermarket's milestones, desktop requirement, economic systems, or cognition framework.
+Help Nick build and understand a browser-first Rust/ECS ecosystem. Read
+[PROJECT_BRIEF.md](PROJECT_BRIEF.md) and [NOW.md](NOW.md) first. Inspect local
+instructions, relevant source files and the worktree before editing; preserve
+unrelated work. Moss is an independent fork, without Aftermarket's desktop,
+economy or cognition requirements.
 
-Read `PROJECT_BRIEF.md` and `NOW.md` first. For bootstrap, read `docs/BOOTSTRAP.md`. Consult other documents only as needed. Check local instructions and existing files before editing; preserve unrelated work.
+Before Rust changes, read [coding conventions](docs/agents/coding-style.md).
+Use [architecture](docs/design/architecture.md) for system boundaries and the
+[documentation index](docs/README.md) to find other material as needed.
+Archived bootstrap prompts describe completed work; they do not authorize
+recreating the project or replacing the current exercise.
 
-## Working mode
+## Ownership and scope
 
-**Scaffold** is the default for setup, dependency checks, browser glue, test plumbing, and repetitive work. Implement those within the authorized scope.
+**Scaffold:** implement setup, dependencies, browser glue, test plumbing and
+repetitive work within the request. **Pair:** biological rules, activity
+selection, attributes, energy costs and reproduction belong to Nick by default.
+Explain the intended behavior and identify one small edit; do not silently
+complete a learner-owned task, including through helpers.
 
-**Pair** is the default for biological rules, activity selection, attributes, energy costs, and reproduction. Explain the intended behavior, identify a small edit, and help Nick make it. Do not implement a learner-owned task silently, including through subagents.
+**Demonstrate or delegate when asked.** Give complete answers and runnable
+examples when Nick requests them, then explain consequential choices. Finishing
+infrastructure or a review does not activate the next feature. Stop at the
+agreed scope.
 
-**Demonstrate or delegate** when Nick asks for it. Do not withhold a complete answer to force a lesson. Explain the consequential choices afterward and leave a runnable checkpoint.
+## Code idioms and boundaries
 
-Bootstrap has an explicit stopping boundary in `docs/BOOTSTRAP.md`. Completing the infrastructure does not authorize implementing the entire ecosystem.
+Follow the linked coding conventions when adding or refactoring code:
 
-## Communication
+- Keep the existing `moss-sim` / `moss-web` Cargo boundary. Organize related
+  responsibilities in small modules, with thin roots and deliberate re-exports.
+  Use the narrowest useful visibility. File size is a readability signal, not
+  a fixed quota or a requirement for one file per type.
+- Prefer concrete structs, enums, functions and typed ECS queries. Do not add
+  a custom ECS, trait registry, generic rule language, speculative component
+  inventory, empty future crates or cognition platform.
+- Preserve one authoritative ECS world. Simulation-owned code mutates biology;
+  presentation derives sprites/transforms and submits typed requests. Camera,
+  zoom, selection and render frequency must not change outcomes for the same
+  executed ticks and accepted inputs. Native simulation tests need no renderer.
+- Keep simulation ordering explicit and initially single-threaded. Use stable
+  application IDs for history. Resolve competing consumption/reproduction
+  explicitly; deferred removal alone cannot prevent a second reward. Newborns
+  do not act before their defined first tick.
+- Name units. Clamp intentional bounds and check arithmetic where overflow
+  would hide an error. Keep energy separate from rest/fatigue, and charge costs
+  by executed ticks or completed actions rather than render frames or policy
+  evaluations.
+- Retain bounded event history with visible coverage. Record actual outcomes;
+  mark absent data unknown or uncollected. Do not add hidden-tab catch-up.
 
-Treat Nick as an experienced programmer returning to Rust, not a novice to software. His prior preparation includes Rustlings, most of the Rust book, and older Bevy ECS reading. Refresh concepts at the point of use.
+Verify current official documentation before changing dependencies or using
+unfamiliar APIs. Keep tested versions and the lockfile recorded. Never claim
+an unbuilt version combination works. Let the pinned rustfmt and Clippy checks
+handle mechanical style; explain substantive departures from local conventions.
 
-Lead with the current goal and one next action. Use short sections, complete sentences, and small concrete examples. Define a new term when it first matters. Avoid long option menus, mandatory quizzes, artificial deadlines, motivational slogans, and giant unexplained patches.
+## Communication and documentation
 
-Recommend a reversible default when choices are low-risk. Ask a targeted question only when the answer materially changes scope, ownership, or a hard-to-reverse decision. Do not return the entire planning burden to Nick.
+Treat Nick as an experienced programmer returning to Rust. Lead with the goal
+and one next action. Explain Rust/ECS concepts at the point of use, with small
+concrete examples. Recommend reversible defaults and ask only when the answer
+materially changes scope, ownership or a hard-to-reverse choice.
 
-Challenge assumptions constructively. State the concern, show an example, and propose a small test. Do not reflexively approve every idea or turn every idea into a new task.
+Challenge assumptions with a concern, example and small test. Avoid long option
+menus, mandatory quizzes, artificial deadlines, slogans and unexplained patches.
+The [collaboration guide](docs/agents/collaboration.md) adds context.
 
-Maintain `NOW.md`: one active task, a verified run path, one concrete next edit, and a stopping point. Put interesting future ideas in `docs/PARKING_LOT.md`. Update the session log briefly after meaningful work. These records are re-entry aids, not homework for Nick.
+Follow [document ownership and maintenance](docs/README.md#document-ownership).
+Keep `NOW.md` to one active task, a verified run path, one next edit and a stopping
+point. Put future ideas in the parking lot and brief factual work records in the
+dated session log. Maintain affected tutorial pages using the
+[authoring contract](docs/tutorial/authoring/README.md); preserve chapter links,
+label future APIs and keep evidence separate from acceptance criteria. This is
+agent work, not Nick's backlog.
 
-Maintain the expandable guide in `docs/tutorial/` alongside changes to scope,
-plans, or teaching APIs. Follow `docs/tutorial/authoring/README.md`; keep the
-reader entry point, affected chapters, optional context, and verification notes
-aligned with the actual code. Preserve existing chapter links and use the
-template for new increments. Guide maintenance is agent work, not Nick's backlog.
+## Verification and handoff
 
-## Technical guardrails
+Use [development commands](docs/development/README.md) and report what actually
+ran. A rule change needs a focused example/regression and a browser observation
+path. Separate correctness, balance and enjoyment. Preserve meaningful
+assertions; never weaken a test to hide a failure.
 
-Rust and ECS are fixed direction. The starting stack and boundaries are in `docs/ARCHITECTURE.md`. Verify current official documentation before manifests or API-specific code. Record tested versions and commit the dependency lockfile when a repository exists. Never claim an unbuilt version combination works.
+Distinguish native tests, WASM builds and browser smoke checks. For documentation
+changes, check links, anchors and examples; do not imply old runtime evidence
+was rerun. Report files changed, observed results, exact limitations and the
+next learning action. Leave a runnable checkpoint or a precise blocker.
 
-Keep simulation rules independent of rendering and browser services. Camera, zoom, selection, and frame rate must not change outcomes for the same executed ticks and accepted input sequence. Start with an explicitly ordered, single-threaded simulation schedule.
+Do not overwrite unrelated work, force-push, delete user data, add secrets,
+or install paid services. Use trusted package sources and the
+environment's installation permissions. Public deployment needs explicit
+permission. Collaboration notes remain local unless Nick authorizes sharing.
 
-Use concrete components, enums, and functions. Do not build a custom ECS, trait registry, generic rule language, or cognition platform ahead of demonstrated need. No giant speculative component inventory or empty future crates.
+## Helpers
 
-The suggested workspace has `moss-sim` and `moss-web`, with one ECS world in the browser application. Presentation may read simulation state but only simulation-owned code mutates biological state. View transforms are derived, not another authoritative position. Native simulation tests must not need a renderer.
-
-Use stable application IDs for history; runtime ECS handles are not historical identities. Resolve competing consumption and reproduction explicitly. Account for deferred spawns/despawns; queuing removal alone cannot prevent a second reward. Newborns do not act before their defined first tick.
-
-Name units and clamp intentional boundaries; use checked arithmetic where overflow would hide an error. Keep nutrition/energy separate from rest/fatigue when both exist. Do not charge costs by render frame or number of policy evaluations.
-
-Keep event retention bounded and coverage visible. Emit actual outcomes, not desired outcomes or invented rationales. Mark absent data as unknown or not collected. Do not add hidden catch-up while a browser tab is inactive.
-
-## Tests and evidence
-
-For each meaningful rule change, include a focused example or regression and a way to see it in the browser. Separate correctness, balance experiments, and enjoyment. Do not weaken a test to conceal a failure.
-
-Report files changed, commands actually run, observed results, limitations, and the next learning action. A successful compile is not a browser smoke test. A native test is not a WebAssembly runtime test. If tooling is unavailable, say exactly what remains unverified and preserve a useful checkpoint.
-
-Do not overwrite existing work, force-push, delete user data, publish a site, install paid services, or add secrets. Use standard trusted package sources and the environment's installation permissions. Public deployment needs explicit authorization.
-
-## Subagents
-
-Use them for bounded research, test review, web compatibility, or repetitive scaffolding. Give each a clear question, permitted files, forbidden work, and return format. Prefer at most two helpers at once. Avoid overlapping edits; the lead integrates and explains the result.
-
-Use actual delegation only when supported. Do not simulate independent agents or claim they ran. Do not delegate Nick's reserved implementation exercise behind the scenes. Role templates are in `prompts/SUBAGENT_TASKS.md`.
-
-## Definition of a good handoff
-
-Something works or the blocker is precisely documented. Nick can see what changed, locate the rule, and take the next small step without reconstructing the conversation. Stop at the agreed scope rather than silently continuing into the next feature.
+Use real subagents for bounded research, review or scaffolding when supported;
+prefer at most two at once. Follow [the assignment contract](docs/agents/subagents.md):
+provide the question, permitted files, forbidden work, applicable conventions,
+evidence and stopping point. Avoid overlapping edits. Integrate and explain the
+result; never delegate Nick's reserved exercise behind the scenes.

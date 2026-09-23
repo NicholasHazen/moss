@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+<title id="title">Component boundaries determine the access a query declares</title>
+<desc id="desc">Hypothetical comparison, not installed code. A grouped AnimalProfile contains upkeep and movement pace. Upkeep reads the profile while pace adjustment writes the profile, so those accesses overlap on the same animals. Split AnimalEnergyCosts and Locomotion components give the two operations separate access boundaries. Upkeep also writes the existing Energy component in both layouts. Both layouts own individual values; no runtime speed comparison has been measured.</desc>
+<rect width="900" height="560" rx="14" fill="#f6f7f1"/>
+<g font-family="system-ui, sans-serif" fill="#20382c">
+<text x="28" y="40" font-size="25" font-weight="700">Which data does each system need to borrow?</text>
+<text x="28" y="72" font-size="17">Hypothetical layouts · the same animal owns both values in either layout</text>
+<text x="28" y="117" font-size="21" font-weight="700">One profile component</text>
+<text x="482" y="117" font-size="21" font-weight="700">Two components</text>
+<rect x="28" y="138" width="388" height="145" rx="9" fill="#e3eddf" stroke="#b9cbb8"/>
+<text x="48" y="171" font-size="20" font-weight="650">AnimalProfile</text>
+<text x="48" y="212" font-size="17">maintenance_units_per_tick: 1</text>
+<text x="48" y="250" font-size="17">step_interval_ticks: 2</text>
+<rect x="482" y="138" width="388" height="68" rx="9" fill="#e3eddf" stroke="#b9cbb8"/>
+<text x="502" y="166" font-size="20" font-weight="650">AnimalEnergyCosts</text>
+<text x="502" y="192" font-size="16">maintenance_units_per_tick: 1</text>
+<rect x="482" y="222" width="388" height="68" rx="9" fill="#fff" stroke="#b9cbb8"/>
+<text x="502" y="250" font-size="20" font-weight="650">Locomotion</text>
+<text x="502" y="277" font-size="16">step_interval_ticks: 2</text>
+<text x="28" y="330" font-size="18">Upkeep: read AnimalProfile</text>
+<text x="28" y="367" font-size="18">Pace change: write AnimalProfile</text>
+<text x="482" y="330" font-size="18">Upkeep: read AnimalEnergyCosts</text>
+<text x="482" y="367" font-size="18">Pace change: write Locomotion</text>
+<text x="28" y="410" font-size="17" font-weight="650">Same component access overlaps.</text>
+<text x="482" y="410" font-size="17" font-weight="650">These component accesses are separate.</text>
+<path d="M28 436H870" stroke="#b9cbb8"/>
+<text x="28" y="469" font-size="17">Both layouts: upkeep also writes Energy { reserve, capacity }.</text>
+<text x="28" y="502" font-size="17">Keep related fields together; split for a useful access or presence boundary.</text>
+<text x="28" y="535" font-size="16">Moss stays single-threaded. This comparison is not a measured performance result.</text>
+</g></svg>

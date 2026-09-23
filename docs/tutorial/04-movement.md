@@ -1,22 +1,21 @@
 # 4. Pay for the distance actually traveled
 
-[Guide home](README.md) · Previous: [food choice](03-food-choice.md) · Next: [eating](05-eating.md)
+[Guide home](README.md) · Session: [today](today.md) · Next after review: [eating](05-eating.md)
 
-**Future chapter; complete and review food choice first.** The step helper was
-tested separately; the installed movement system is still future work. See
-[the verification record](authoring/verification.md).
+**Ready: implement `move_one_cell`; movement remains unscheduled until review.**
+The helper stub and focused test are prepared. The test is intentionally red;
+the browser still runs maintenance alone. See
+[the verification record](authoring/verification.md) for executed checks and limits.
 
-Fern has selected Meadow, but selecting a destination has not changed her cell.
-Now the decision needs an executor: a rule that takes an accepted step and
-updates the world. This is also the point where we know whether travel actually
-happened, so it is where we can charge for it.
+Fern has an authored target: Meadow. This gives us a destination without first
+building an autonomous food policy. Today's edit takes one affordable step toward
+that destination and pays for the distance actually traveled. Later, food choice
+can assign a different target without changing this step rule.
 
-The first movement is one cardinal cell per tick, x before y, with no obstacles
-or body collision. The constraint gives us an explainable route and a distance
-of either zero or one. We can learn the relationship between movement and cost
-before adding speed variation or pathfinding.
-
-> Prepare Chapter 4 with species travel rates, a nearby-food fixture and query/schedule plumbing. Leave the affordable-step rule for me. Keep eating unscheduled and update this guide to match our current types.
+**Start here:** in [`lessons.rs`](../../crates/moss-sim/src/lessons.rs), replace
+only the body of `move_one_cell`. Its prepared imports and signature already
+match this chapter. Run checkpoint A's test, then stop for review; the agent
+handles schedule activation and browser verification.
 
 ## On this page
 
@@ -27,27 +26,35 @@ before adding speed variation or pathfinding.
 
 ## Where costs belong
 
-The agent will extend the species resource with named movement units per cell,
-alongside passive units per tick. The worked test uses a travel rate of 2.
-Selecting a target does not pay it. The movement executor knows the old position
-and accepted destination; it computes actual distance and applies the movement
-and charge together.
+Maintenance charges for an executed tick. Movement charges for an accepted
+change of position. The prepared `MovementRules` resource supplies a rate of
+**2 energy units per cell**. Keeping these units separate makes the two causes
+visible without first redesigning every species setting.
 
-Maintenance runs before movement. With reserve 60, passive cost 1 and an accepted
-one-cell move costing 2, the complete tick leaves **57**. If maintenance leaves
-only 1, the animal cannot buy that move. Saturating subtraction is appropriate
-for baseline maintenance, but would wrongly permit unaffordable movement here.
+![A proposed one-cell step changes neither position nor energy until bounds and affordability pass; an accepted step commits both changes.](visuals/movement-step.svg)
 
-No persistent distance component is necessary for this single step. Later travel
-history can record actual outcomes. For several segments, charge their summed
-lengths; returning to the starting cell does not erase the journey's cost.
+Read the diagram as **propose → validate → commit**. With reserve 60, maintenance
+first leaves 59. A one-cell move then costs 2, leaving 57. If maintenance leaves
+only 1, movement must preserve both the cell and that remaining energy. Saturating
+subtraction would incorrectly let the animal take a step it could not afford.
+
+The first route moves at most one cardinal cell per tick, along x before y,
+without obstacles or collision. For Fern's route from `(10, 10)` to `(16, 13)`,
+that is six x steps and three y steps. The sprite's size is not distance and does
+not determine contact; the simulation uses integer cells.
 
 ## Checkpoint A — an affordable step
 
-The agent will prepare a `move_one_cell` helper stub in `lessons.rs` and
-`crates/moss-sim/tests/movement.rs`. It accepts mutable position/energy references,
-a target position, the configured travel rate and validated world dimensions.
-It returns actual cells traveled, either zero or one.
+The helper takes mutable position and energy references, a target position,
+a travel rate and validated world dimensions. It returns the distance accepted:
+zero or one cell. It is an ordinary Rust function with no ECS query inside it.
+That lets the first test name all inputs without constructing an entire world.
+
+The following shows the **first cases of the prepared test** in
+[`tests/movement.rs`](../../crates/moss-sim/tests/movement.rs); it is already in
+the project, so you do not need to paste it. The full test also covers both axes,
+both directions, exact affordability and world edges. The `use` line brings its types and
+helper into this test file's scope.
 
 <!-- example: movement-test -->
 ```rust
@@ -80,18 +87,43 @@ fn movement_charges_only_an_affordable_actual_step() {
 }
 ```
 
-Run after preparation:
+**Run from the repository root:**
 
 ```sh
 scripts/with-toolchain.sh cargo test -p moss-sim --locked --test movement movement_charges_only_an_affordable_actual_step -- --exact
 ```
 
-**Expected:** one red test while the helper is unfinished, then one green test.
-The literals check position and energy independently; a correct return value
-alone would not prove the effect happened.
+**Expected before the edit:** exactly one test fails at the unfinished helper.
+**Expected after the edit:** `1 passed; 0 failed`. The first assertions require a
+paid x step; the later ones require no changes for an unaffordable move, arrival
+and an out-of-bounds target. A correct return value alone would not establish
+that position and energy were updated correctly.
 
-Worked implementation, with `Energy`, `Position`, `WorldConfig` in the existing
-`lessons.rs` imports:
+Start your body with a tentative destination. These are **excerpts for reasoning**,
+not a second function to paste:
+
+```rust
+let mut next = *position;
+// Compute a proposed next cell, then its cost.
+// Return 0 if the move is invalid or unaffordable.
+// Only after those checks, update position and energy together.
+```
+
+`position` is a mutable reference, written `&mut Position` in the signature.
+It borrows the caller's value exclusively for this call. `*position` accesses
+that value; because `Position` implements `Copy`, assigning it to `next` makes a
+small independent copy. Changing `next` does not move the real animal yet.
+This lets us validate a proposal without having to undo mutations on failure.
+
+Rust's `if` can also produce a value. In the worked answer, the expression
+`if next.x < target.x { 1 } else { -1 }` supplies the direction for one x step.
+The following `else if` means y changes only after x is already aligned. There
+is no loop inside this helper: the ECS adapter calls it for eligible animals,
+and subsequent ticks call it again for subsequent steps.
+
+**Complete worked replacement** for `move_one_cell` in `lessons.rs`, using its
+prepared `Energy`, `Position` and `WorldConfig` imports. Keep this answer available
+while you work; comparing or copying it is fine.
 
 <!-- example: movement-helper -->
 ```rust
@@ -132,61 +164,99 @@ pub fn move_one_cell(
 }
 ```
 
-`let mut next = *position` copies the current cell into a tentative destination.
-It does not move the animal yet. `*position = next` writes through the mutable
-reference only after affordability succeeds. The proposed step stays between
-two valid grid coordinates, so it stays in bounds. `checked_mul` makes overflow
-an explicit error instead of silently producing a cheap travel cost.
-See the optional [checked multiplication reference](https://doc.rust-lang.org/std/primitive.u32.html#method.checked_mul).
+The `in_bounds` closure is a small local function that checks both coordinates.
+The ranges exclude their upper bound: width 32 permits x values 0 through 31.
+`WorldConfig` limits dimensions to 8–256, so these casts to `i32` fit. Taking a
+step toward an in-bounds target from an in-bounds cell keeps the step in bounds.
 
-**Send:**
+`abs_diff` returns the unsigned distance on one axis. Adding the two axes gives
+cell travel distance for this cardinal step. The checked arithmetic reports
+an overflow rather than silently changing the cost. Once affordability passes,
+`*position = next` writes the proposal back through the borrow, and subtracting
+the cost is safe. The final `distance` has no semicolon because it is the
+function's returned value.
 
-> The Chapter 4 step test is green. Review bounds, affordability and the mutation order. Help me wire the real target into move_to_food and verify a complete tick before adding eating.
+**If the result differs:** check when you write `*position`. Moving before the
+affordability check makes the low-energy assertion fail even if energy is correct.
+If zero tests run, check the exact test target and filter; that is not green.
+A compiler error at the stub is a setup issue rather than the intended red test.
+
+**Observed evidence:** the live helper remains Nick's edit. Isolated worked-answer
+checks and their exact commands are recorded in
+[verification](authoring/verification.md); they do not establish live browser
+movement. The installed checkpoint below still needs review and activation.
+
+**Send for review:**
+
+> The Chapter 4 step test is green. Review bounds, affordability and the mutation
+> order. Activate the prepared movement system and run its integration and browser
+> checks. Keep eating for the next paired edit.
 
 ## Checkpoint B — move toward the accepted target
 
-I will prepare this as a separate pairing checkpoint with a real installed
-fixture and one next edit. We will review one accepted step before adding the
-missing-target and affordability boundaries.
+This is the agent's integration work after your helper passes review. You do not
+need to implement another body before seeing motion. The prepared `move_to_food`
+adapter resolves the animal's `FoodTarget` stable ID to a current, nonempty food
+patch (Meadow is grass), obtains the components, and calls your helper. It remains
+unscheduled while that helper is unfinished.
 
-Together we fill in `move_to_food`: only an eligible seeking grazer with a live,
-nonempty food target attempts a step. Re-resolve the stable target ID now; a
-previous choice is not proof that the target still exists. The agent handles
-disjoint Bevy queries and chains maintenance → choice → movement → complete tick.
+A **query** supplies a system with components from matching entities. The adapter
+borrows an animal's `Position` and `Energy` mutably, because your helper changes
+them. It reads the target patch's position. The native helper and the ECS adapter
+have distinct responsibilities: the helper decides a step; the adapter finds
+which values that decision applies to.
 
-One Bevy pitfall belongs to that plumbing: animal `&mut Position` and patch
-`&Position` queries can conflict even with different `With` filters. The agent
-will add an explicit exclusion such as `Without<Creature>` for patches; different
-component names alone do not guarantee disjoint queries.
+Food queries explicitly exclude creatures so those position borrows are disjoint.
+A stable target ID also needs resolving each tick: the fact that Meadow existed
+when the target was authored does not prove it still exists now. Missing or empty
+food means no travel and no travel charge. Flint has no authored food target and
+continues paying only maintenance.
 
-The installed test starts a **seeking** hare at 60 (between the existing hunger
-thresholds), passive rate 1, travel rate 2, and nearby nonempty grass. One tick
-must move exactly one cell and leave 57. A low-reserve case starting at 2 leaves
-1 after maintenance and must stay still. A no-food case pays only maintenance.
-If a different valid patch is selected, travel toward that replacement can cost
-energy; a stale target itself must never create a charge.
+After review the agent installs maintenance → movement → complete tick, enables
+both prepared integration regressions (currently explicitly ignored), and runs:
 
-Add focused edge cases while reviewing: y movement after x aligns, all four
-directions, exact affordability, and valid edge cells. The helper example above
-is an initial checkpoint, not exhaustive coverage of the installed system.
+```sh
+scripts/with-toolchain.sh cargo test -p moss-sim --locked --test movement
+```
 
-**Browser:** Step a seeking hare toward nearby grass, checking old/new coordinates
-and reserve. Pause and camera motion change neither. On the target cell it stops
-paying travel, but maintenance continues. Biomass stays unchanged: eating is the
-next chapter. Zero-energy animals still exist.
+**Expected after activation:** all three movement tests run and pass, with none
+ignored. They exercise the helper, installed world, Reset, and missing, empty or
+unaffordable destinations. The agent also checks the
+helper's remaining boundaries, including y movement, both directions, exact
+affordability and world edges. The first helper example is not exhaustive coverage.
+Maintenance tests use no-food setup so their existing reserve assertions keep
+measuring maintenance alone; their expected values are preserved.
 
-Review and stop once the installed test and browser agree.
+The browser acceptance path is **Reset → inspect Fern → Step**, then continue
+stepping. All numbers below are expected after reviewed activation:
+
+| Executed ticks since Reset | What the inspector should show |
+| --- | --- |
+| 0 | Fern `(10, 10)`, reserve 60; Flint reserve 60; Meadow biomass 80. |
+| 1 | Fern `(11, 10)`, reserve 57; Flint reserve 59. |
+| 9 | Fern `(16, 13)`, reserve 33; Flint reserve 51; Meadow biomass 80. |
+| 10 | Fern still `(16, 13)`, reserve 32; Flint reserve 50; Meadow biomass 80. |
+
+The route is nine cells: `60 − 9 × 1 − 9 × 2 = 33`. Once Fern arrives,
+maintenance continues but travel distance becomes zero. Pause, pan and zoom must
+leave position and reserve unchanged. Reset restores the same starting state and
+target; eating remains inactive and zero-energy animals remain alive.
+
+Stop when the reviewed helper, installed test and browser agree. That is a
+complete visible contribution. If there is time, the next edit is
+[a bounded meal](05-eating.md), prepared separately by the agent.
 
 ## Optional: a journey that ends where it started
 
-Suppose a later action moves from (2, 2) to (3, 2), then back to (2, 2). The
-final displacement is zero, but the distance traveled is two cells. At 2 units
-per cell, travel should cost 4, before counting any passive maintenance.
-That is why a future multi-segment action must sum accepted segment lengths.
+Suppose a later action moves from `(2, 2)` to `(3, 2)`, then back to `(2, 2)`.
+Its final displacement is zero, but its traveled distance is two cells. At 2 units
+per cell, travel should cost 4 before counting maintenance. A future multi-segment
+action must sum accepted segment lengths; comparing only its endpoints would
+lose that cost.
 
-For the current one-cell action, old and new positions are enough. Record that
-actual outcome and we can later explain a travel total without asking the camera
-or a policy evaluation how far the animal went. [The tick walkthrough](context/a-tick-through-moss.md)
-shows where authoritative state and its presentation part ways.
+For the current one-cell action, old and new positions are enough. No persistent
+distance component is required. The [tick walkthrough](context/a-tick-through-moss.md)
+shows how the simulation's result becomes a visible position without letting
+render frame rate decide how far an animal travels.
 
-[Guide home](README.md) · Previous: [food choice](03-food-choice.md) · Next after review: [eating](05-eating.md)
+[Guide home](README.md) · Session: [today](today.md) · Next after review: [eating](05-eating.md)

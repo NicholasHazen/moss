@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="515" viewBox="0 0 800 515" role="img" aria-labelledby="title desc">
+<title id="title">Propose, validate, then commit one cell</title>
+<desc id="desc">In the helper example, the animal starts at 2,2 with 59 energy after maintenance. Its target is 4,4. The x-first proposal is 3,2, one cell away, costing two energy. If affordable, write position 3,2 and energy 57. With only one energy, keep the original position and energy unchanged. Cells are schematic and row y increases downward.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#316c4a"/></marker></defs>
+<rect width="800" height="515" rx="14" fill="#f6f7f1"/>
+<g font-family="system-ui, sans-serif" fill="#20382c">
+<text x="28" y="42" font-size="25" font-weight="700">A proposal is not a move yet</text>
+<text x="28" y="73" font-size="17">Helper example · maintenance has already left 59 energy</text>
+<g stroke="#c2cebf" fill="#fff"><rect x="40" y="130" width="240" height="240"/>
+<path d="M120 130V370M200 130V370M40 210H280M40 290H280"/></g>
+<g font-size="16" text-anchor="middle" fill="#506451"><text x="80" y="117">x = 2</text><text x="160" y="117">3</text><text x="240" y="117">4</text><text x="22" y="175">2</text><text x="22" y="255">3</text><text x="22" y="335">4</text></g>
+<circle cx="80" cy="170" r="23" fill="#477d59"/>
+<text x="80" y="176" text-anchor="middle" font-size="17" fill="#fff">F</text>
+<rect x="133" y="143" width="54" height="54" rx="7" fill="#ebf3e9" stroke="#477d59" stroke-width="2" stroke-dasharray="5 4"/>
+<path d="M105 170H138" stroke="#316c4a" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="216" y="306" width="48" height="48" rx="5" fill="#d9c780"/>
+<text x="240" y="337" text-anchor="middle" font-size="20">M</text>
+<text x="40" y="400" font-size="16">F: start (2, 2)</text><text x="40" y="425" font-size="16">Dashed: proposal (3, 2)</text><text x="40" y="450" font-size="16">M: target (4, 4)</text>
+<rect x="318" y="100" width="454" height="355" rx="12" fill="#fff" stroke="#b9cbb8"/>
+<text x="340" y="135" font-size="20" font-weight="700">1 · Propose on a copy</text>
+<text x="340" y="164" font-size="17">Change x first; leave y alone.</text>
+<text x="340" y="211" font-size="20" font-weight="700">2 · Validate before mutation</text>
+<text x="340" y="240" font-size="17">Coordinates in bounds? Can we pay?</text>
+<text x="340" y="269" font-size="17">1 cell × 2 units per cell = 2 energy</text>
+<text x="340" y="315" font-size="20" font-weight="700">3 · Commit the accepted result</text>
+<text x="340" y="344" font-size="17">Position (3, 2) · reserve 59 − 2 = 57</text>
+<path d="M340 368H750" stroke="#d7dfd2"/>
+<text x="340" y="397" font-size="17">Only 1 energy? Return 0 cells traveled.</text>
+<text x="340" y="426" font-size="17">Keep position (2, 2) and reserve 1.</text>
+<text x="28" y="491" font-size="17">Later ticks repeat the rule. No diagonal step, no free unaffordable travel.</text>
+</g></svg>

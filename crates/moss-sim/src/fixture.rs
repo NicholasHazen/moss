@@ -4,13 +4,13 @@
 //! Species supports many individuals; role describes a food-web responsibility.
 //! This tiny fixture isolates rules. The planned population fixture will reuse
 //! these component combinations with distinct IDs and configured counts.
-//! See docs/ECOLOGY_PLAN.md for that experiment and the plant/environment model.
+//! See docs/design/ecology.md for that experiment and the plant/environment model.
 
 use bevy_ecs::prelude::*;
 
 use crate::{
-    Creature, EcologicalRole, Energy, FoodPatch, Position, SimId, Species, WorldConfig,
-    record_placement,
+    Creature, EcologicalRole, Energy, EventKind, FoodPatch, FoodTarget, Journal, JournalEntry,
+    Position, SimId, Species, WorldConfig,
 };
 
 pub(super) fn place(world: &mut World) {
@@ -40,17 +40,23 @@ pub(super) fn place(world: &mut World) {
             },
         ),
     ] {
-        world.spawn((
-            id,
-            position,
-            species,
-            role,
-            Creature { name },
-            Energy {
-                reserve: 60,
-                capacity: 100,
-            },
-        ));
+        let entity = world
+            .spawn((
+                id,
+                position,
+                species,
+                role,
+                Creature { name },
+                Energy {
+                    reserve: 60,
+                    capacity: 100,
+                },
+            ))
+            .id();
+        if species == Species::Hare {
+            // Authored destination only: no food-choice policy runs yet.
+            world.entity_mut(entity).insert(FoodTarget(SimId(3)));
+        }
         record_placement(world, id, name);
     }
 
@@ -70,4 +76,12 @@ pub(super) fn place(world: &mut World) {
         food,
     ));
     record_placement(world, food_id, food.name);
+}
+
+fn record_placement(world: &mut World, id: SimId, name: &'static str) {
+    world.resource_mut::<Journal>().record(JournalEntry {
+        tick: 0,
+        participants: vec![id],
+        kind: EventKind::FixturePlaced { name },
+    });
 }

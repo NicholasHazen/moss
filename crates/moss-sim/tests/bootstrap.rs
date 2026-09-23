@@ -1,82 +1,16 @@
+//! Authored scene, startup history, and tick/reset lifecycle.
+
+mod common;
+
+use std::collections::BTreeSet;
+
 use bevy_ecs::prelude::*;
 use moss_sim::{
     Creature, EcologicalRole, Energy, EventKind, FoodPatch, Journal, Position, RunRecord, SimClock,
-    SimId, Species, WorldConfig, install, reset, tick,
+    SimId, Species, WorldConfig, reset, tick,
 };
-use std::collections::BTreeSet;
 
-fn fixture(config: WorldConfig) -> World {
-    let mut world = World::new();
-    install(&mut world, config);
-    world
-}
-
-#[test]
-fn maintenance_spends_energy_and_stops_at_zero() {
-    // API reference while writing this test (examples are commented out):
-    // `fixture(...)` is our helper: a fresh world with the real simulation installed.
-    // `tick(&mut world)` borrows that world mutably and runs one complete tick.
-    //
-    // In a plain test, prepare a query yourself; Bevy injects Query parameters
-    // only into scheduled systems. This reads Energy from creatures:
-    // let mut energies = world.query_filtered::<&Energy, With<Creature>>();
-    //
-    // `iter(&world)` borrows component data read-only. Get a new iterator each time:
-    // assert_eq!(energies.iter(&world).count(), 2);
-    // for energy in energies.iter(&world) {
-    //     assert_eq!(energy.reserve, 60); // Starting reserve, before any ticks.
-    //     assert_eq!(energy.capacity, 100); // Capacity is a different field.
-    // }
-    //
-    // The count check prevents an empty loop from passing if all creatures vanished.
-    // After your three ticks below, repeat the reserve checks with expected 57.
-    // Then run 60 MORE ticks (63 total), check both reserves are 0, and count is 2.
-    // Keep the expected values literal: they are the rule's contract, not a
-    // recalculation using the same saturating_sub expression as the implementation.
-    let mut world = fixture(WorldConfig::default());
-
-    // Confirm the starting reserve is 60; its maximum capacity is 100.
-    let mut energies = world.query_filtered::<&Energy, With<Creature>>();
-
-    assert_eq!(energies.iter(&world).count(), 2);
-    for energy in energies.iter(&world) {
-        assert_eq!(energy.reserve, 60);
-        assert_eq!(energy.capacity, 100);
-    }
-
-    tick(&mut world);
-    tick(&mut world);
-    tick(&mut world);
-
-    // confirm energy has reduced
-
-    let mut energies = world.query_filtered::<&Energy, With<Creature>>();
-    assert_eq!(energies.iter(&world).count(), 2);
-    for energy in energies.iter(&world) {
-        assert_eq!(energy.reserve, 57);
-    }
-
-    // tick 60 more times and check that reserve equals 0
-    for _ in 0..60 {
-        tick(&mut world);
-    }
-
-    assert_eq!(energies.iter(&world).count(), 2);
-    for energy in energies.iter(&world) {
-        assert_eq!(energy.reserve, 0);
-    }
-}
-
-#[test]
-fn configuration_rejects_dimensions_outside_the_supported_range() {
-    for (width, height) in [(0, 20), (32, 0), (7, 8), (8, 7), (257, 20), (32, 257)] {
-        assert!(WorldConfig::new(width, height).is_err());
-    }
-    assert!(WorldConfig::new(8, 8).is_ok());
-    assert!(WorldConfig::new(256, 256).is_ok());
-    assert_eq!(WorldConfig::default().width(), 32);
-    assert_eq!(WorldConfig::default().height(), 20);
-}
+use common::fixture;
 
 #[test]
 fn authored_fixture_has_unique_ids_and_valid_positions_at_supported_sizes() {

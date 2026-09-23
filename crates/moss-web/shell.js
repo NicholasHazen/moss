@@ -153,6 +153,8 @@
     fact("Position · cells", `${selected.x}, ${selected.y}`);
     if (selected.energy !== null) fact("Energy · units", `${selected.energy} / ${selected.capacity ?? "unknown"}`);
     if (selected.biomass !== null) fact("Biomass · units", String(selected.biomass));
+    if (selected.maintenance_units_per_tick != null) fact("Maintenance · units/tick", String(selected.maintenance_units_per_tick));
+    if (selected.authored_target != null) fact("Authored destination", `#${selected.authored_target}`);
     fact("Behavior", "Not autonomous yet");
     fact("Physical size", "Not modeled");
     inspector.append(facts);
