@@ -1,0 +1,67 @@
+name: Publish Moss book
+
+# Publish a reviewed static export; ordinary source pushes do not deploy.
+on:
+  workflow_dispatch:
+    inputs:
+      export_commit:
+        description: Full commit SHA of the verified static export on gh-pages
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: moss-book-publication
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require an immutable export revision
+        env:
+          EXPORT_COMMIT: ${{ inputs.export_commit }}
+        run: '[[ "$EXPORT_COMMIT" =~ ^[0-9a-f]{40}$ ]]'
+
+      - name: Check out the reviewed export
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.export_commit }}
+          path: public
+          persist-credentials: false
+
+      - name: Check export landmarks
+        run: |
+          test -f public/.nojekyll
+          test -f public/index.html
+          test -f public/404.html
+          test -d public/downloads
+          test ! -d public/book
+          test ! -d public/crates
+
+      - name: Upload the static site
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: public
+
+  deploy:
+    needs: upload
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the uploaded site
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
+        with:
+          timeout: '300000'
