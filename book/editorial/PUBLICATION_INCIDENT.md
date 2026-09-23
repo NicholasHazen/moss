@@ -1,13 +1,14 @@
 # Pages deployment investigation — September 23, 2026
 
-**As of 15:45 UTC:** the first book release remains intact. The refined export
-is safely committed on `gh-pages`, but its deployment retry is blocked in
-GitHub's run orchestration. No book, Rust or dependency change is indicated by
-the observed failure.
+**Publication recovered at 17:47 UTC.** With Nick's approval, a fresh manual
+workflow deployed the refined export `776dcec`. All 104 served files match the
+reviewed export, including both downloads; the custom 404 also matches. The
+old rerun still reports queued, but no longer prevents publication. See the
+[recovery record](WORKFLOW_RECOVERY.md) for the successful run and configuration.
 
 ## What failed
 
-Repository: `NicholasHazen/moss`. Pages is configured to publish the root of
+Repository: `NicholasHazen/moss`. At the time of failure, Pages was configured to publish the root of
 `gh-pages` using GitHub's managed branch-publishing workflow (`build_type: legacy`).
 
 - [First release, run 35841617425](https://github.com/NicholasHazen/moss/actions/runs/35841617425):
@@ -73,7 +74,7 @@ expected refinement hashes remain in the ignored
 The active learner exercise remains `move_one_cell`. Local browser development
 and the local book preview do not depend on the stalled GitHub run.
 
-## Smallest recovery path
+## Recovering the original run
 
 GitHub must queue or clear the accepted rerun. Once it has a consistent terminal
 state, inspect the result before taking another action. If it succeeded, verify
@@ -89,3 +90,51 @@ An independent read-only helper checked the official action source and recovery
 documentation and agreed that the permission hint is not a diagnosis. The lead
 retrieved the run/attempt/job state, inspected the deployment log, attempted the
 single force-cancel recovery and verified the public artifact hashes.
+
+## Follow-up at 17:12 UTC
+
+Fresh API reads found the same run timestamps and contradictory states. The
+latest jobs endpoint returned zero jobs; Actions is enabled and the managed
+workflow is active. Pushing checkpoint `6c610af` to `main` did not trigger a
+Pages release: the configured publishing source remains `gh-pages` at `776dcec`.
+
+The live GitHub status feed marked Actions and Pages operational. Its remaining
+September 23 incident update concerns delayed Projects indexing, so it does not
+establish an explanation for this deployment failure.
+
+A second bounded helper independently checked recovery documentation. GitHub's
+[Pages build API](https://docs.github.com/en/rest/pages/pages#request-a-github-pages-build)
+states that a new build request waits for an existing build to complete; it is
+not a documented bypass. No further cancellation or rerun was attempted against
+the unchanged state. Publishing settings and history remain intact.
+
+Prepared a short [Support request](SUPPORT_REQUEST.md) asking GitHub to reconcile
+the run and Pages build state. Submitting it would send a message on Nick's behalf
+and requires his authorization; it has not been sent. The earlier full public
+file verification remains separate from these fresh API observations.
+
+## Alternative publication route prepared
+
+Nick asked whether publication could proceed without Support. Prepared and
+reviewed a [manual workflow recovery](WORKFLOW_RECOVERY.md) that deploys the exact
+verified export through a fresh workflow and deployment request. This changes
+the publishing route rather than fixing the old rerun.
+
+Automatic approval review rejected pushing and activating that change before
+execution because it changes the persistent publishing mode and adds `main` to
+the allowed deployment branches. Explicit approval was requested. No remote
+settings changed during that rejected operation. Nick subsequently approved activation.
+
+## Successful publication at 17:47 UTC
+
+Pushed workflow commit `3d2b87673526064f3eb745e6c7cd99ce58442264`, switched Pages
+from `legacy` to `workflow`, and added `main` to the deployment environment while
+preserving the existing `gh-pages` rule. Dispatched the verified export
+`776dcec5fab903575ad73aacf424b417b24d9111` once.
+
+[Run 35897888968](https://github.com/NicholasHazen/moss/actions/runs/35897888968)
+completed successfully at 17:46:40 UTC. At 17:47:33 UTC, all 104 public files
+matched the refined release manifest and a missing URL returned the exact custom
+404. Pages reports `built` with build type `workflow`. The original run remains
+queued with its unchanged timestamp; this recovery does not claim to have fixed
+that historical record. No Support request was sent.

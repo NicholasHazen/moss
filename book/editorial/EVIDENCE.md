@@ -382,3 +382,27 @@ Fetched all 104 public files with system `curl`; every hash still matched the
 first release. The refinement remains undeployed. No site configuration,
 permissions, credentials, source or simulation tests changed. No support request
 was sent. The working public release and verified local export remain available.
+
+## Manual workflow recovery — September 23, 17:47 UTC
+
+After Nick explicitly approved the prepared workaround, pushed workflow commit
+`3d2b87673526064f3eb745e6c7cd99ce58442264`. Changed Pages from `legacy` to `workflow`
+and added `main` alongside `gh-pages` in the existing deployment environment.
+Settings were backed up before mutation. The manual workflow uses pinned official
+actions, separate upload/deploy jobs, bounded timeouts and job-specific permissions.
+Workflow lint and an independent read-only review passed. A fresh remote export
+clone matched all 105 files in the reviewed `776dcec` manifest.
+
+Dispatched the verified export `776dcec5fab903575ad73aacf424b417b24d9111` once.
+[Run 35897888968](https://github.com/NicholasHazen/moss/actions/runs/35897888968)
+completed successfully at 17:46:40 UTC. At 17:47:33 UTC, all 104 public files,
+including both downloads, matched the refinement's hashes. A missing URL returned
+HTTP 404 and the exact custom page. Pages reported `built`, build type `workflow`.
+The old run still reported queued with its original timestamp, so this result
+establishes recovered publication, not repair of the orphaned run.
+
+No book-source content, teaching models or simulation rules changed. The verified
+export was deployed unchanged; no native/WASM builds or browser interaction tests
+were rerun. Maintainer documentation now describes manual publication; no Support
+request was sent. The workflow and export have different commit IDs, recorded
+separately in ignored `book/artifacts/manual-pages-recovery.json`.

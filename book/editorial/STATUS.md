@@ -5,14 +5,12 @@
 twelve-hour allowance. The edition and public release are complete; the next
 learner action remains the movement edit in `NOW.md`.
 
-**Latest refinement:** reviewed and verified locally, pushed as `776dcec` on
-`gh-pages`. Its public deployment is **not yet verified**: GitHub's deployment
-step timed out obtaining an identity token, and the requested retry remains
-queued with inconsistent runner status. A follow-up investigation found the
-force-cancel endpoint also rejects it as not yet queued. The original public
-release's 104 served files were rechecked and remain intact. See the
-[publication incident](PUBLICATION_INCIDENT.md) for evidence and the recovery boundary.
-Use <http://127.0.0.1:8090/moss/> to read the revised local build.
+**Latest refinement:** export `776dcec` is **published and verified** as of
+17:47 UTC. The new manual [publication run](https://github.com/NicholasHazen/moss/actions/runs/35897888968)
+on workflow commit `3d2b876` succeeded; all 104 public files match its manifest,
+and the custom 404 was verified. The old managed rerun still reports queued,
+but it did not block this publication. See the [recovery record](WORKFLOW_RECOVERY.md)
+for the authorized configuration change and future release instructions.
 
 ## Outcome
 
@@ -34,7 +32,8 @@ was published only after Nick selected a public site linked to the repository.
   it; the print edition and RustRover reader must remain understandable.
 - No remote fonts, analytics or third-party interactive embeds are required.
 - Nick selected **web book only** and **a public site linked to the Moss
-  repository**. GitHub Pages now serves the verified static export from `gh-pages`;
+  repository**. GitHub Pages serves a verified static export stored on `gh-pages`,
+  through the manual publication workflow on `main`;
   the repository homepage links back to the book. No PDF edition is
   required; the ordinary browser print view remains a convenience.
 
@@ -59,7 +58,7 @@ deployed successfully on `gh-pages`. All 104 public files returned HTTP 200 with
 matching hashes; a missing URL returned the exact custom 404. Public Chromium
 checks covered navigation, movement, search/disclosures and error-page recovery.
 The static branch preserves the existing working checkout and unrelated edits;
-remote `main` remains `83a72a5abd46339e5448076fc183bfe33cd54029`.
+remote `main` remained `83a72a5abd46339e5448076fc183bfe33cd54029` at that first release.
 
 ## Second editorial pass
 
@@ -78,11 +77,11 @@ All seventeen canonical Rust blocks remain identical. The rebuilt site and
 the expanded figure and narrow reading layout. The updated source download
 independently rebuilt all 105 files byte for byte. No runtime or teaching-model
 code changed. Latest publication observations belong in [the evidence record](EVIDENCE.md).
-The remaining release action is for GitHub to queue or clear the stuck retry.
-After a successful terminal result from
-[the Pages run](https://github.com/NicholasHazen/moss/actions/runs/35879572240),
-compare the public files with `book/artifacts/review-v2-release-record.json`.
-Do not change permissions or replace the published source to resolve a runner timeout.
+The refinement's public hashes now match `book/artifacts/review-v2-release-record.json`.
+Nick authorized switching to a manual workflow and allowing `main` alongside
+`gh-pages` in the deployment environment. This restored publication without
+Support or deleting the site. The old run remains a separate unresolved record;
+its state should be checked before releasing newer content.
 
 ## Evidence
 

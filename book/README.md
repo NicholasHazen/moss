@@ -42,14 +42,15 @@ aligned with the checkpoint they describe.
 
 Publishing tooling is separate from the Cargo workspace. The tool version is
 pinned here and in the wrapper; Moss's dependencies and lockfile are unchanged.
-GitHub Pages serves the verified static export from the root of `gh-pages`.
-The Moss repository's homepage links to the book. The first publication is
-commit `14b93fab06513aa6440150816e94044ae7936dd9`; it leaves `main` and its
-existing local edits unchanged.
+GitHub Pages serves a verified static export committed on `gh-pages`, deployed
+by the manually triggered [publication workflow](../.github/workflows/publish-book.yml)
+on `main`. The repository homepage links to the book. The first publication was
+export `14b93fab06513aa6440150816e94044ae7936dd9`.
 
-The second editorial pass is committed as `776dcec` on that branch and verified
-locally. Its Pages retry is pending; [the work card](editorial/STATUS.md) records
-the deployment issue and the remaining public verification.
+The second editorial pass, export `776dcec`, is now publicly verified. A
+[fresh workflow run](https://github.com/NicholasHazen/moss/actions/runs/35897888968)
+published it after the managed branch-publishing rerun became stuck. See the
+[recovery record](editorial/WORKFLOW_RECOVERY.md) for settings and evidence.
 
 Each build also creates two deterministic downloads: the runnable Moss starter
 and the editable book source with its bounded reference inputs. Their manifests
@@ -58,10 +59,25 @@ The source download can rebuild the complete export, including both downloads.
 See the public [edition notes](src/reference/edition-notes.md) for scope and limits.
 
 For a later release, rebuild and run the checks below, then inspect the local
-preview. Publish only `book/_site/` from a separate checkout of `gh-pages`, using
+preview. Commit only `book/_site/` to a separate checkout of `gh-pages`, using
 a normal commit and push. Preserve the branch history; do not replace the active
-Moss checkout or include private editorial material. Confirm Pages deployment
-success and check the actual public pages and downloads before recording a release.
+Moss checkout or include editorial material in the export. Verify the remote
+export against the reviewed files, then use **Actions → Publish Moss book → Run
+workflow** on `main`, supplying that export's full commit SHA. A push alone no
+longer deploys. With an authenticated account that can publish this repository,
+the equivalent CLI command is:
+
+```sh
+gh workflow run publish-book.yml --repo NicholasHazen/moss --ref main \
+  -f export_commit=FULL_VERIFIED_EXPORT_COMMIT_SHA
+```
+
+Replace the placeholder with the verified export SHA. The workflow validates
+its format and basic export landmarks; it does not replace the release checks.
+Confirm deployment success and compare the public pages and downloads with
+the export manifest before recording a release. Record both the workflow commit
+and the content's export commit. Before publishing newer content, check the old
+queued run's state as described in the recovery record.
 
 Repository text citations are copied into the exported edition as escaped source
 snapshots, with their file paths and content hashes. Figures use a restricted,
