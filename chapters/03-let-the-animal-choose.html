@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0dabd431.js";
+            window.path_to_searchindex_js = "../searchindex-e8e1b246.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ece4b1fe.js"></script>
@@ -231,6 +231,7 @@ distance calculation does not find a path around them.</p>
 </table>
 </div>
 <p><img src="../source/docs/tutorial/path/visuals/perception-distance.svg" alt="Fern at cell 6,6 has a radius-four Manhattan neighborhood. Patch 9 at 10,6 qualifies; patch 8 at 9,8 requires five cardinal steps and does not."></p>
+<p><a href="../source/docs/tutorial/path/visuals/perception-distance.svg">Open the distance diagram at full size</a>.</p>
 <p>Read the boundary as a budget of cardinal steps. The eligible cells form a
 diamond on the square grid. A straight line to patch 8 is only about 3.6 cells
 long, so a circular range would include it and make it the nearer candidate.
@@ -425,6 +426,10 @@ reference. The three names receive copies because <code>SimId</code>, <code>Posi
 <code>u32</code> all implement <code>Copy</code>. The original observations remain in the caller’s
 collection. Copying these small observations does not copy an ECS entity or
 give the helper permission to change its biomass.</p>
+<p>Compare that with the meal resolver’s <code>for (id, energy) in eaters</code>: there we
+iterated a mutable slice and bound mutable references to its fields. Here the
+leading <code>&amp;</code> unpacks a shared reference so the bindings hold copied observations.
+One loop can change the caller’s energy; the other only inspects its supplied data.</p>
 <p>The <code>match</code> handles both forms of the running choice. With <code>None</code>, the current
 candidate has nothing to beat. With <code>Some(previous)</code>, it must compare lower
 than the previous pair. Each arm produces a <code>bool</code>, so the <code>match</code> expression
@@ -478,6 +483,7 @@ A seeking grazer stops <strong>at 75 or above</strong>. Between those thresholds
 the previous state. These are teaching settings for capacity-100 animals;
 they are not yet evidence of balanced behavior.</p>
 <p><img src="../source/docs/tutorial/path/visuals/seeking-state.svg" alt="Idle changes to Seeking below 45 energy units; Seeking changes to Idle at 75 or above. At 60, the prior state remains."></p>
+<p><a href="../source/docs/tutorial/path/visuals/seeking-state.svg">Open the activity transition diagram at full size</a>.</p>
 <p>Follow the outgoing arrow from the current state. At reserve 60, neither state
 has an applicable transition, so both remain possible. The name for this
 dependence on previous state is <strong>hysteresis</strong>. Here it is a small piece of
@@ -632,6 +638,7 @@ the proposed eating adapter requires a valid target as well as contact.
 There is no further meal, and four biomass remain. The stop threshold takes
 effect at a decision opportunity, using that opportunity’s input.</p>
 <p><img src="../source/docs/tutorial/path/visuals/choice-before-meal.svg" alt="Choice reads reserve 73 before a meal raises it to 77. At the next tick’s choice, reserve 76 stops seeking and clears the target, leaving the remaining four biomass uneaten."></p>
+<p><a href="../source/docs/tutorial/path/visuals/choice-before-meal.svg">Open the two-tick sequence diagram at full size</a>.</p>
 <p>The figure omits the no-op movement phase and tick completion to keep the
 changing quantities legible; the table above includes both. Read across one
 tick before comparing the two rows. The apparent disagreement disappears
@@ -686,6 +693,28 @@ The agent prepares those adapter checks and the complete journey described
 in the <a href="../source/docs/tutorial/03-food-choice.md.html#checkpoint-b--choosing-becomes-an-ecs-behavior">choice companion</a>.
 The same preparation keeps foxes out of grass selection and verifies that
 evaluating choice does not spend energy or move an animal.</p>
+<h3 id="why-the-familiar-journey-might-start-later"><a class="header" href="#why-the-familiar-journey-might-start-later">Why the familiar journey might start later</a></h3>
+<p>Chapter 1’s fixture gives Fern a destination immediately. If the autonomous
+fixture instead starts her <strong>Idle</strong> with reserve 60, the proposed choice rule
+waits until she is hungry. Keep upkeep at one, travel at two per cell, radius
+ten and Meadow nine cardinal cells away with food available. Assume no other
+rule or creature changes these inputs. The expected start is:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Completed tick</th><th>Fern’s state under this proposed setup</th></tr>
+</thead>
+<tbody>
+<tr><td>15</td><td>Reserve 45; still Idle at <code>(10, 10)</code> with no target.</td></tr>
+<tr><td>16</td><td>Maintenance leaves 44; choice starts Seeking; the first step ends at <code>(11, 10)</code> with 42.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The strict <code>reserve &lt; 45</code> condition explains the extra wait at 45. Fifteen
+stationary ticks would be correct for this setup, even with working movement.
+These are calculated consequences of an illustrative starting activity, not a
+new live fixture. The nine-cell route stays the same; choice changes when it
+begins.</p>
 <p>After activation, the browser observation has a specific story to inspect:
 Fern’s post-maintenance reserve starts an activity; a selected ID becomes her
 destination; accepted steps bring her to Meadow; an actual meal changes both

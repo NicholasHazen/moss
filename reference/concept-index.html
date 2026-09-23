@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0dabd431.js";
+            window.path_to_searchindex_js = "../searchindex-e8e1b246.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ece4b1fe.js"></script>
@@ -208,7 +208,9 @@ is no longer enough.</p>
 <tr><td><strong>Resource</strong></td><td>Shared ECS data used by systems, such as world configuration or shared species settings. See <a href="code-map.html">the code map</a>.</td></tr>
 <tr><td><strong>Schedule</strong></td><td>The ordered execution of systems and relevant deferred-application boundaries. See <a href="../chapters/01-one-affordable-step.html#from-one-correct-call-to-one-visible-tick">one visible tick</a>.</td></tr>
 <tr><td><strong>Stable ID</strong></td><td>Moss’s application identity used to name participants across inspection and history; distinct from a storage handle. See <a href="../chapters/01-one-affordable-step.html#how-the-little-function-reaches-an-ecs-world">target resolution</a>.</td></tr>
+<tr><td><strong>System</strong></td><td>A function that declares the ECS data it accesses and can run in a schedule. <code>move_to_food</code> is the prepared system adapter; <code>move_one_cell</code> is the ordinary helper it calls. See <a href="../chapters/01-one-affordable-step.html#how-the-little-function-reaches-an-ecs-world">the adapter</a>.</td></tr>
 <tr><td><strong>Tick</strong></td><td>One executed simulation step. Its rules do not depend on how many frames draw it. See <a href="../chapters/01-one-affordable-step.html#from-one-correct-call-to-one-visible-tick">one visible tick</a>.</td></tr>
+<tr><td><strong>World</strong></td><td>The ECS store holding entities, their components and shared resources. Moss uses one authoritative world; presentation derives its view from that state. See <a href="code-map.html">the code map</a>.</td></tr>
 </tbody>
 </table>
 </div>

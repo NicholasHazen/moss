@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0dabd431.js";
+            window.path_to_searchindex_js = "../searchindex-e8e1b246.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ece4b1fe.js"></script>
@@ -254,6 +254,7 @@ the caller’s value. In the test, <code>&amp;mut fern</code> and <code>&amp;mut
 The helper can write their fields; it does not take ownership of Fern or Meadow
 and return replacements.</p>
 <p><img src="../source/docs/tutorial/path/visuals/meal-borrow.svg" alt="Fern’s energy and Meadow’s patch remain owned by the caller. During one call, mutable borrows let the helper transfer two units, leaving reserve 100 and biomass 3."></p>
+<p><a href="../source/docs/tutorial/path/visuals/meal-borrow.svg">Open the mutable borrowing diagram at full size</a>.</p>
 <p>Follow the arrows back to the caller. After the call, the assertions inspect
 the same <code>fern</code> and <code>meadow</code> values with their changed fields. The returned
 number, 2, supplies additional information: it says how much was consumed.
@@ -435,6 +436,7 @@ the patch’s subtraction at zero. Every mutation could happen through a valid,
 short mutable borrow, in a single thread. The animals would still gain eight
 from a supply of five.</p>
 <p><img src="../source/docs/tutorial/path/visuals/shared-food.svg" alt="Two transfers using the current patch award four and then one, consuming five total. Two awards calculated from the initial supply instead grant eight, even if the patch’s final subtraction clamps at zero."></p>
+<p><a href="../source/docs/tutorial/path/visuals/shared-food.svg">Open the shared food diagram at full size</a>.</p>
 <p>Rust’s borrowing rules do not express the invariant “these two meals together
 must fit the supply.” They control access to values. Our transfer helper and
 resolution order express the resource rule. Sorting stale awards would not
@@ -593,6 +595,12 @@ fn session_02_order_is_a_rule_not_an_accident() {
 length is supplied by the caller. It permits the resolver to reorder the pairs
 and update their energy. The function does not need to own the array used in
 the test, and it does not need a special two-animal version.</p>
+<p>Iterating this mutable slice yields a mutable reference to each pair. Rust’s
+pattern matching lets <code>(id, energy)</code> name the fields through that reference:
+here <code>id</code> is <code>&amp;mut SimId</code> and <code>energy</code> is <code>&amp;mut Energy</code>. Passing <code>energy</code> to
+<code>eat_from_patch</code> therefore lends the animal’s existing reserve to the helper.
+The record uses <code>*id</code> to copy the small identity value out; it does not keep a
+borrow into the slice after the meal.</p>
 <p>In <code>sort_by_key(|(id, _)| *id)</code>, the method lends the closure a pair and the
 tuple pattern gives its ID a name. <code>*id</code> copies the small <code>SimId</code> value to use
 as a sorting key; <code>_</code> ignores the energy while choosing that key. <code>SimId</code>’s

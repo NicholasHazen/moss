@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0dabd431.js";
+            window.path_to_searchindex_js = "../searchindex-e8e1b246.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ece4b1fe.js"></script>
@@ -497,10 +497,20 @@ fn session_14_removal_reports_each_terminal_id_once() {
     assert_eq!(remaining, vec![(SimId(9), 5)]);
 }</code></pre>
 </details>
-<p>During <code>query.iter(world)</code>, each row contains an entity handle and borrowed
-component data. The filter reads reserve. The mapping changes the shape of
-what leaves the iterator: <code>(entity, *id)</code> contains values we can retain, with
-no reference into component storage.</p>
+<p>The resolver keeps handle and ID values when it crosses from inspecting
+components to removing entities:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>What the resolver holds</th></tr>
+</thead>
+<tbody>
+<tr><td>Inspect</td><td>Each query row supplies an entity handle and borrowed <code>SimId</code> and <code>Energy</code> components. The filter reads the reserve.</td></tr>
+<tr><td>Keep candidates</td><td>The mapping yields owned <code>(Entity, SimId)</code> pairs; <code>collect()</code> gathers them into a vector with no references into component storage.</td></tr>
+<tr><td>Commit removal</td><td>Query iteration has finished. The loop uses the owned handles to despawn and reports an ID only after removal succeeds.</td></tr>
+</tbody>
+</table>
+</div>
 <p><code>collect()</code> materializes those yielded values. It does not automatically
 turn borrowed components into copies. The <code>*id</code> in the mapping performs the
 copy that matters. Here <code>Vec&lt;_&gt;</code> can be inferred as <code>Vec&lt;(Entity, SimId)&gt;</code>.
@@ -594,6 +604,7 @@ to visible death rows would invent a result.</p>
 Use “unknown” or “uncollected” when it does not. A small honest record can
 explain more than a full-looking timeline whose gaps are hidden.</p>
 <p><img src="../assets/a-life-and-its-evidence.svg" alt="One future death is reflected in a living count of five and an independent whole-run death count of one. Fern’s detail remains in a 32-entry journal, while three earlier records from the same tick have been evicted. The retained detail is partial even though the independent counter covers the run."></p>
+<p><a href="../assets/a-life-and-its-evidence.svg">Open the history and population diagram at full size</a>.</p>
 <p><em>One illustrative future outcome, three views. The current journal does not yet
 collect deaths or this counter. If both are added, losing a detail must not erase
 the aggregate fact; the living count should still be measured from the world.</em></p>

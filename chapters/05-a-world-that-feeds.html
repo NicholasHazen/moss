@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0dabd431.js";
+            window.path_to_searchindex_js = "../searchindex-e8e1b246.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ece4b1fe.js"></script>
@@ -208,7 +208,8 @@ the rules in the live project.</p>
 <h2 id="give-meadow-room-to-recover"><a class="header" href="#give-meadow-room-to-recover">Give Meadow room to recover</a></h2>
 <p>Meadow represents a stand of grass at one simulation cell. Its biomass can
 fall when eaten and rise when replenished without creating another patch or
-changing its footprint. Zero biomass will mean cropped grass that can regrow.
+changing its <a href="07-another-kind-of-life.html#when-a-larger-picture-changes-contact">footprint</a>.
+Zero biomass will mean cropped grass that can regrow.
 That is a selected modeling assumption: this first renewal rule does not
 require seeds, neighboring plants or a separate recovery delay.</p>
 <p>Use a proposed capacity of <strong>100 biomass units</strong> and, initially, constant-light
@@ -753,6 +754,7 @@ at 19. Meadow has neither new nor stored biomass, so there is no eligible food
 target and no meal. The patch again ends at zero, this time because there was
 nothing to transfer.</p>
 <p><img src="../source/docs/tutorial/path/visuals/stock-and-flow.svg" alt="At day tick 119, growth adds one biomass and a meal consumes it; upkeep deducts one energy and Fern ends at 20. At night tick 120, the empty patch supplies no meal and Fern ends at 19. Both ticks finish with zero biomass."></p>
+<p><a href="../source/docs/tutorial/path/visuals/stock-and-flow.svg">Open the stores and changes diagram at full size</a>.</p>
 <p>Compare actual growth and meals as well as the final stores. The figure
 compresses away choice, unchanged position and tick completion to show the
 quantities that change. Its night row starts with an empty patch; it does

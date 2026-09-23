@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0dabd431.js";
+            window.path_to_searchindex_js = "searchindex-e8e1b246.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ece4b1fe.js"></script>
@@ -193,6 +193,7 @@ changing either, and a test that can tell whether we got the decision right.</p>
 <p>New to the repository? <a href="#put-the-book-beside-a-running-world">Get this edition’s starter running</a>
 first. It includes the exact unfinished exercise and its tests.</p>
 <p><img src="assets/first-journey.svg" alt="Fern at cell 10,10 and Meadow at 16,13, connected by six horizontal and three vertical steps. The illustrated route is a proposed movement rule, not a screenshot of the live simulation."></p>
+<p><a href="assets/first-journey.svg">Open the journey diagram at full size</a>.</p>
 <p><em>One proposed journey. Six cells east, then three north. A small rule can explain
 the whole route, including why it might stop early.</em></p>
 <p>Moss is an ecosystem to build and a program to understand. A creature should
@@ -207,10 +208,14 @@ introduce a language feature when an actual decision needs it. You will meet
 mutable references while committing a step, <code>Option</code> while looking for food,
 and query filters while deciding which entities a system can reach.</p>
 <p>Read at either of two speeds. You can follow the main argument and its pictures
-without opening an editor. When you want to code, the chapter gives a small
-checkpoint, an exact command, and a complete worked answer. Reading an answer
-and tracing it is a useful way into an unfamiliar codebase; the next changed
-case gives you a chance to use the idea yourself.</p>
+without opening an editor. Chapter 1 also gives you a ready-to-edit function
+and a test of your change. Later chapters let you explore and run complete
+reference examples; their live exercises are prepared one at a time during
+paired work. A reference command checks the printed answer, rather than your
+saved implementation, and does not install that behavior in the world.</p>
+<p>Complete worked answers remain available throughout. Read and trace as much of
+an answer as helps you regain your bearings; the nearby variation gives you a
+chance to use the idea yourself.</p>
 <p>The browser edition includes interactive teaching models. Every model has a
 static trace beside it so the chapter also makes sense in RustRover or print.
 The diagrams and labs explain a rule; they are not recordings of the Moss app.</p>
@@ -612,6 +617,7 @@ is a function that declares the data it needs; a <strong>schedule</strong> decid
 systems run. In the prepared adapter, those declarations let an ECS query
 supply the values your ordinary helper needs.</p>
 <p><img src="source/docs/tutorial/visuals/adapter-to-helper.svg" alt="The prepared adapter reads Meadow’s stable ID, position and biomass, matches Fern’s target, and lends Fern’s position and energy to the helper. The illustrated first movement phase starts after maintenance at reserve 59 and would finish at 57."></p>
+<p><a href="source/docs/tutorial/visuals/adapter-to-helper.svg">Open the ECS adapter diagram at full size</a>.</p>
 <p><em>One world supplies both sides. The destination is copied; Fern’s changing
 values are borrowed. This is the expected call after activation.</em></p>
 <p>The animal query is this <strong>parameter excerpt</strong> from <code>move_to_food</code>:</p>
@@ -740,6 +746,7 @@ the caller’s value. In the test, <code>&amp;mut fern</code> and <code>&amp;mut
 The helper can write their fields; it does not take ownership of Fern or Meadow
 and return replacements.</p>
 <p><img src="source/docs/tutorial/path/visuals/meal-borrow.svg" alt="Fern’s energy and Meadow’s patch remain owned by the caller. During one call, mutable borrows let the helper transfer two units, leaving reserve 100 and biomass 3."></p>
+<p><a href="source/docs/tutorial/path/visuals/meal-borrow.svg">Open the mutable borrowing diagram at full size</a>.</p>
 <p>Follow the arrows back to the caller. After the call, the assertions inspect
 the same <code>fern</code> and <code>meadow</code> values with their changed fields. The returned
 number, 2, supplies additional information: it says how much was consumed.
@@ -921,6 +928,7 @@ the patch’s subtraction at zero. Every mutation could happen through a valid,
 short mutable borrow, in a single thread. The animals would still gain eight
 from a supply of five.</p>
 <p><img src="source/docs/tutorial/path/visuals/shared-food.svg" alt="Two transfers using the current patch award four and then one, consuming five total. Two awards calculated from the initial supply instead grant eight, even if the patch’s final subtraction clamps at zero."></p>
+<p><a href="source/docs/tutorial/path/visuals/shared-food.svg">Open the shared food diagram at full size</a>.</p>
 <p>Rust’s borrowing rules do not express the invariant “these two meals together
 must fit the supply.” They control access to values. Our transfer helper and
 resolution order express the resource rule. Sorting stale awards would not
@@ -1079,6 +1087,12 @@ fn session_02_order_is_a_rule_not_an_accident() {
 length is supplied by the caller. It permits the resolver to reorder the pairs
 and update their energy. The function does not need to own the array used in
 the test, and it does not need a special two-animal version.</p>
+<p>Iterating this mutable slice yields a mutable reference to each pair. Rust’s
+pattern matching lets <code>(id, energy)</code> name the fields through that reference:
+here <code>id</code> is <code>&amp;mut SimId</code> and <code>energy</code> is <code>&amp;mut Energy</code>. Passing <code>energy</code> to
+<code>eat_from_patch</code> therefore lends the animal’s existing reserve to the helper.
+The record uses <code>*id</code> to copy the small identity value out; it does not keep a
+borrow into the slice after the meal.</p>
 <p>In <code>sort_by_key(|(id, _)| *id)</code>, the method lends the closure a pair and the
 tuple pattern gives its ID a name. <code>*id</code> copies the small <code>SimId</code> value to use
 as a sorting key; <code>_</code> ignores the energy while choosing that key. <code>SimId</code>’s
@@ -1228,6 +1242,7 @@ distance calculation does not find a path around them.</p>
 </table>
 </div>
 <p><img src="source/docs/tutorial/path/visuals/perception-distance.svg" alt="Fern at cell 6,6 has a radius-four Manhattan neighborhood. Patch 9 at 10,6 qualifies; patch 8 at 9,8 requires five cardinal steps and does not."></p>
+<p><a href="source/docs/tutorial/path/visuals/perception-distance.svg">Open the distance diagram at full size</a>.</p>
 <p>Read the boundary as a budget of cardinal steps. The eligible cells form a
 diamond on the square grid. A straight line to patch 8 is only about 3.6 cells
 long, so a circular range would include it and make it the nearer candidate.
@@ -1422,6 +1437,10 @@ reference. The three names receive copies because <code>SimId</code>, <code>Posi
 <code>u32</code> all implement <code>Copy</code>. The original observations remain in the caller’s
 collection. Copying these small observations does not copy an ECS entity or
 give the helper permission to change its biomass.</p>
+<p>Compare that with the meal resolver’s <code>for (id, energy) in eaters</code>: there we
+iterated a mutable slice and bound mutable references to its fields. Here the
+leading <code>&amp;</code> unpacks a shared reference so the bindings hold copied observations.
+One loop can change the caller’s energy; the other only inspects its supplied data.</p>
 <p>The <code>match</code> handles both forms of the running choice. With <code>None</code>, the current
 candidate has nothing to beat. With <code>Some(previous)</code>, it must compare lower
 than the previous pair. Each arm produces a <code>bool</code>, so the <code>match</code> expression
@@ -1475,6 +1494,7 @@ A seeking grazer stops <strong>at 75 or above</strong>. Between those thresholds
 the previous state. These are teaching settings for capacity-100 animals;
 they are not yet evidence of balanced behavior.</p>
 <p><img src="source/docs/tutorial/path/visuals/seeking-state.svg" alt="Idle changes to Seeking below 45 energy units; Seeking changes to Idle at 75 or above. At 60, the prior state remains."></p>
+<p><a href="source/docs/tutorial/path/visuals/seeking-state.svg">Open the activity transition diagram at full size</a>.</p>
 <p>Follow the outgoing arrow from the current state. At reserve 60, neither state
 has an applicable transition, so both remain possible. The name for this
 dependence on previous state is <strong>hysteresis</strong>. Here it is a small piece of
@@ -1629,6 +1649,7 @@ the proposed eating adapter requires a valid target as well as contact.
 There is no further meal, and four biomass remain. The stop threshold takes
 effect at a decision opportunity, using that opportunity’s input.</p>
 <p><img src="source/docs/tutorial/path/visuals/choice-before-meal.svg" alt="Choice reads reserve 73 before a meal raises it to 77. At the next tick’s choice, reserve 76 stops seeking and clears the target, leaving the remaining four biomass uneaten."></p>
+<p><a href="source/docs/tutorial/path/visuals/choice-before-meal.svg">Open the two-tick sequence diagram at full size</a>.</p>
 <p>The figure omits the no-op movement phase and tick completion to keep the
 changing quantities legible; the table above includes both. Read across one
 tick before comparing the two rows. The apparent disagreement disappears
@@ -1683,6 +1704,28 @@ The agent prepares those adapter checks and the complete journey described
 in the <a href="source/docs/tutorial/03-food-choice.md.html#checkpoint-b--choosing-becomes-an-ecs-behavior">choice companion</a>.
 The same preparation keeps foxes out of grass selection and verifies that
 evaluating choice does not spend energy or move an animal.</p>
+<h3 id="why-the-familiar-journey-might-start-later"><a class="header" href="#why-the-familiar-journey-might-start-later">Why the familiar journey might start later</a></h3>
+<p>Chapter 1’s fixture gives Fern a destination immediately. If the autonomous
+fixture instead starts her <strong>Idle</strong> with reserve 60, the proposed choice rule
+waits until she is hungry. Keep upkeep at one, travel at two per cell, radius
+ten and Meadow nine cardinal cells away with food available. Assume no other
+rule or creature changes these inputs. The expected start is:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Completed tick</th><th>Fern’s state under this proposed setup</th></tr>
+</thead>
+<tbody>
+<tr><td>15</td><td>Reserve 45; still Idle at <code>(10, 10)</code> with no target.</td></tr>
+<tr><td>16</td><td>Maintenance leaves 44; choice starts Seeking; the first step ends at <code>(11, 10)</code> with 42.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The strict <code>reserve &lt; 45</code> condition explains the extra wait at 45. Fifteen
+stationary ticks would be correct for this setup, even with working movement.
+These are calculated consequences of an illustrative starting activity, not a
+new live fixture. The nine-cell route stays the same; choice changes when it
+begins.</p>
 <p>After activation, the browser observation has a specific story to inspect:
 Fern’s post-maintenance reserve starts an activity; a selected ID becomes her
 destination; accepted steps bring her to Meadow; an actual meal changes both
@@ -1731,6 +1774,12 @@ active edit.</p>
 <p>Read the short rule excerpts and traces for the argument. Expand a complete
 answer when you want its imports, supporting types and test fixtures; each
 reference has its own command beside it.</p>
+<p>For one path from an authored cost to its visible effect, start with
+<a href="#a-default-is-an-instruction-for-making-an-individual">defaults and owned values</a>,
+continue through <a href="#make-the-query-read-the-new-owner">the maintenance query</a>,
+then follow <a href="#give-the-difference-a-fair-journey">the two-hare journey</a>.
+The population summary and discussions of component boundaries, modifiers and
+scale are adjacent investigations you can return to after that account makes sense.</p>
 <h2 id="a-population-gives-the-numbers-some-company"><a class="header" href="#a-population-gives-the-numbers-some-company">A population gives the numbers some company</a></h2>
 <p>One animal makes a rule easy to follow. Several animals make its consequences
 worth comparing. The proposed population scene supplies six hares, two foxes
@@ -1942,6 +1991,7 @@ changes the default to nine, the unchanged inputs construct nine and one.
 An explicit one remains an explicit one even when an earlier default happened
 to match it.</p>
 <p><img src="source/docs/tutorial/path/visuals/default-to-instance.svg" alt="At creation, a species default and an optional authored override produce an owned cost component. Maintenance later reads that resolved component directly."></p>
+<p><a href="source/docs/tutorial/path/visuals/default-to-instance.svg">Open the defaults and owned values diagram at full size</a>.</p>
 <p>The arrow from template to individual happens during construction. There is
 no arrow reaching back from every future maintenance subtraction. This is why
 the original <code>Option</code> belongs in retained authoring data: reconstruction needs
@@ -2096,8 +2146,10 @@ forgetting to attach costs must not grant it free upkeep.</p>
 <p>The exact <a href="source/docs/tutorial/path/07-querying-costs.md.html">session 07</a>
 reference constructs small Bevy worlds and installs only its local maintenance
 system. Its local component repeats the preceding concept so the reference can
-run independently. The future live integration uses the one component already
-prepared in <code>energy.rs</code>; it must not declare a competing second type.</p>
+run independently. The edition’s <code>energy.rs</code> does not yet define
+<code>AnimalEnergyCosts</code>. When the owned-cost lesson becomes active, prepare that
+component there once and make live systems use it; do not copy this reference’s
+local definition into a second competing type.</p>
 <p>The first test uses valid animals and checks attachment as well as reserves.
 The second deliberately constructs three different component combinations.
 Use that second test to distinguish a query doing its job from spawn code
@@ -2262,6 +2314,8 @@ explains the required data and filter access used here.</p>
 leaving the real schedule installed. If both hares finish at 57, inspect whether
 maintenance still reads the species resource. If one stays at 60, inspect
 attachment and query membership before changing the subtraction.</p>
+<p><a href="#give-the-difference-a-fair-journey">Continue the two-hare experiment</a> to see
+those costs combine with travel, or stay here to examine the component boundary.</p>
 <h2 id="how-many-components-should-these-attributes-become"><a class="header" href="#how-many-components-should-these-attributes-become">How many components should these attributes become?</a></h2>
 <p>The owned-cost example answers who owns a number. It does not require every
 attribute to occupy its own component, and it does not require all attributes
@@ -2572,7 +2626,8 @@ the rules in the live project.</p>
 <h2 id="give-meadow-room-to-recover"><a class="header" href="#give-meadow-room-to-recover">Give Meadow room to recover</a></h2>
 <p>Meadow represents a stand of grass at one simulation cell. Its biomass can
 fall when eaten and rise when replenished without creating another patch or
-changing its footprint. Zero biomass will mean cropped grass that can regrow.
+changing its <a href="#when-a-larger-picture-changes-contact">footprint</a>.
+Zero biomass will mean cropped grass that can regrow.
 That is a selected modeling assumption: this first renewal rule does not
 require seeds, neighboring plants or a separate recovery delay.</p>
 <p>Use a proposed capacity of <strong>100 biomass units</strong> and, initially, constant-light
@@ -3117,6 +3172,7 @@ at 19. Meadow has neither new nor stored biomass, so there is no eligible food
 target and no meal. The patch again ends at zero, this time because there was
 nothing to transfer.</p>
 <p><img src="source/docs/tutorial/path/visuals/stock-and-flow.svg" alt="At day tick 119, growth adds one biomass and a meal consumes it; upkeep deducts one energy and Fern ends at 20. At night tick 120, the empty patch supplies no meal and Fern ends at 19. Both ticks finish with zero biomass."></p>
+<p><a href="source/docs/tutorial/path/visuals/stock-and-flow.svg">Open the stores and changes diagram at full size</a>.</p>
 <p>Compare actual growth and meals as well as the final stores. The figure
 compresses away choice, unchanged position and tick completion to show the
 quantities that change. Its night row starts with an empty patch; it does
@@ -3548,10 +3604,20 @@ fn session_14_removal_reports_each_terminal_id_once() {
     assert_eq!(remaining, vec![(SimId(9), 5)]);
 }</code></pre>
 </details>
-<p>During <code>query.iter(world)</code>, each row contains an entity handle and borrowed
-component data. The filter reads reserve. The mapping changes the shape of
-what leaves the iterator: <code>(entity, *id)</code> contains values we can retain, with
-no reference into component storage.</p>
+<p>The resolver keeps handle and ID values when it crosses from inspecting
+components to removing entities:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>What the resolver holds</th></tr>
+</thead>
+<tbody>
+<tr><td>Inspect</td><td>Each query row supplies an entity handle and borrowed <code>SimId</code> and <code>Energy</code> components. The filter reads the reserve.</td></tr>
+<tr><td>Keep candidates</td><td>The mapping yields owned <code>(Entity, SimId)</code> pairs; <code>collect()</code> gathers them into a vector with no references into component storage.</td></tr>
+<tr><td>Commit removal</td><td>Query iteration has finished. The loop uses the owned handles to despawn and reports an ID only after removal succeeds.</td></tr>
+</tbody>
+</table>
+</div>
 <p><code>collect()</code> materializes those yielded values. It does not automatically
 turn borrowed components into copies. The <code>*id</code> in the mapping performs the
 copy that matters. Here <code>Vec&lt;_&gt;</code> can be inferred as <code>Vec&lt;(Entity, SimId)&gt;</code>.
@@ -3645,6 +3711,7 @@ to visible death rows would invent a result.</p>
 Use “unknown” or “uncollected” when it does not. A small honest record can
 explain more than a full-looking timeline whose gaps are hidden.</p>
 <p><img src="assets/a-life-and-its-evidence.svg" alt="One future death is reflected in a living count of five and an independent whole-run death count of one. Fern’s detail remains in a 32-entry journal, while three earlier records from the same tick have been evicted. The retained detail is partial even though the independent counter covers the run."></p>
+<p><a href="assets/a-life-and-its-evidence.svg">Open the history and population diagram at full size</a>.</p>
 <p><em>One illustrative future outcome, three views. The current journal does not yet
 collect deaths or this counter. If both are added, losing a detail must not erase
 the aggregate fact; the living count should still be measured from the world.</em></p>
@@ -4111,6 +4178,7 @@ prevent growth forever. A defined remainder can carry progress across ticks.
 That would be a new numerical rule to check, not something a darker background
 can implement. Rain or cold should likewise name which input they change;
 an unused weather label has no biological effect.</p>
+<h3 id="when-a-larger-picture-changes-contact"><a class="header" href="#when-a-larger-picture-changes-contact">When a larger picture changes contact</a></h3>
 <p>Geometry asks a related question: what does a larger picture mean? The live
 markers are schematic squares, and the first meal model uses simulation cells
 for contact. Enlarging a sprite or its click target does not enlarge an
@@ -4118,6 +4186,7 @@ animal’s reach. A future body radius would need simulation-owned units and
 explicit contact and boundary rules. A plant stand might instead occupy a
 footprint of cells. Shape matters when a rule uses it, while visual detail can
 remain a presentation choice.</p>
+<h3 id="refill-a-patch-or-spread-to-a-neighbor"><a class="header" href="#refill-a-patch-or-spread-to-a-neighbor">Refill a patch or spread to a neighbor</a></h3>
 <p>Meadow’s refill and grass spreading into a new cell are also separate
 relationships. Refill changes a stored quantity at an existing patch. A
 cellular-automaton spread rule would make a cell’s next state depend on its
@@ -4257,7 +4326,9 @@ is no longer enough.</p>
 <tr><td><strong>Resource</strong></td><td>Shared ECS data used by systems, such as world configuration or shared species settings. See <a href="#where-to-look-when-something-happens">the code map</a>.</td></tr>
 <tr><td><strong>Schedule</strong></td><td>The ordered execution of systems and relevant deferred-application boundaries. See <a href="#from-one-correct-call-to-one-visible-tick">one visible tick</a>.</td></tr>
 <tr><td><strong>Stable ID</strong></td><td>Moss’s application identity used to name participants across inspection and history; distinct from a storage handle. See <a href="#how-the-little-function-reaches-an-ecs-world">target resolution</a>.</td></tr>
+<tr><td><strong>System</strong></td><td>A function that declares the ECS data it accesses and can run in a schedule. <code>move_to_food</code> is the prepared system adapter; <code>move_one_cell</code> is the ordinary helper it calls. See <a href="#how-the-little-function-reaches-an-ecs-world">the adapter</a>.</td></tr>
 <tr><td><strong>Tick</strong></td><td>One executed simulation step. Its rules do not depend on how many frames draw it. See <a href="#from-one-correct-call-to-one-visible-tick">one visible tick</a>.</td></tr>
+<tr><td><strong>World</strong></td><td>The ECS store holding entities, their components and shared resources. Moss uses one authoritative world; presentation derives its view from that state. See <a href="#where-to-look-when-something-happens">the code map</a>.</td></tr>
 </tbody>
 </table>
 </div>
