@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import io
 import json
 import os
 import posixpath
+import re
 import tempfile
 import zipfile
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import fieldwork_preview
 import preview
@@ -70,7 +72,7 @@ class Page(HTMLParser):
         self.offsets = [0]
         for line in source.splitlines(keepends=True):
             self.offsets.append(self.offsets[-1] + len(line))
-        self.stack, self.nodes, self.refs, self.ids = [], [], [], set()
+        self.stack, self.nodes, self.refs, self.ids, self.tags = [], [], [], set(), []
         self.players = 0
 
     def position(self):
@@ -79,12 +81,13 @@ class Page(HTMLParser):
 
     def handle_starttag(self, tag, attributes):
         attrs = dict(attributes)
+        self.tags.append({"start": self.position(), "raw": self.get_starttag_text(), "attrs": attrs})
         if "id" in attrs:
             require(attrs["id"] not in self.ids, f"Duplicate HTML id: {attrs['id']}")
             self.ids.add(attrs["id"])
         if tag == "base":
             raise ValueError("Public course pages must use relative links, not a base element")
-        self.refs.extend(v for k, v in attributes if k in {"href", "src", "data-narration-source"} and v)
+        self.refs.extend(v for k, v in attributes if k in {"href", "src", "data-narration-source", "data-source-file"} and v)
         if "data-narration-source" in attrs:
             self.players += 1
         if tag not in VOID:
@@ -154,6 +157,43 @@ def public_html(name, data, source_download):
     return source.encode("utf-8")
 
 
+def rename_public_gitignore(files):
+    """Pages' upload excludes dotfiles; only exported names and URL attributes change."""
+    names = {".gitignore": "gitignore.txt", ".gitignore.html": "gitignore.txt.html"}
+    renamed = {name: str(PurePosixPath(name).with_name(names[PurePosixPath(name).name]))
+               for name in files if PurePosixPath(name).name in names}
+    require(not set(renamed.values()).intersection(files), "Public gitignore export name collision")
+    attributes = re.compile(r'''(?P<name>[^\s"'<>/=]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?''')
+    result = {}
+    for name, data in files.items():
+        output_name = renamed.get(name, name)
+        if name.endswith(".html"):
+            source = data.decode("utf-8")
+            edits = []
+            for tag in parsed(source).tags:
+                for key in ("href", "src", "data-source-file"):
+                    value = tag["attrs"].get(key)
+                    if not value:
+                        continue
+                    url = urlsplit(value)
+                    if url.scheme or url.netloc or not url.path:
+                        continue
+                    target = posixpath.normpath(posixpath.join(posixpath.dirname(name), unquote(url.path)))
+                    if target not in renamed:
+                        continue
+                    relative = posixpath.relpath(renamed[target], posixpath.dirname(output_name) or ".")
+                    replacement = urlunsplit(("", "", quote(relative, safe="/"), url.query, url.fragment))
+                    token = next(match for match in attributes.finditer(tag["raw"])
+                                 if match.group("name").lower() == key)
+                    edits.append((tag["start"] + token.start(), tag["start"] + token.end(),
+                                  f'{key}="{html.escape(replacement, quote=True)}"'))
+            for start, end, replacement in sorted(edits, reverse=True):
+                source = source[:start] + replacement + source[end:]
+            data = source.encode("utf-8")
+        result[output_name] = data
+    return result
+
+
 def validate_export(files, course, public=False):
     expected_pages = {m["id"] + ".html" for m in course["modules"]} | {n + ".html" for n in course["guides"]}
     require(len(expected_pages) == 41, "This exporter expects the reviewed 41-page edition")
@@ -161,6 +201,8 @@ def validate_export(files, course, public=False):
     allowed = {"assets", "examples", "reference", "downloads", "runtime", "previews"} | ({"narration"} if not public else set())
     for name in files:
         path = safe_name(name)
+        if public:
+            require(not any(part.startswith(".") for part in path.parts), f"Pages upload would exclude dotfile: {name}")
         require(name in expected_pages or len(path.parts) > 1 and path.parts[0] in allowed, f"Unknown/private publication file: {name}")
     wasm = {n for n in files if n.endswith(".wasm")}
     require(len(wasm) == 7 and "runtime/moss.wasm" in wasm, "Expected all seven compiled WASM assets")
@@ -280,6 +322,7 @@ def publish(destination, source_archive=None):
             files[name] = (json.dumps(metadata, indent=2) + "\n").encode()
     if source_bytes is not None:
         files[SOURCE_DOWNLOAD] = source_bytes
+    files = rename_public_gitignore(files)
     validate_export(files, course, public=True)
     manifest = {"edition": course["edition"], "publicEdition": True,
                 "recordings": "Excluded macOS system-voice recordings; browser Listen remains available",

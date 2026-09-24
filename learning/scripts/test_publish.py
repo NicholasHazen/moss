@@ -192,6 +192,36 @@ class PublicExport(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "build metadata"):
             publish.validate_built_bytes(self.files | {"runtime/build.json": json.dumps(changed).encode()})
 
+    def test_public_gitignore_names_and_actual_urls_change_but_code_and_zips_do_not(self):
+        raw = b'/target/\n# href=".gitignore.html" stays literal source text\n'
+        view = (b"<html><body><h1>.gitignore</h1><a href='.gitignore?download=1&amp;raw=1'>Raw</a>"
+                b"<a href='.gitignore.html?v=2#code'>View</a>"
+                b"<pre><code id='code' data-source-file='.gitignore?raw=1'>/target/\n"
+                b"# href=&quot;.gitignore.html&quot; stays literal source text\n</code></pre></body></html>")
+        self.files["reference/refuge/.gitignore"] = raw
+        self.files["reference/refuge/.gitignore.html"] = view
+        self.files["setup.html"] = self.files["setup.html"].replace(b"</article>",
+            b"<a href='reference/refuge/.gitignore.html?v=2#code'>Source</a></article>")
+        self.flush()
+        before_code = [n["text"] for n in publish.parsed(view.decode()).nodes if n["tag"] == "code"]
+        publish.publish(self.destination)
+        output = publish.read_site(self.destination)
+        self.assertFalse(any(part.startswith(".") for name in output for part in Path(name).parts))
+        self.assertEqual(output["reference/refuge/gitignore.txt"], raw)
+        revised = output["reference/refuge/gitignore.txt.html"].decode()
+        self.assertIn('href="gitignore.txt?download=1&amp;raw=1"', revised)
+        self.assertIn('href="gitignore.txt.html?v=2#code"', revised)
+        self.assertIn('data-source-file="gitignore.txt?raw=1"', revised)
+        self.assertIn('href="reference/refuge/gitignore.txt.html?v=2#code"', output["setup.html"].decode())
+        self.assertEqual([n["text"] for n in publish.parsed(revised).nodes if n["tag"] == "code"], before_code)
+        for name, data in self.files.items():
+            if name.endswith(".zip"):
+                self.assertEqual(output[name], data)
+        public_files = {name: data for name, data in output.items() if name != "manifest.json"}
+        publish.validate_export(public_files, self.course, public=True)
+        with self.assertRaisesRegex(ValueError, "dotfile"):
+            publish.validate_export(public_files | {"reference/refuge/.unexpected": b"hidden"}, self.course, public=True)
+
 
 if __name__ == "__main__":
     unittest.main()
