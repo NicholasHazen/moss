@@ -41,7 +41,7 @@ LEGACY = {
     'source/docs/design/ecology.md.html': 'introduction.html',
     'source/docs/design/observability.md.html': '13-evidence.html',
     'source/docs/research/attributes-and-energy.md.html': '04-units.html',
-    'source/docs/research/property-bags-and-defaults.md.html': '08-traits.html',
+    'source/docs/research/property-bags-and-defaults.md.html': '09-traits.html',
     'source/docs/tutorial/03-food-choice.md.html': '16-targets.html',
     'source/docs/tutorial/05-eating.md.html': '15-meals.html',
     'source/docs/tutorial/context/a-tick-through-moss.md.html': '01-observe.html',
