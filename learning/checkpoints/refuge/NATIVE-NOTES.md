@@ -1,0 +1,242 @@
+# Native refuge capstone: contract and observations
+
+This additive reference feature is confined to the course ecosystem, with Rust
+1.93.1 and Bevy ECS 0.18.1. It preserves the frozen hunting checkpoint and the live
+Moss assignment. The accompanying learner guide and CLI stage are maintained
+separately. There is no new refuge browser mode: the native investigation is the
+feature's execution surface.
+
+## Public contract and private responsibilities
+
+`MobileScenario::with_refuges(RefugeConfig)` enables the optional policy;
+`refuges()` borrows its configuration. `RefugeConfig::new(Vec<RefugeSeed>)` stores
+raw authored inputs for validation during world construction or replacement.
+Each seed contains a `RefugeId(u32)` and a `Cell`. Existing scenario fields remain
+private, so earlier constructors and callers require no extra argument.
+
+Refuge IDs must be positive and unique, and each cell must be inside the authored
+grid. Two sites cannot name the same cell. The positive-ID requirement is this
+model's chosen contract, not a requirement of Bevy or Rust. Static-site identity
+has a separate namespace from `SimId`; site 1 may coexist with grazer 1, and even
+site `u32::MAX` neither consumes nor exhausts the actor allocator. The errors are
+`ZeroRefugeId`, `DuplicateRefugeId`, `RefugeOutOfBounds`, and `SharedRefugeCell`.
+All validation finishes before the current world, run identity, or saved reset
+configuration is replaced. Site vectors are then sorted by ID for owned reports.
+
+`CourseWorld::refuge_snapshot()` returns `None` when the policy is disabled. An
+enabled configuration with zero sites returns `Some`, with an empty config and
+unprotected living grazers. `RefugeSnapshot` contains version
+`moss-course-refuge-v1`, run, completed tick, an owned canonical config, and
+stable-ID-sorted `RefugeGrazerReading` values. Each reading has `id`, current
+`cell`, `refuge: Option<RefugeId>`, and `assessed_tick`. This report is current
+membership, not a journal or a measurement of time spent protected. A saved
+report stays owned and unchanged after future steps or reset.
+
+`reset()` repeats the saved mode. `reset_with_mobile` can replace it with another
+validated refuge placement or an ordinary mobile scenario, incrementing the same
+run counter. Selecting an earlier course mode removes the optional state.
+
+The feature is deliberately small:
+
+| File | Responsibility |
+| --- | --- |
+| `src/refuge.rs` | Public config/readings; validation; private site lookup and membership component; installation, whole typed membership system, owned report |
+| `src/mobile/config.rs` | Optional private scenario field, builder/accessor, validation and canonical ordering |
+| `src/simulation.rs` | Installation, two ordered system positions, public report method |
+| `src/hunting/perception.rs` | Exclude protected grazers from local eligible prey readings |
+| `src/hunting/capture.rs` | Reject current protected prey before any transaction debit |
+| `src/reproduction.rs` | Initialize a child's membership at its accepted birth cell before deferred insertion |
+| `src/lib.rs` | Explicit exports |
+| `tests/refuge.rs` | Twelve top-level public behavioral tests |
+| `examples/refuges.rs` | Fully declared four-placement experiment and per-tick accounting |
+
+The reproduction system groups its two optional spatial resources in one tuple
+system parameter; this keeps the existing concrete system readable and satisfies
+strict Clippy without an allowance or a new policy framework. No dependency was
+added. The public fields and variants of all earlier seeds/reports/events stay
+unchanged. The manual `MobileScenario` debug formatter omits the absent new
+field, preserving old diagnostic traces while showing enabled refuge input.
+
+## Timing and biological choices
+
+The private `RefugeMembership` stores an optional site and its assessment tick.
+The lookup only maps current cells to authored sites. The refresh system has a
+shared `Clock`, an optional shared `RefugeState`, and a typed query borrowing
+`Position` and mutably borrowing `RefugeMembership` for grazers. It changes no
+body budget, movement, fatigue, decision, journal, or counter.
+
+The existing ordered schedule now includes these boundaries:
+
+```text
+upkeep / growth / rest decisions
+→ refresh memberships → local grazer and hunter observations → target decisions
+→ grazer travel → hunter travel → refresh memberships
+→ rest effects → current-contact captures → grazer meals → starvation
+→ births with initial membership → ApplyDeferred → cleanup → complete journals
+```
+
+Founder membership is installed at tick zero. Newborn membership is calculated
+from the actual accepted birth position at the birth tick, then inserted with
+its components. The child still obeys the existing next-tick first eligibility;
+protection does not enable an early meal, action, or prey observation.
+
+The first refresh declares a reassessment boundary before perception. In the
+present static model it is redundant for normal public runs: no position changes
+between the previous post-travel refresh and next perception, and initial and
+newborn memberships are populated correctly. The start-inside test verifies
+protection and observation filtering; it is **not** evidence that removing this
+first refresh alone is detected. The post-travel refresh is independently
+necessary and its omission fails a compiled public test.
+
+A protected grazer is absent from eligible local prey readings, even when the
+global inspector lists it. A hunter cannot restore a hidden target from that
+inspector or acquire new prey during capture. If a previously visible grazer
+enters a refuge during travel, the current capture check rejects the stale
+intention before charging cost or effort. A grazer that leaves refuge after the
+observation phase cannot be targeted until a later fresh local observation.
+Targeting remains governed by the existing local selector.
+
+Protection is passive and applies to the current sampled cell, not every cell
+crossed by a multi-cell movement. Refuges confer no food, reserve, recovery,
+capacity, birth permission, or immunity to starvation. Grazers do not seek refuge
+or flee hunters. There are no obstacles, occupancy limits, pathfinding, random
+choices, hunter reproduction, or calibrated biological claims.
+
+## Literal arrival and departure investigation
+
+The public fixture has grid `2 × 1`, dark supply, grazer 1 at x0 with reserve
+6/capacity 8/upkeep 1/meal 2, sensing 1/speed 1/travel cost 1. Patch 1000 at x1
+contains 5 with capacity 5 and zero growth. Hunter 100 is already at x1 with
+reserve 4/capacity 10/upkeep 1/attack 1, sensing 1/speed 0. The ordinary population
+policy has no partner, and rest is disabled. Initial stores are 15 in every run.
+
+| Configuration / tick | Grazer outcome | Hunter reserve / captures | Patch | Observation meaning |
+| --- | --- | --- | --- | --- |
+| Off, tick 1 | Captured at x1, transfers 4 | 6 / 1 | 5 | Hunter copied prey at x0, then contact becomes real |
+| Refuge x1, tick 1 | Alive at x1, reserve 6 | 3 / 0 | 3 | Same pre-travel reading and current contact; protection alone rejects capture |
+| Refuge x0, tick 1 | Alive at x1, reserve 6 | 3 / 0 | 3 | Empty eligible observation; leaving does not create a target |
+| Refuge x0, tick 2 | Captured at x1, transfers 5 | 6 / 1 | 3 | Fresh tick-2 observation supplies the target |
+
+The arrival control matters: the stationary hunter has actual contact, affordable
+attack, and room for the whole prey in both cases. An unreachable or unaffordable
+control would conceal a broken protection check. In the protected arrival,
+ending stores 12 plus two upkeep units and one travel unit equals starting 15.
+No attack debit or transfer is recorded.
+
+A separate protected `hunting_contention` fixture produces child 1001 at x0 on
+tick 1. Its owned membership is already `Some(RefugeId(1))` at that tick, with
+reserve 4 and no maintenance/meal event. On tick 2 it pays 1 and eats 2, reaching
+5 while still absent from eligible hunter observations. Protected, unfed
+zero-reserve actors still starve. Those tests distinguish eligibility from an
+energy grant.
+
+## Matched 120-tick placement experiment
+
+`examples/refuges.rs` starts every run from the identical C meadow, default rest
+(minimum 2, entry 6, exit 2, recovery 2), and two meadow hunters. Initial stores
+are 128: grazer reserves 72, patch biomass 24, hunter reserves 32. Actor IDs,
+traits, positions, movement, supply, birth rules, rest rules, hunt rules, history
+limits, and horizon are unchanged. Only the optional refuge sites vary. The
+program prints the complete common configuration before execution.
+
+| Placement | Final grazers / hunters | Births | Grazer starvation / captures | Hunter starvation | Final stores |
+| --- | --- | --- | --- | --- | --- |
+| Disabled | 0 / 0 | 3 | 4 / 3 | 2 | 36 |
+| Food cell `(3,2)` | 1 / 0 | 3 | 5 / 1 | 2 | 55 |
+| Transit cell `(4,2)` | 0 / 0 | 3 | 4 / 3 | 2 | 36 |
+| Both food cells `(3,2)`, `(7,2)` | 1 / 0 | 3 | 5 / 1 | 2 | 55 |
+
+| Placement | Accepted growth | Grazer upkeep / travel | Hunter upkeep / travel / attack | Prey transfer | Grazer / hunter rest actions |
+| --- | --- | --- | --- | --- | --- |
+| Disabled | 60 | 53 / 15 | 62 / 13 / 3 | 46 | 7 / 13 |
+| Food cell | 168 | 171 / 17 | 38 / 8 / 1 | 15 | 10 / 6 |
+| Transit cell | 55 | 51 / 15 | 62 / 10 / 3 | 43 | 7 / 11 |
+| Both food cells | 168 | 171 / 17 | 38 / 8 / 1 | 15 | 10 / 6 |
+
+Each run transfers 12 parental units into newborns and dissipates 6 in birth
+costs. No otherwise eligible pair is blocked by the population cap in these
+runs: both blocked-pair and blocked-tick counters are zero. Equal authored supply
+does not imply equal accepted growth: different consumption leaves different
+headroom under each patch's capacity.
+
+In the food-cell run, tick 4 has six living grazers, all protected, after three
+births and one starvation. By tick 8 only two remain; neither is currently
+protected, four have starved, and one has been captured. By tick 12 grazer 2 is
+the single survivor in the food refuge, with five total starvations and one
+capture. At tick 120 it has reserve 24 at `(3,2)`, membership site 1 assessed on
+tick 120; patch biomasses are 13 and 18. Both hunters have starved. Adding the
+second food-cell refuge produces the same measured outcomes and flows here;
+that null difference is retained.
+
+Transit protection changes timing and costs without preventing extinction: the
+last grazer is gone by tick 12, earlier than in the disabled pilot. Final patch
+biomass is 18 each in both extinct runs. These outcomes show an interaction
+between contact protection, foraging, finite supply and maintenance; they do not
+establish that any placement generally improves survival. Lower capture and
+higher starvation can coexist.
+
+The example checks energy and grazer census after every tick:
+
+```text
+previous stores + accepted growth
+ = current stores + grazer upkeep + hunter upkeep
+   + grazer travel + hunter travel + attack cost + birth dissipation
+
+living grazers + grazer starvations + captures = founders + births
+```
+
+Birth and prey transfers remain internal. There is no refuge source/sink to add.
+
+Coverage remains separate from lifetime totals. Disabled and transit runs retain
+all five journals over ticks 1–120, with zero evictions. Food and both-food runs
+retain base history only over ticks 69–120 (`complete_after_tick=68`, 209 evicted
+events); their population, mobile, rest and hunt journals retain all 120 ticks.
+The full-run base starvation query therefore returns `None` despite a known
+lifetime count of 5. Full-run capture queries return `Some(1)` for those runs and
+`Some(3)` for the extinct runs. A current refuge reading cannot fill the missing
+base journal. Separately, the zero-capacity history test distinguishes a known
+retained zero captures from an unavailable interval with zero lifetime captures.
+
+## Verification and evidence
+
+The final reference suite has 106 native tests: 18 internal cases and the
+unchanged public suites (19 first-arc, 15 population, 15 mobile, 12 rest, 15
+hunting), plus 12 refuge cases. The five older public test files retain their
+original bytes. The two exact tests decoded from the guide's
+`code[data-refuge-test="arrival-and-departure"]` also passed in a separate project.
+
+Four isolated mutations compiled and then failed behavioral tests: exposing
+protected prey in observation, omitting the current capture protection guard,
+omitting the post-travel refresh, and omitting newborn membership insertion.
+Restoring the reference passed all 12 refuge tests plus the two guide tests.
+These probes used one sequential scratch copy and a reused private target;
+compile failures were not counted as test evidence.
+
+All five earlier modes—first arc, fixed-contact population, mobile, resting, and
+hunting—were independently compiled against frozen C and the new reference.
+Every existing public report was printed for ticks 0–120 plus reset ticks 0/1.
+The **19,872,248 bytes are identical**, SHA-256
+`da1586195115d6a55be8d7032742ca19441cae1fa5aa35e2f6651be7dce0746f`.
+This includes old `MobileScenario` debug output and all future-relevant fields in
+those old reports, rather than an endpoint-only comparison.
+
+Evidence paths relative to the repository:
+
+- `learning/work/ecosystem-refuge-observed.txt`: full declared four-placement run.
+- `learning/work/ecosystem-refuge-probes.json` and matching `mutant-*.txt`: exact mutation outcomes.
+- `learning/work/ecosystem-refuge-probe-restored.txt`: restored canonical and guide tests.
+- `learning/work/ecosystem-refuge-compatibility/{result.txt,before.txt,after.txt}`: complete off-mode witness.
+- `learning/work/ecosystem-refuge-original-tests.json`: frozen earlier suite hashes.
+
+Pinned commands from the repository root:
+
+```sh
+cargo +1.93.1 fmt --manifest-path learning/ecosystem/Cargo.toml --all -- --check
+CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 test --offline --locked --manifest-path learning/ecosystem/Cargo.toml
+CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 clippy --offline --locked --manifest-path learning/ecosystem/Cargo.toml --all-targets -- -D warnings
+CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 run --offline --locked --manifest-path learning/ecosystem/Cargo.toml --example refuges
+```
+
+Native evidence does not claim a new browser integration or full-goal completion.
+The capstone's learner-authored implementation and independent hypothesis remain
+separate from reproducing the supplied investigation.

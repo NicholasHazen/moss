@@ -1,0 +1,201 @@
+<p class="lesson-lead">The inspector says “no food,” but Fern's situation is still unclear. Perhaps she hasn't selected a patch. Perhaps her selected patch is empty. Or perhaps its reading is missing. Those situations need different explanations before anyone decides what Fern should do next.</p>
+<aside class="scope-note"><p>You'll implement an isolated observer in <code>options.rs</code>, resolving a selected ID against supplied readings. The current Moss fixture authors its movement target; this exercise doesn't add target selection or feeding, and the live assignment remains in <code>NOW.md</code>.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Give each missing fact its own meaning</h2>
+<p>The observer we'll build must preserve three different answers: no target was selected, the selected patch has a reading, or that reading could not be found. We'll model those answers as enum variants, resolve an optional identity against borrowed readings, and return an owned description. By testing an empty patch alongside a missing one, you'll be able to explain why zero is sometimes the right result and sometimes an invented answer.</p>
+</section>
+
+<h2 id="absence-needs-a-question">Ask what is absent</h2>
+<p>We've already encountered <code>None</code> in two places. In <a href="04-units.html">the forecast</a>, it meant that the function couldn't represent the exact requested amount. In <a href="03-queries.html">the audit query</a>, it meant that a matched entity had no reserve component. The same Rust spelling answered different questions. To interpret an optional value, we need to know what was being requested.</p>
+<p>For Fern's target, the first question is whether an identity has been selected at all. We'll express that with <code>Option&lt;SimId&gt;</code>. A value of <code>Some(SimId(3))</code> carries the selected identity, while <code>None</code> says no identity was supplied. Having a selected ID still doesn't tell us what a patch contains, or even whether the supplied readings include that patch.</p>
+<p>Resolving the identity therefore takes a second step: search the snapshot for a patch reading whose ID matches. If we find it, we can report its biomass, including a legitimate zero. If we don't, we can report that the selected ID is missing from this snapshot. Keeping the two steps separate lets an empty patch remain distinguishable from a missing reading.</p>
+<p>We should be careful about what that failed search proves. A snapshot could be partial, stale, or from a different run; the lab doesn't supply enough information to distinguish those explanations. “Missing from this reading” is supported by the lookup. “Destroyed” would require evidence that we haven't collected.</p>
+
+<h2 id="give-each-alternative-a-shape">Keep each answer with the data it needs</h2>
+<p>Our returned <code>TargetView</code> will have three alternatives. <code>Unchosen</code> needs no further data. <code>Present</code> needs both the selected ID and observed biomass. <code>Missing</code> needs the unresolved ID so the inspector can say which reference it couldn't find. A Rust enum lets each alternative carry exactly those fields.</p>
+<p>Compare that with a struct containing separate <code>has_target</code> and <code>found</code> flags, plus an ID and biomass. Such a struct could say “no target” and “found” at the same time, leaving every consumer to work out which fields to trust. With the enum, a value is one variant at a time. <code>Unchosen</code> doesn't need a dummy ID, and <code>Present</code> can't omit its biomass field.</p>
+<p>The following cases will become the core of our tests. Notice that the first two can both look like “no food” in a vague display, even though they describe different evidence:</p>
+<table><caption>Three facts the inspector should preserve</caption><thead><tr><th scope="col">Input evidence</th><th scope="col">Inspector result</th></tr></thead><tbody><tr><td>No selected ID, even if patches are available</td><td><code>Unchosen</code>: there is no selected identity to resolve.</td></tr><tr><td>Selected ID 3; its reading has biomass zero</td><td><code>Present { id: SimId(3), biomass_units: 0 }</code>: the reading exists and reports an empty amount.</td></tr><tr><td>Selected ID 99; no matching reading</td><td><code>Missing { id: SimId(99) }</code>: the selected identity remains unresolved.</td></tr></tbody></table>
+<p>The type removes contradictory combinations of these fields, but it can't establish the quality of the input snapshot by itself. Duplicate IDs, for example, would still make a lookup ambiguous. For this lab, we assume unique IDs in one coherent snapshot. Later history work will make run identity and coverage explicit.</p>
+<p>The <a href="https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html">Rust Book's enum chapter</a> develops data-bearing variants and introduces <code>Option</code>. Our design gives you a concrete reason to use them: facts that belong together in one situation can stay together without forcing unrelated situations to carry unused fields.</p>
+
+<h2 id="match-the-data">Resolve one alternative at a time</h2>
+<p>We'll implement <code>view_target</code> with two matches, following the two questions above. The first examines the optional selected ID. In the <code>Some(id)</code> branch, the pattern binds the contained identity to <code>id</code>. In the <code>None</code> branch, there is no identity to look up, so the helper can return <code>TargetView::Unchosen</code> immediately.</p>
+<p>After that early return, the function has a definite ID and can search for its reading. Matching this search result gives a borrowed patch in <code>Some(patch)</code>, or no matching row in <code>None</code>. The successful branch copies the ID and biomass into <code>Present</code>. The unsuccessful branch keeps the selected ID in <code>Missing</code>.</p>
+<p>Neither match needs a default biomass. That's how the implementation preserves the difference we wanted at the beginning. Searching for a matching ID with positive biomass would lose it: an empty patch would disappear from the result even though its reading was present. The lookup asks about identity; a future feeding rule will ask whether the patch can supply a meal.</p>
+<p>Exhaustiveness makes <code>match</code> useful as this design grows. If we later add an alternative for an unavailable snapshot, a consumer that explicitly covers every existing variant must account for the new one. A catch-all can be appropriate when remaining cases truly share behavior, but using it merely to silence the compiler could hide a decision the new state needs. The <a href="https://doc.rust-lang.org/book/ch06-02-match.html">official match chapter</a> explains these rules.</p>
+<p>You may also recognize <code>if let</code>, which is convenient when only one alternative matters, such as displaying a badge for <code>Present</code>. Here the helper owes a status for every case. Keeping both matches visible makes it easier to check that each path preserves the evidence it received.</p>
+
+<h2 id="describe-do-not-decide">Build the observer</h2>
+<p>Before editing, try two calls on paper. First, supply no selected ID and a snapshot containing a patch with 80 units. Then select a patch whose recorded biomass is zero. The observer should describe each input as it stands. Choosing a rich patch in the first case or hiding the empty patch in the second would introduce behavior that the caller didn't request.</p>
+<details><summary>Hint 1: begin with the selected identity</summary><p>For <code>None</code>, return <code>TargetView::Unchosen</code>. For <code>Some(id)</code>, keep that exact identity for the lookup instead of selecting the first available row.</p></details>
+<details><summary>Hint 2: search by ID alone</summary><p>Compare each reading's ID with the selected ID. Zero biomass doesn't disqualify a reading from describing the selected patch.</p></details>
+<details><summary>Prediction answer</summary><p>The rich patch doesn't change an unchosen target, so the first call returns <code>Unchosen</code>. The second returns <code>Present</code> with biomass zero. We have described the evidence without selecting food or claiming that a meal can succeed.</p></details>
+<p>From the repository root, prepare a new practice directory and run the starter's check. Use another destination if you already have work at this path.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare options --dest work/options-practice
+python3 learning/scripts/labs.py check options --file work/options-practice/options.rs</code></pre>
+<p>The starter compiles but reaches an intentional <code>todo!</code> in <code>view_target</code>. Replace that body, then repeat the check. Its inputs and return type already describe the contract, so the edit is about following the alternatives without losing their meaning.</p>
+<details><summary>Complete starter file: options.rs</summary><pre><code class="language-rust" data-starter="options">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SimId(u64);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PatchReading {
+    id: SimId,
+    biomass_units: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TargetView {
+    Unchosen,
+    Present { id: SimId, biomass_units: u32 },
+    Missing { id: SimId },
+}
+
+fn view_target(target: Option&lt;SimId&gt;, patches: &amp;[PatchReading]) -&gt; TargetView {
+    let _ = (target, patches);
+    todo!("distinguish unchosen, present, and missing targets")
+}
+
+fn main() {
+    let patches = [
+        PatchReading { id: SimId(1), biomass_units: 80 },
+        PatchReading { id: SimId(3), biomass_units: 0 },
+    ];
+    println!("{:?}", view_target(Some(SimId(3)), &amp;patches));
+    println!("{:?}", view_target(Some(SimId(99)), &amp;patches));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_selected_id_does_not_choose_an_available_patch() {
+        let patches = [PatchReading { id: SimId(3), biomass_units: 80 }];
+        assert_eq!(view_target(None, &amp;patches), TargetView::Unchosen);
+    }
+
+    #[test]
+    fn selected_id_is_matched_instead_of_taking_the_first_row() {
+        let patches = [
+            PatchReading { id: SimId(1), biomass_units: 80 },
+            PatchReading { id: SimId(3), biomass_units: 7 },
+        ];
+        assert_eq!(view_target(Some(SimId(3)), &amp;patches),
+            TargetView::Present { id: SimId(3), biomass_units: 7 });
+    }
+
+    #[test]
+    fn present_zero_is_not_missing() {
+        let patches = [PatchReading { id: SimId(3), biomass_units: 0 }];
+        assert_eq!(view_target(Some(SimId(3)), &amp;patches),
+            TargetView::Present { id: SimId(3), biomass_units: 0 });
+    }
+
+    #[test]
+    fn missing_target_retains_the_selected_identity() {
+        let patches = [PatchReading { id: SimId(3), biomass_units: 80 }];
+        assert_eq!(view_target(Some(SimId(99)), &amp;patches),
+            TargetView::Missing { id: SimId(99) });
+        assert_eq!(view_target(Some(SimId(99)), &amp;[]),
+            TargetView::Missing { id: SimId(99) });
+    }
+}</code></pre></details>
+<details><summary>Complete worked answer: options.rs</summary><pre><code class="language-rust" data-runnable="options">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SimId(u64);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PatchReading {
+    id: SimId,
+    biomass_units: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TargetView {
+    Unchosen,
+    Present { id: SimId, biomass_units: u32 },
+    Missing { id: SimId },
+}
+
+fn view_target(target: Option&lt;SimId&gt;, patches: &amp;[PatchReading]) -&gt; TargetView {
+    let id = match target {
+        Some(id) =&gt; id,
+        None =&gt; return TargetView::Unchosen,
+    };
+    match patches.iter().find(|patch| patch.id == id) {
+        Some(patch) =&gt; TargetView::Present {
+            id,
+            biomass_units: patch.biomass_units,
+        },
+        None =&gt; TargetView::Missing { id },
+    }
+}
+
+fn main() {
+    let patches = [
+        PatchReading { id: SimId(1), biomass_units: 80 },
+        PatchReading { id: SimId(3), biomass_units: 0 },
+    ];
+    println!("{:?}", view_target(Some(SimId(3)), &amp;patches));
+    println!("{:?}", view_target(Some(SimId(99)), &amp;patches));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_selected_id_does_not_choose_an_available_patch() {
+        let patches = [PatchReading { id: SimId(3), biomass_units: 80 }];
+        assert_eq!(view_target(None, &amp;patches), TargetView::Unchosen);
+    }
+
+    #[test]
+    fn selected_id_is_matched_instead_of_taking_the_first_row() {
+        let patches = [
+            PatchReading { id: SimId(1), biomass_units: 80 },
+            PatchReading { id: SimId(3), biomass_units: 7 },
+        ];
+        assert_eq!(view_target(Some(SimId(3)), &amp;patches),
+            TargetView::Present { id: SimId(3), biomass_units: 7 });
+    }
+
+    #[test]
+    fn present_zero_is_not_missing() {
+        let patches = [PatchReading { id: SimId(3), biomass_units: 0 }];
+        assert_eq!(view_target(Some(SimId(3)), &amp;patches),
+            TargetView::Present { id: SimId(3), biomass_units: 0 });
+    }
+
+    #[test]
+    fn missing_target_retains_the_selected_identity() {
+        let patches = [PatchReading { id: SimId(3), biomass_units: 80 }];
+        assert_eq!(view_target(Some(SimId(99)), &amp;patches),
+            TargetView::Missing { id: SimId(99) });
+        assert_eq!(view_target(Some(SimId(99)), &amp;[]),
+            TargetView::Missing { id: SimId(99) });
+    }
+}</code></pre></details>
+<p>Expect four named tests to pass after the edit. The unchosen case catches a helper that silently selects an available patch, while the empty-patch case catches a lookup that mistakes zero for absence. You can check the printed answer with <code>python3 learning/scripts/labs.py check options</code>, or run these commands from the directory containing your saved file:</p>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 --test options.rs -o options-tests
+./options-tests
+rustc +1.93.1 --edition=2024 options.rs -o options
+./options</code></pre>
+<p>The expected test result is four passed tests, and the program should print these two lines:</p>
+<pre><code class="language-text">Present { id: SimId(3), biomass_units: 0 }
+Missing { id: SimId(99) }</code></pre>
+<p>The first line describes an existing reading with an empty amount. The second carries the ID the search couldn't resolve. If your output collapses those cases, follow the function back to the point where information was replaced with a default.</p>
+
+<h2 id="follow-the-borrows">Keep the result after the search finishes</h2>
+<p>Our status preserves the distinction between a missing reading and an observed empty patch. To keep that status after the input snapshot changes, we also need to follow what it owns. The helper borrows its readings through <code>&amp;[PatchReading]</code>, a slice. A caller can lend a sequence without handing over its array or vector. Calling <code>iter()</code> visits shared references, and <code>find</code> stops at the first one whose ID satisfies the comparison in the closure.</p>
+<p>Finding a borrowed reading doesn't require us to return that borrow. The status needs only its ID and numeric biomass, both of which we copy. After <code>view_target</code> returns, the caller can replace or discard the input snapshot while keeping the status. This is the same ownership pattern as our saved reserve: borrow while observing, then own the values needed for the record.</p>
+<p>The first-match behavior explains our uniqueness assumption. With two readings for the same ID, whichever appeared first would determine the result. One test puts a nonmatching row first to catch a helper that skips the ID comparison, but none of these tests validates all IDs for uniqueness. Construction of a real snapshot needs to preserve that separate invariant.</p>
+
+<section class="lesson-summary" id="missing-is-not-zero" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Let the inspector say what it knows</h2>
+<p>A shortcut such as <code>unwrap_or(0)</code> is useful when zero is the specified fallback. It would be misleading here because an observed zero and a failed lookup mean different things to the reader. The <a href="https://doc.rust-lang.org/std/option/enum.Option.html">Option reference</a> offers many ways to transform or default an optional value; the operation we choose should follow the question we're answering.</p>
+<p>Compare this helper's <code>Option&lt;SimId&gt;</code> with the audit query's <code>Option&lt;&amp;Reserve&gt;</code>. One carries a selected identity; the other carries borrowed access to a component on a matched entity. Seeing <code>Some</code> in either case tells us what is present at that boundary. It doesn't establish that some other entity is still eligible for an action.</p>
+<details><summary>Recall the two lookups</summary><p>The optional component answers whether reserve exists on a matched entity. The optional ID answers whether a target identity was supplied. Resolving that identity requires another lookup, which this lab performs only within its supplied snapshot. Live action-time validity, complete history, and successful feeding require further evidence.</p></details>
+<p>Our inspector can now replace “no food” with an explanation: no target was selected, the selected patch was observed empty, or its reading couldn't be found. In <a href="06-results.html">recoverable errors and validated configuration</a>, we'll give an unsuccessful operation a reason too, so its caller can decide how to respond.</p>
+</section>

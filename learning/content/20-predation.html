@@ -1,0 +1,456 @@
+<p class="lesson-lead">Two hunters reach the same prey. The first succeeds and queues its removal, but the prey's entity is still present when the second hunter gets a turn. We need one capture to produce one reward, and we need the prey to miss its own later action.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Make a capture take effect before cleanup</h2>
+<p>You'll implement <code>claim</code>, combining the finite meal's accounting with the terminal transition's eligibility check. A supplied Bevy schedule will resolve both hunters, try the prey's action, and inspect the result while deferred removal is still pending. Leaving the entity present makes the immediate availability change visible.</p>
+<p>By the end, you should be able to show why only one hunter receives a reward, why a rejected claim leaves both participants unchanged, and why the consumed prey performs no later action. We'll then apply the queued cleanup and check what remains: one owned interaction record, independent of the entity's continued existence.</p>
+</section>
+<aside class="scope-note"><p>This isolated Bevy ECS 0.18.1 lab proposes a whole-prey meal at same-cell contact, converting biomass to reserve one for one only when the entire gain fits. These teaching rules don't activate hunting, death, or movement in live Moss.</p></aside>
+
+<h2 id="reuse-the-finite-resource-question">Combine a transfer with a terminal transition</h2>
+<p><a href="15-meals.html">Finite meals</a> made two consumers share one current supply, while <a href="19-history.html">terminal history</a> stopped a dead animal from acting before cleanup. A hunt brings both concerns into one accepted interaction. The hunter gains reserve, the prey loses biomass and eligibility, and an owned record explains the change.</p>
+<p>Our hunters have stable IDs 9 and 2. Each starts with zero reserve and capacity ten, and both target prey 40 at cell zero. The prey contains three biomass units. We spawn hunter 9 first but resolve by ascending stable ID, so hunter 2 gets the first opportunity. Its successful capture should leave nothing for hunter 9 to receive.</p>
+<p>This meal also differs deliberately from eating part of a patch. Our terminal policy consumes the whole prey, so all three units must fit. If a hunter has room for only one, we reject before claiming anything. Otherwise, accepting the kill and crediting one would imply a discarded remainder that the model never accounted for.</p>
+<p>The ID priority makes this small contest repeatable. It doesn't show fairness or real predator behavior: lower IDs keep winning otherwise identical contests. Once accounting and eligibility are established, another priority policy can be compared against them without confusing a change of winner with a double reward.</p>
+
+<h2 id="validate-before-claiming">Leave a rejected prey available</h2>
+<p>A hunter that cannot accept the whole meal must leave the next hunter's opportunity intact. We'll establish every condition before claiming the prey, starting when the resolver locates the hunter's selected prey by stable ID. If that identity is missing, it doesn't redirect the action toward another animal. The <code>claim</code> helper then checks that the hunter is alive, the prey remains available with positive biomass, both occupy the same cell, and the hunter's reserve is valid.</p>
+<p>A valid reserve lets us calculate room as capacity minus reserve. The full biomass must fit in that room before any participant changes. This matters for the order of the contest: if hunter 2 starts at nine of ten units, rejecting its three-unit meal must leave prey 40 available for hunter 9.</p>
+<p>After acceptance, the helper computes the new reserve with checked addition. It then writes three connected changes: the prey becomes unavailable, its biomass becomes zero, and the hunter receives the full gain. The returned <code>Some(gain)</code> lets the caller record those actual units and queue structural cleanup.</p>
+<p>Rejected attempts return <code>None</code>. That intentionally combines the reasons in this focused lab; an inspector could use the named rejection style from the meal lesson if it needed to explain each one. Whatever return type we choose, the failed attempt must leave both participants unchanged so another eligible action can still resolve correctly.</p>
+
+<h2 id="presence-is-not-permission">Make unavailability visible immediately</h2>
+<p><code>Commands::despawn</code> requests removal through a command buffer. While that command is pending, another query can still find the prey's components. The immediately written <code>available</code> field is therefore the state that prevents a second capture: hunter 9 reads the change made by hunter 2 before attempting its own claim.</p>
+<p>Queuing a <code>Dead</code> marker wouldn't automatically solve the timing problem. If its insertion were still pending, later systems couldn't use it to exclude the prey yet. A marker can serve another design well, but its visibility must match the moment at which the actor loses permission. Here the component field changes at the accepted transaction.</p>
+<p>The prey's action system illustrates the same distinction. Its query still finds entities with <code>Prey</code>, then checks availability before incrementing their action counts. The consumed prey remains present during this experiment but performs zero actions. Query membership answers whether the data exists; the eligibility field answers whether this rule may act on it.</p>
+<p>We need to check the schedule as well as the helper. Even a correct claim would permit a different tick outcome if prey action ran first. Conversely, the intended phase order couldn't prevent duplicate rewards if claim left availability unchanged. The next part of the fixture makes both promises observable.</p>
+
+<h2 id="hold-the-cleanup-boundary-open">Keep the entity present long enough to inspect it</h2>
+<p>The schedule chains hunt resolution, prey action, and observation of pending state. We also select the single-threaded executor, but the chain is what states our semantic order. The observation should find prey 40 still present, with zero biomass, unavailable, and an action count of zero.</p>
+<p>To expose that intermediate state, the lab turns off automatic intermediate deferred application and final deferred application. Bevy 0.18.1 supports automatic application along ordering dependencies and at the end of a schedule; allowing cleanup to happen there would hide the state we're investigating. These settings serve this experiment rather than prescribe how every schedule should be configured.</p>
+<p>After <code>schedule.run</code>, the program prints the pending observation and then calls <code>schedule.apply_deferred</code> on that same schedule. Its systems own the queued commands. Calling a different schedule wouldn't flush those command buffers and wouldn't complete this cleanup.</p>
+<table><caption>Prey 40 through resolution and deferred cleanup</caption><thead><tr><th scope="col">Observation point</th><th scope="col">State and outcome</th></tr></thead><tbody><tr><td>Before hunting</td><td>Present, available, three biomass units.</td></tr><tr><td>After hunter 2 succeeds</td><td>Present, unavailable, zero biomass; removal queued.</td></tr><tr><td>After hunter 9 and prey action</td><td>Still unavailable; one reward, one terminal record, zero prey actions.</td></tr><tr><td>After explicit deferred application</td><td>No prey entity; the owned interaction record remains.</td></tr></tbody></table>
+<p>Checking only the last row wouldn't establish why the second reward or prey action was prevented. Holding cleanup open lets the tests show that eligibility changed while the entity was still accessible.</p>
+
+<h2 id="keep-one-shared-interaction">Record both participants in the same event</h2>
+<p>Cleanup will remove the prey's components, so the accepted interaction needs an explanation that belongs to neither live participant. The capture records run seven, tick one, prey ID 40, hunter ID 2, and the three units gained. A future biography for either participant can refer to this interaction. Producing separate “matching” events for each biography would introduce another opportunity for their identities, times, or amounts to disagree.</p>
+<p>These are application IDs rather than retained ECS handles. Handles help the resolver access current entities; owned run and actor identities keep the record interpretable after despawn. The fixture assumes unique hunter and prey IDs within the run and assigns separate roles. It doesn't define role changes or cannibalism.</p>
+<p>The journal is a short vector because this fixture performs only a few controlled resolutions. A long-running world would need the previous lesson's bounded retention and visible coverage around these records too. Pursuit, injury, and escape also remain outside this one-contact transaction.</p>
+
+<h2 id="predict-a-pending-despawn">Try another claim before cleanup</h2>
+<p>Predict both hunter reserves, terminal-record count, and prey action count after the schedule runs but before commands are applied. Then run that schedule again with cleanup still pending. Finally, start a fresh fixture where hunter 2 has room for only one unit and decide who receives the three-unit prey.</p>
+<details><summary>Hint 1: read the changed field</summary><p>The later hunter and repeated execution both encounter the prey's current unavailability. Its entity can remain present without becoming eligible for another reward.</p></details>
+<details><summary>Hint 2: follow rejection before mutation</summary><p>The whole meal must fit. Hunter 2's insufficient-capacity attempt leaves the prey available for the next hunter.</p></details>
+<details><summary>Prediction answer</summary><p>In the ordinary fixture, hunter 2 gains three, hunter 9 gains zero, one terminal event exists, and the prey performs zero actions. Repeating resolution before cleanup adds nothing. In the capacity fixture, hunter 2 stays at nine and hunter 9 gains the prey's three units instead.</p></details>
+<p>Prepare a practice file from the repository root and implement <code>claim</code>. The resolver, schedule, observation, and explicit cleanup are supplied so the helper's effects are checked at the relevant boundaries.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare predation --dest work/predation-practice
+python3 learning/scripts/labs.py check predation --file work/predation-practice/predation.rs</code></pre>
+<p>The first run reaches an intentional <code>todo!</code>. After your edit, expect eight passing tests. If the prey acts while awaiting cleanup, inspect both its eligibility check and the schedule order. If the wrong hunter wins, follow the stable-ID ordering before suspecting entity allocation.</p>
+<details><summary>Complete starter: predation.rs</summary><pre><code class="language-rust" data-starter="predation">use bevy_ecs::prelude::*;
+use bevy_ecs::schedule::{ExecutorKind, ScheduleBuildSettings};
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Id(u32);
+#[derive(Component)]
+struct Hunter { target: Id, cell: i32, reserve_units: u32, capacity_units: u32, alive: bool }
+#[derive(Component)]
+struct Prey { cell: i32, biomass_units: u32, available: bool, actions: u32 }
+#[derive(Resource)]
+struct Moment { run: u32, tick: u64 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Terminal { run: u32, tick: u64, prey: Id, hunter: Id, gained_units: u32 }
+#[derive(Resource, Default)]
+struct Journal(Vec&lt;Terminal&gt;);
+#[derive(Resource, Default)]
+struct Audit { pending: Vec&lt;(Id, bool, u32, u32)&gt;, acted: Vec&lt;Id&gt; }
+
+fn claim(prey: &amp;mut Prey, hunter: &amp;mut Hunter) -&gt; Option&lt;u32&gt; {
+    let _ = (prey, hunter);
+    todo!(&quot;validate the whole-prey transfer, then immediately claim and credit it&quot;)
+}
+
+fn resolve_hunts(
+    mut commands: Commands,
+    moment: Res&lt;Moment&gt;,
+    mut hunters: Query&lt;(Entity, &amp;Id, &amp;mut Hunter)&gt;,
+    mut prey_query: Query&lt;(Entity, &amp;Id, &amp;mut Prey)&gt;,
+    mut journal: ResMut&lt;Journal&gt;,
+) {
+    let mut order: Vec&lt;(Id, Entity)&gt; = hunters.iter().map(|(entity, id, _)| (*id, entity)).collect();
+    order.sort_by_key(|(id, _)| *id);
+    for (_, entity) in order {
+        let (_, hunter_id, mut hunter) = hunters.get_mut(entity).unwrap();
+        for (prey_entity, prey_id, mut prey) in &amp;mut prey_query {
+            if *prey_id != hunter.target { continue; }
+            if let Some(gained_units) = claim(&amp;mut prey, &amp;mut hunter) {
+                journal.0.push(Terminal { run: moment.run, tick: moment.tick,
+                    prey: *prey_id, hunter: *hunter_id, gained_units });
+                commands.entity(prey_entity).despawn();
+            }
+            break;
+        }
+    }
+}
+fn prey_action(mut prey_query: Query&lt;(&amp;Id, &amp;mut Prey)&gt;, mut audit: ResMut&lt;Audit&gt;) {
+    for (id, mut prey) in &amp;mut prey_query {
+        if !prey.available { continue; }
+        prey.actions = prey.actions.checked_add(1).expect(&quot;action count exhausted&quot;);
+        audit.acted.push(*id);
+    }
+}
+fn observe_pending(prey_query: Query&lt;(&amp;Id, &amp;Prey)&gt;, mut audit: ResMut&lt;Audit&gt;) {
+    audit.pending = prey_query.iter().map(|(id, prey)|
+        (*id, prey.available, prey.biomass_units, prey.actions)).collect();
+    audit.pending.sort_by_key(|row| row.0);
+}
+fn hunt_schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.set_build_settings(ScheduleBuildSettings {
+        auto_insert_apply_deferred: false, ..Default::default()
+    });
+    schedule.set_apply_final_deferred(false);
+    schedule.add_systems((resolve_hunts, prey_action, observe_pending).chain());
+    schedule
+}
+fn fixture(order: [u32; 2]) -&gt; (World, Entity) {
+    let mut world = World::new();
+    world.insert_resource(Moment { run: 7, tick: 1 });
+    world.init_resource::&lt;Journal&gt;();
+    world.init_resource::&lt;Audit&gt;();
+    for id in order {
+        world.spawn((Id(id), Hunter { target: Id(40), cell: 0, reserve_units: 0,
+            capacity_units: 10, alive: true }));
+    }
+    let prey = world.spawn((Id(40), Prey { cell: 0, biomass_units: 3,
+        available: true, actions: 0 })).id();
+    (world, prey)
+}
+fn reserves(world: &amp;mut World) -&gt; Vec&lt;(Id, u32)&gt; {
+    let mut rows: Vec&lt;_&gt; = world.query::&lt;(&amp;Id, &amp;Hunter)&gt;().iter(world)
+        .map(|(id, hunter)| (*id, hunter.reserve_units)).collect();
+    rows.sort_by_key(|row| row.0);
+    rows
+}
+fn main() {
+    let (mut world, _) = fixture([9, 2]);
+    let mut schedule = hunt_schedule();
+    schedule.run(&amp;mut world);
+    println!(&quot;reserves={:?}&quot;, reserves(&amp;mut world));
+    println!(&quot;pending={:?}&quot;, world.resource::&lt;Audit&gt;().pending);
+    println!(&quot;terminal records={}&quot;, world.resource::&lt;Journal&gt;().0.len());
+    schedule.apply_deferred(&amp;mut world);
+    println!(&quot;prey after cleanup={}&quot;, world.query::&lt;&amp;Prey&gt;().iter(&amp;world).count());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn one_prey_rewards_one_hunter_before_structural_cleanup() {
+        let (mut world, prey) = fixture([9, 2]);
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 3), (Id(9), 0)]);
+        assert!(world.get::&lt;Prey&gt;(prey).is_some());
+        assert_eq!(world.resource::&lt;Audit&gt;().pending, vec![(Id(40), false, 0, 0)]);
+        assert!(world.resource::&lt;Audit&gt;().acted.is_empty());
+        assert_eq!(world.resource::&lt;Journal&gt;().0, vec![Terminal {
+            run: 7, tick: 1, prey: Id(40), hunter: Id(2), gained_units: 3 }]);
+    }
+    #[test]
+    fn spawn_order_does_not_select_the_winner() {
+        for order in [[9, 2], [2, 9]] {
+            let (mut world, _) = fixture(order);
+            hunt_schedule().run(&amp;mut world);
+            assert_eq!(reserves(&amp;mut world), vec![(Id(2), 3), (Id(9), 0)]);
+            assert_eq!(world.resource::&lt;Journal&gt;().0[0].hunter, Id(2));
+        }
+    }
+    #[test]
+    fn repeated_resolution_while_cleanup_is_pending_does_not_reward_again() {
+        let (mut world, prey) = fixture([9, 2]);
+        let mut schedule = hunt_schedule();
+        schedule.run(&amp;mut world);
+        schedule.run(&amp;mut world);
+        assert!(world.get::&lt;Prey&gt;(prey).is_some());
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 3), (Id(9), 0)]);
+        assert_eq!(world.resource::&lt;Journal&gt;().0.len(), 1);
+        assert!(world.resource::&lt;Audit&gt;().acted.is_empty());
+        schedule.apply_deferred(&amp;mut world);
+        assert!(world.get::&lt;Prey&gt;(prey).is_none());
+        schedule.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Journal&gt;().0.len(), 1);
+    }
+    #[test]
+    fn insufficient_capacity_rejects_without_consumption_and_later_hunter_can_win() {
+        let (mut world, _) = fixture([9, 2]);
+        for (id, mut hunter) in world.query::&lt;(&amp;Id, &amp;mut Hunter)&gt;().iter_mut(&amp;mut world) {
+            if *id == Id(2) { hunter.reserve_units = 9; }
+        }
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 9), (Id(9), 3)]);
+        assert_eq!(world.resource::&lt;Journal&gt;().0[0].hunter, Id(9));
+    }
+    #[test]
+    fn absent_contact_preserves_prey_and_allows_its_later_action() {
+        let (mut world, prey) = fixture([9, 2]);
+        world.get_mut::&lt;Prey&gt;(prey).unwrap().cell = 1;
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 0), (Id(9), 0)]);
+        assert_eq!(world.resource::&lt;Audit&gt;().pending, vec![(Id(40), true, 3, 1)]);
+        assert_eq!(world.resource::&lt;Audit&gt;().acted, vec![Id(40)]);
+        assert!(world.resource::&lt;Journal&gt;().0.is_empty());
+    }
+    #[test]
+    fn dead_hunter_and_invalid_reserve_cannot_claim_prey() {
+        let mut prey = Prey { cell: 0, biomass_units: 3, available: true, actions: 0 };
+        let mut hunter = Hunter { target: Id(40), cell: 0, reserve_units: 0,
+            capacity_units: 10, alive: false };
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), None);
+        hunter.alive = true;
+        hunter.reserve_units = 11;
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), None);
+        assert_eq!((prey.available, prey.biomass_units, hunter.reserve_units), (true, 3, 11));
+    }
+    #[test]
+    fn exact_capacity_at_integer_limit_is_safe_and_zero_biomass_is_ineligible() {
+        let mut prey = Prey { cell: 0, biomass_units: 3, available: true, actions: 0 };
+        let mut hunter = Hunter { target: Id(40), cell: 0, reserve_units: u32::MAX - 3,
+            capacity_units: u32::MAX, alive: true };
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), Some(3));
+        assert_eq!(hunter.reserve_units, u32::MAX);
+        prey.available = true;
+        hunter.reserve_units = 0;
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), None);
+        assert_eq!(hunter.reserve_units, 0);
+    }
+    #[test]
+    fn a_missing_target_grants_no_reward_or_terminal_record() {
+        let (mut world, prey) = fixture([9, 2]);
+        assert!(world.despawn(prey));
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 0), (Id(9), 0)]);
+        assert!(world.resource::&lt;Journal&gt;().0.is_empty());
+        assert!(world.resource::&lt;Audit&gt;().acted.is_empty());
+    }
+
+}
+</code></pre></details>
+
+<h2 id="the-complete-pending-interaction">Inspect the real schedule</h2>
+<p>The complete reference below uses the course's pinned Bevy ECS dependency. Its mutable queries write different component types, <code>Hunter</code> and <code>Prey</code>, while both read identity. Follow a successful <code>claim</code> into the journal write and queued despawn, then continue through prey action to the pending observation.</p>
+<details><summary>Complete worked answer: predation.rs</summary><pre><code class="language-rust" data-runnable="predation">use bevy_ecs::prelude::*;
+use bevy_ecs::schedule::{ExecutorKind, ScheduleBuildSettings};
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Id(u32);
+#[derive(Component)]
+struct Hunter { target: Id, cell: i32, reserve_units: u32, capacity_units: u32, alive: bool }
+#[derive(Component)]
+struct Prey { cell: i32, biomass_units: u32, available: bool, actions: u32 }
+#[derive(Resource)]
+struct Moment { run: u32, tick: u64 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Terminal { run: u32, tick: u64, prey: Id, hunter: Id, gained_units: u32 }
+#[derive(Resource, Default)]
+struct Journal(Vec&lt;Terminal&gt;);
+#[derive(Resource, Default)]
+struct Audit { pending: Vec&lt;(Id, bool, u32, u32)&gt;, acted: Vec&lt;Id&gt; }
+
+fn claim(prey: &amp;mut Prey, hunter: &amp;mut Hunter) -&gt; Option&lt;u32&gt; {
+    if !hunter.alive || !prey.available || prey.biomass_units == 0
+        || hunter.cell != prey.cell || hunter.reserve_units &gt; hunter.capacity_units {
+        return None;
+    }
+    let gain = prey.biomass_units;
+    let room = hunter.capacity_units - hunter.reserve_units;
+    if gain &gt; room { return None; }
+    let reserve = hunter.reserve_units.checked_add(gain).expect(&quot;gain fits validated room&quot;);
+    prey.available = false;
+    prey.biomass_units = 0;
+    hunter.reserve_units = reserve;
+    Some(gain)
+}
+
+fn resolve_hunts(
+    mut commands: Commands,
+    moment: Res&lt;Moment&gt;,
+    mut hunters: Query&lt;(Entity, &amp;Id, &amp;mut Hunter)&gt;,
+    mut prey_query: Query&lt;(Entity, &amp;Id, &amp;mut Prey)&gt;,
+    mut journal: ResMut&lt;Journal&gt;,
+) {
+    let mut order: Vec&lt;(Id, Entity)&gt; = hunters.iter().map(|(entity, id, _)| (*id, entity)).collect();
+    order.sort_by_key(|(id, _)| *id);
+    for (_, entity) in order {
+        let (_, hunter_id, mut hunter) = hunters.get_mut(entity).unwrap();
+        for (prey_entity, prey_id, mut prey) in &amp;mut prey_query {
+            if *prey_id != hunter.target { continue; }
+            if let Some(gained_units) = claim(&amp;mut prey, &amp;mut hunter) {
+                journal.0.push(Terminal { run: moment.run, tick: moment.tick,
+                    prey: *prey_id, hunter: *hunter_id, gained_units });
+                commands.entity(prey_entity).despawn();
+            }
+            break;
+        }
+    }
+}
+fn prey_action(mut prey_query: Query&lt;(&amp;Id, &amp;mut Prey)&gt;, mut audit: ResMut&lt;Audit&gt;) {
+    for (id, mut prey) in &amp;mut prey_query {
+        if !prey.available { continue; }
+        prey.actions = prey.actions.checked_add(1).expect(&quot;action count exhausted&quot;);
+        audit.acted.push(*id);
+    }
+}
+fn observe_pending(prey_query: Query&lt;(&amp;Id, &amp;Prey)&gt;, mut audit: ResMut&lt;Audit&gt;) {
+    audit.pending = prey_query.iter().map(|(id, prey)|
+        (*id, prey.available, prey.biomass_units, prey.actions)).collect();
+    audit.pending.sort_by_key(|row| row.0);
+}
+fn hunt_schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.set_build_settings(ScheduleBuildSettings {
+        auto_insert_apply_deferred: false, ..Default::default()
+    });
+    schedule.set_apply_final_deferred(false);
+    schedule.add_systems((resolve_hunts, prey_action, observe_pending).chain());
+    schedule
+}
+fn fixture(order: [u32; 2]) -&gt; (World, Entity) {
+    let mut world = World::new();
+    world.insert_resource(Moment { run: 7, tick: 1 });
+    world.init_resource::&lt;Journal&gt;();
+    world.init_resource::&lt;Audit&gt;();
+    for id in order {
+        world.spawn((Id(id), Hunter { target: Id(40), cell: 0, reserve_units: 0,
+            capacity_units: 10, alive: true }));
+    }
+    let prey = world.spawn((Id(40), Prey { cell: 0, biomass_units: 3,
+        available: true, actions: 0 })).id();
+    (world, prey)
+}
+fn reserves(world: &amp;mut World) -&gt; Vec&lt;(Id, u32)&gt; {
+    let mut rows: Vec&lt;_&gt; = world.query::&lt;(&amp;Id, &amp;Hunter)&gt;().iter(world)
+        .map(|(id, hunter)| (*id, hunter.reserve_units)).collect();
+    rows.sort_by_key(|row| row.0);
+    rows
+}
+fn main() {
+    let (mut world, _) = fixture([9, 2]);
+    let mut schedule = hunt_schedule();
+    schedule.run(&amp;mut world);
+    println!(&quot;reserves={:?}&quot;, reserves(&amp;mut world));
+    println!(&quot;pending={:?}&quot;, world.resource::&lt;Audit&gt;().pending);
+    println!(&quot;terminal records={}&quot;, world.resource::&lt;Journal&gt;().0.len());
+    schedule.apply_deferred(&amp;mut world);
+    println!(&quot;prey after cleanup={}&quot;, world.query::&lt;&amp;Prey&gt;().iter(&amp;world).count());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn one_prey_rewards_one_hunter_before_structural_cleanup() {
+        let (mut world, prey) = fixture([9, 2]);
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 3), (Id(9), 0)]);
+        assert!(world.get::&lt;Prey&gt;(prey).is_some());
+        assert_eq!(world.resource::&lt;Audit&gt;().pending, vec![(Id(40), false, 0, 0)]);
+        assert!(world.resource::&lt;Audit&gt;().acted.is_empty());
+        assert_eq!(world.resource::&lt;Journal&gt;().0, vec![Terminal {
+            run: 7, tick: 1, prey: Id(40), hunter: Id(2), gained_units: 3 }]);
+    }
+    #[test]
+    fn spawn_order_does_not_select_the_winner() {
+        for order in [[9, 2], [2, 9]] {
+            let (mut world, _) = fixture(order);
+            hunt_schedule().run(&amp;mut world);
+            assert_eq!(reserves(&amp;mut world), vec![(Id(2), 3), (Id(9), 0)]);
+            assert_eq!(world.resource::&lt;Journal&gt;().0[0].hunter, Id(2));
+        }
+    }
+    #[test]
+    fn repeated_resolution_while_cleanup_is_pending_does_not_reward_again() {
+        let (mut world, prey) = fixture([9, 2]);
+        let mut schedule = hunt_schedule();
+        schedule.run(&amp;mut world);
+        schedule.run(&amp;mut world);
+        assert!(world.get::&lt;Prey&gt;(prey).is_some());
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 3), (Id(9), 0)]);
+        assert_eq!(world.resource::&lt;Journal&gt;().0.len(), 1);
+        assert!(world.resource::&lt;Audit&gt;().acted.is_empty());
+        schedule.apply_deferred(&amp;mut world);
+        assert!(world.get::&lt;Prey&gt;(prey).is_none());
+        schedule.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Journal&gt;().0.len(), 1);
+    }
+    #[test]
+    fn insufficient_capacity_rejects_without_consumption_and_later_hunter_can_win() {
+        let (mut world, _) = fixture([9, 2]);
+        for (id, mut hunter) in world.query::&lt;(&amp;Id, &amp;mut Hunter)&gt;().iter_mut(&amp;mut world) {
+            if *id == Id(2) { hunter.reserve_units = 9; }
+        }
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 9), (Id(9), 3)]);
+        assert_eq!(world.resource::&lt;Journal&gt;().0[0].hunter, Id(9));
+    }
+    #[test]
+    fn absent_contact_preserves_prey_and_allows_its_later_action() {
+        let (mut world, prey) = fixture([9, 2]);
+        world.get_mut::&lt;Prey&gt;(prey).unwrap().cell = 1;
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 0), (Id(9), 0)]);
+        assert_eq!(world.resource::&lt;Audit&gt;().pending, vec![(Id(40), true, 3, 1)]);
+        assert_eq!(world.resource::&lt;Audit&gt;().acted, vec![Id(40)]);
+        assert!(world.resource::&lt;Journal&gt;().0.is_empty());
+    }
+    #[test]
+    fn dead_hunter_and_invalid_reserve_cannot_claim_prey() {
+        let mut prey = Prey { cell: 0, biomass_units: 3, available: true, actions: 0 };
+        let mut hunter = Hunter { target: Id(40), cell: 0, reserve_units: 0,
+            capacity_units: 10, alive: false };
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), None);
+        hunter.alive = true;
+        hunter.reserve_units = 11;
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), None);
+        assert_eq!((prey.available, prey.biomass_units, hunter.reserve_units), (true, 3, 11));
+    }
+    #[test]
+    fn exact_capacity_at_integer_limit_is_safe_and_zero_biomass_is_ineligible() {
+        let mut prey = Prey { cell: 0, biomass_units: 3, available: true, actions: 0 };
+        let mut hunter = Hunter { target: Id(40), cell: 0, reserve_units: u32::MAX - 3,
+            capacity_units: u32::MAX, alive: true };
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), Some(3));
+        assert_eq!(hunter.reserve_units, u32::MAX);
+        prey.available = true;
+        hunter.reserve_units = 0;
+        assert_eq!(claim(&amp;mut prey, &amp;mut hunter), None);
+        assert_eq!(hunter.reserve_units, 0);
+    }
+    #[test]
+    fn a_missing_target_grants_no_reward_or_terminal_record() {
+        let (mut world, prey) = fixture([9, 2]);
+        assert!(world.despawn(prey));
+        hunt_schedule().run(&amp;mut world);
+        assert_eq!(reserves(&amp;mut world), vec![(Id(2), 0), (Id(9), 0)]);
+        assert!(world.resource::&lt;Journal&gt;().0.is_empty());
+        assert!(world.resource::&lt;Audit&gt;().acted.is_empty());
+    }
+
+}
+</code></pre></details>
+<p>Check the printed reference separately with this command:</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py check predation</code></pre>
+<p>The expected program output is:</p>
+<pre><code class="language-text">reserves=[(Id(2), 3), (Id(9), 0)]
+pending=[(Id(40), false, 0, 0)]
+terminal records=1
+prey after cleanup=0</code></pre>
+<p>The pending tuple contains identity, availability, biomass, and action count, in that order. Its presence is useful evidence: the prey still existed when the action phase skipped it. Applying deferred commands removes the entity afterward while leaving the owned record intact.</p>
+
+<section class="lesson-summary" aria-labelledby="chapter-takeaway" id="recall-and-evidence">
+<h2 id="chapter-takeaway">One claim settles the contest</h2>
+<p>The opening contest now resolves without depending on immediate removal. Hunter 2's accepted claim changes the prey's eligibility and supply before either hunter 9 or the prey itself gets another opportunity. Cleanup can follow at its chosen boundary because it no longer carries responsibility for preventing another action.</p>
+<details><summary>Recall why the checks precede the claim</summary><p>Deferred insertion and despawn may both remain unapplied while other work runs, so the immediate availability change supplies this lab's eligibility boundary. A hunter that cannot hold the full gain must reject before that change, preserving the prey for another eligible hunter.</p></details>
+<p>The eight native tests execute the miniature schedule, including reversed spawn order, repeated pending resolution, missing targets, and exact numerical limits. They establish the isolated interaction rather than a live Moss installation or browser result. The deferred settings match the installed 0.18.1 source; the <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/schedule/struct.Schedule.html">versioned schedule reference</a> provides further detail.</p>
+<p>In <a href="21-rest.html">rest and commitment</a>, we'll return to one individual's sequence of actions. A recoverable fatigue value and a remembered commitment will determine when it rests or works, while reserve continues to account for the energy those ticks consume.</p>
+</section>

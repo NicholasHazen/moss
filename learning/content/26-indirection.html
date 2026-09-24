@@ -1,0 +1,572 @@
+<p class="lesson-lead">The inspector wants “Inspector: actor=7 tick=5 reserve=10,” while a compact diagnostic panel wants “7@5:10.” Both should read the same retained report without changing it. We can support those two formats with an enum.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Choose what owns the report and what calls the formatter</h2>
+<p>We'll begin with those known styles, then let an independently written formatter join the same collection. You'll implement <code>boxed_format</code> and compare owned trait objects with borrowed and generic calls. A small compiler probe will show why the interface must offer a method that an object can dispatch.</p>
+<p>Once that calling decision is clear, we'll ask a separate question: what if several readers need to keep the report? The <code>Rc</code>, <code>Arc</code> and interior-mutability examples should help you distinguish shared ownership, cross-thread access and permission to mutate. The outcome is a reasoned choice for each requirement, without changing the authoritative ECS world's ownership.</p>
+</section>
+<aside class="scope-note"><p><strong>Optional Rust supplement.</strong> Continue from <a href="25-lifetimes.html">borrowed views and owned snapshots</a>, with <a href="09-traits.html">trait contracts</a> available for recall. This standard-library lab uses Rust 1.93.1, edition 2024. Its formatters read an isolated report. They do not introduce a biological rule registry or wrap Moss's authoritative ECS world in shared mutable pointers.</p></aside>
+<h2 id="start-with-the-known-choices">Start with the known choices</h2>
+<p>Begin with the value being presented. Our <code>Report</code> owns its actor ID, tick, and optional reserve measurement, so it does not depend on a live entity or an allocation in the history journal. The formatter borrows that report long enough to produce a string. It must retain the meaning of the option: <code>None</code> prints “unknown,” while <code>Some(0)</code> prints zero. The compact line is diagnostic text for this exercise; a stored interchange format would need a versioned schema of its own.</p>
+<p>For two known choices, <code>Style</code> can describe everything we need. Its named variant owns a prefix, and its compact variant needs no extra data. A <code>render</code> method matches the variant and produces the appropriate line. Because both choices are values of the same enum type, a <code>Vec&lt;Style&gt;</code> already stores them together without a separate box for each element. Adding a variant also makes exhaustive matches ask what that new choice means.</p>
+<p>Now suppose a separately written formatter needs to join the same list. The test's <code>IdOnly</code> type knows how to print an identity but is not another <code>Style</code> variant. We want the collection's rendering loop to accept it through a shared interface. That extension is the reason to consider a trait object here. If the program continues to need only the two known styles, keeping the enum is a complete design.</p>
+<h2 id="separate-the-owner-from-the-call">Separate the owner from the call</h2>
+<p>The collection needs to own its formatters after the construction function returns, including a named formatter's prefix. <code>Box&lt;T&gt;</code> supplies an owning pointer, ordinarily to heap storage. Moving the box transfers that ownership to the recipient, and the recipient can borrow the stored value for a call. A zero-sized value such as our empty <code>CompactFormat</code> needs no allocation. The <a href="https://doc.rust-lang.org/std/boxed/index.html">boxed module documentation</a> describes that storage behavior; it is separate from choosing which render method to execute.</p>
+<p>The rest of the type, <code>dyn ReportFormat</code>, supplies the common calling interface. Behind each pointer is a particular formatter value, but the collection only needs to know that its render operation is available. Calling through the trait object selects the implementation using its dispatch information. The <a href="https://doc.rust-lang.org/reference/types/trait-object.html">trait-object reference</a> describes the data pointer and virtual method table involved. Combining this interface with <code>Box</code> lets one vector own formatter values of different concrete types.</p>
+<p>You can use the interface without transferring ownership. <code>render_borrowed</code> accepts <code>&amp;dyn ReportFormat</code>, so it can temporarily borrow a local <code>Style::Compact</code> without putting it in a box. <code>render_generic&lt;F: ReportFormat&gt;</code> also borrows a formatter, but its caller selects a concrete type for <code>F</code> rather than using object dispatch. All three paths can render the same report. Decide first whether the call needs a borrowed value or a stored owner, then whether it needs a concrete type or a trait-object interface.</p>
+<p>There is a lifetime promise in the returned <code>Box&lt;dyn ReportFormat&gt;</code> too: this lab's return type defaults to a <code>'static</code> object lifetime bound. A named formatter meets it by owning its prefix instead of borrowing a local string from construction. The box can still be dropped whenever its owner is finished with it; the bound says its contents cannot depend on a shorter-lived borrow. A formatter designed to borrow the caller's prefix would need an explicitly bounded object lifetime.</p>
+<h2 id="complete-the-owning-adapter">Complete the owning adapter</h2>
+<p>Put those ownership decisions into <code>boxed_format</code>, the one unfinished function. It receives an owned <code>Style</code> and must return the matching owned formatter adapter. Prepare the starter from the repository root; formatting methods, borrowed and generic call paths, the main program, and eight canonical tests are already supplied.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare indirection --dest work/indirection-practice
+python3 learning/scripts/labs.py check indirection --file work/indirection-practice/indirection.rs</code></pre>
+<p>The initial file compiles, then checks that use the adapter reach its TODO. For the named branch, follow the prefix as you match the enum: the function owns that string, so it can move it into <code>NamedFormat</code> and return the box. No clone is needed. Returning a reference to a temporary adapter would instead leave the caller borrowing a local value that has gone away, the lifetime mistake from the previous lesson.</p>
+<details><summary>Hint 1: preserve the payload when matching</summary><p>Match <code>Style::Named { prefix }</code> and <code>Style::Compact</code>. In the named arm, the local <code>prefix</code> is the owned string moved from the selected variant.</p></details>
+<details><summary>Hint 2: return a box from each arm</summary><p>Use <code>Box::new(NamedFormat { prefix })</code> or <code>Box::new(CompactFormat)</code>. Both concrete types implement <code>ReportFormat</code>, so they can be coerced to the declared boxed trait-object return type.</p></details>
+<details><summary>Complete starter file: indirection.rs</summary><pre><code class="language-rust" data-starter="indirection">#[derive(Clone, Debug, PartialEq, Eq)]
+struct Report {
+    actor: u64,
+    tick: u64,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+trait ReportFormat {
+    fn render(&amp;self, report: &amp;Report) -&gt; String;
+}
+
+#[derive(Clone)]
+enum Style {
+    Named { prefix: String },
+    Compact,
+}
+
+fn reserve_text(report: &amp;Report) -&gt; String {
+    match report.reserve_units {
+        Some(value) =&gt; value.to_string(),
+        None =&gt; &quot;unknown&quot;.into(),
+    }
+}
+
+fn named_line(prefix: &amp;str, report: &amp;Report) -&gt; String {
+    format!(
+        &quot;{prefix}: actor={} tick={} reserve={}&quot;,
+        report.actor,
+        report.tick,
+        reserve_text(report)
+    )
+}
+
+fn compact_line(report: &amp;Report) -&gt; String {
+    format!(&quot;{}@{}:{}&quot;, report.actor, report.tick, reserve_text(report))
+}
+
+impl ReportFormat for Style {
+    fn render(&amp;self, report: &amp;Report) -&gt; String {
+        match self {
+            Self::Named { prefix } =&gt; named_line(prefix, report),
+            Self::Compact =&gt; compact_line(report),
+        }
+    }
+}
+
+struct NamedFormat {
+    prefix: String,
+}
+
+struct CompactFormat;
+
+impl ReportFormat for NamedFormat {
+    fn render(&amp;self, report: &amp;Report) -&gt; String {
+        named_line(&amp;self.prefix, report)
+    }
+}
+
+impl ReportFormat for CompactFormat {
+    fn render(&amp;self, report: &amp;Report) -&gt; String {
+        compact_line(report)
+    }
+}
+
+fn boxed_format(style: Style) -&gt; Box&lt;dyn ReportFormat&gt; {
+    let _ = style;
+    todo!(&quot;move each style into its corresponding owned formatter&quot;)
+}
+
+fn render_generic&lt;F: ReportFormat&gt;(formatter: &amp;F, report: &amp;Report) -&gt; String {
+    formatter.render(report)
+}
+
+fn render_borrowed(formatter: &amp;dyn ReportFormat, report: &amp;Report) -&gt; String {
+    formatter.render(report)
+}
+
+fn render_all(formatters: &amp;[Box&lt;dyn ReportFormat&gt;], report: &amp;Report) -&gt; Vec&lt;String&gt; {
+    formatters
+        .iter()
+        .map(|formatter| formatter.render(report))
+        .collect()
+}
+
+fn fixture() -&gt; Report {
+    Report {
+        actor: 7,
+        tick: 5,
+        reserve_units: Some(10),
+    }
+}
+
+fn main() {
+    let report = fixture();
+    let styles = [
+        Style::Named {
+            prefix: &quot;Inspector&quot;.into(),
+        },
+        Style::Compact,
+    ];
+    let expected: Vec&lt;_&gt; = styles
+        .iter()
+        .map(|style| render_generic(style, &amp;report))
+        .collect();
+    let formatters: Vec&lt;_&gt; = styles.into_iter().map(boxed_format).collect();
+    let actual = render_all(&amp;formatters, &amp;report);
+    assert_eq!(expected, actual);
+    for line in actual {
+        println!(&quot;{line}&quot;);
+    }
+    println!(&quot;borrowed: {}&quot;, render_borrowed(&amp;CompactFormat, &amp;report));
+    let shared = std::rc::Rc::new(report);
+    let second_panel = std::rc::Rc::clone(&amp;shared);
+    println!(
+        &quot;same allocation: {}&quot;,
+        std::rc::Rc::ptr_eq(&amp;shared, &amp;second_panel)
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use std::sync::Arc;
+
+    #[test]
+    fn enum_and_boxed_adapters_agree_for_each_style_and_absence_case() {
+        for reserve_units in [None, Some(0), Some(10)] {
+            let report = Report {
+                reserve_units,
+                ..fixture()
+            };
+            for style in [
+                Style::Named {
+                    prefix: &quot;Inspector&quot;.into(),
+                },
+                Style::Compact,
+            ] {
+                let expected = style.render(&amp;report);
+                assert_eq!(boxed_format(style).render(&amp;report), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn output_preserves_identity_time_zero_and_unknown() {
+        let unknown = Report {
+            reserve_units: None,
+            ..fixture()
+        };
+        let zero = Report {
+            reserve_units: Some(0),
+            ..fixture()
+        };
+        assert_eq!(boxed_format(Style::Compact).render(&amp;unknown), &quot;7@5:unknown&quot;);
+        assert_eq!(boxed_format(Style::Compact).render(&amp;zero), &quot;7@5:0&quot;);
+        assert_eq!(
+            boxed_format(Style::Named {
+                prefix: &quot;观察&quot;.into()
+            })
+            .render(&amp;fixture()),
+            &quot;观察: actor=7 tick=5 reserve=10&quot;
+        );
+    }
+
+    #[test]
+    fn stored_formatter_owns_its_prefix_after_construction_scope_ends() {
+        let formatter = {
+            let prefix = String::from(&quot;Saved&quot;);
+            boxed_format(Style::Named { prefix })
+        };
+        assert_eq!(
+            formatter.render(&amp;fixture()),
+            &quot;Saved: actor=7 tick=5 reserve=10&quot;
+        );
+    }
+
+    #[test]
+    fn heterogeneous_collection_accepts_a_new_formatter_without_an_enum_variant() {
+        struct IdOnly;
+        impl ReportFormat for IdOnly {
+            fn render(&amp;self, report: &amp;Report) -&gt; String {
+                format!(&quot;ID {}&quot;, report.actor)
+            }
+        }
+        let formatters: Vec&lt;Box&lt;dyn ReportFormat&gt;&gt; = vec![
+            boxed_format(Style::Compact),
+            Box::new(IdOnly),
+            boxed_format(Style::Named {
+                prefix: &quot;Last&quot;.into(),
+            }),
+        ];
+        assert_eq!(
+            render_all(&amp;formatters, &amp;fixture()),
+            vec![&quot;7@5:10&quot;, &quot;ID 7&quot;, &quot;Last: actor=7 tick=5 reserve=10&quot;]
+        );
+        assert!(render_all(&amp;[], &amp;fixture()).is_empty());
+    }
+
+    #[test]
+    fn borrowed_dispatch_needs_no_box_and_keeps_source_unchanged() {
+        let report = fixture();
+        let before = report.clone();
+        let formatter = Style::Compact;
+        assert_eq!(
+            render_generic(&amp;formatter, &amp;report),
+            render_borrowed(&amp;formatter, &amp;report)
+        );
+        assert_eq!(report, before);
+    }
+
+    #[test]
+    fn rc_handles_share_ownership_while_a_report_clone_is_independent() {
+        let first = Rc::new(fixture());
+        let second = Rc::clone(&amp;first);
+        assert!(Rc::ptr_eq(&amp;first, &amp;second));
+        let mut independent = (*first).clone();
+        independent.reserve_units = Some(0);
+        drop(first);
+        assert_eq!(second.reserve_units, Some(10));
+        assert_eq!(independent.reserve_units, Some(0));
+    }
+
+    #[test]
+    fn refcell_rejects_overlapping_mutation_until_read_guard_is_dropped() {
+        let cache = RefCell::new(String::from(&quot;old preview&quot;));
+        let reading = cache.borrow();
+        assert!(cache.try_borrow_mut().is_err());
+        assert_eq!(&amp;*reading, &quot;old preview&quot;);
+        drop(reading);
+        *cache.try_borrow_mut().unwrap() = String::from(&quot;new preview&quot;);
+        assert_eq!(&amp;*cache.borrow(), &quot;new preview&quot;);
+    }
+
+    #[test]
+    fn this_owned_report_can_be_shared_with_a_native_worker() {
+        fn assert_send_sync&lt;T: Send + Sync&gt;() {}
+        assert_send_sync::&lt;Report&gt;();
+        assert_send_sync::&lt;Arc&lt;Report&gt;&gt;();
+        let report = Arc::new(fixture());
+        let worker_report = Arc::clone(&amp;report);
+        let worker = std::thread::spawn(move || CompactFormat.render(&amp;worker_report));
+        assert_eq!(worker.join().unwrap(), &quot;7@5:10&quot;);
+        assert_eq!(report.reserve_units, Some(10));
+    }
+}
+</code></pre></details>
+<details><summary>Complete worked answer: indirection.rs</summary><pre><code class="language-rust" data-runnable="indirection">#[derive(Clone, Debug, PartialEq, Eq)]
+struct Report {
+    actor: u64,
+    tick: u64,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+trait ReportFormat {
+    fn render(&amp;self, report: &amp;Report) -&gt; String;
+}
+
+#[derive(Clone)]
+enum Style {
+    Named { prefix: String },
+    Compact,
+}
+
+fn reserve_text(report: &amp;Report) -&gt; String {
+    match report.reserve_units {
+        Some(value) =&gt; value.to_string(),
+        None =&gt; &quot;unknown&quot;.into(),
+    }
+}
+
+fn named_line(prefix: &amp;str, report: &amp;Report) -&gt; String {
+    format!(
+        &quot;{prefix}: actor={} tick={} reserve={}&quot;,
+        report.actor,
+        report.tick,
+        reserve_text(report)
+    )
+}
+
+fn compact_line(report: &amp;Report) -&gt; String {
+    format!(&quot;{}@{}:{}&quot;, report.actor, report.tick, reserve_text(report))
+}
+
+impl ReportFormat for Style {
+    fn render(&amp;self, report: &amp;Report) -&gt; String {
+        match self {
+            Self::Named { prefix } =&gt; named_line(prefix, report),
+            Self::Compact =&gt; compact_line(report),
+        }
+    }
+}
+
+struct NamedFormat {
+    prefix: String,
+}
+
+struct CompactFormat;
+
+impl ReportFormat for NamedFormat {
+    fn render(&amp;self, report: &amp;Report) -&gt; String {
+        named_line(&amp;self.prefix, report)
+    }
+}
+
+impl ReportFormat for CompactFormat {
+    fn render(&amp;self, report: &amp;Report) -&gt; String {
+        compact_line(report)
+    }
+}
+
+fn boxed_format(style: Style) -&gt; Box&lt;dyn ReportFormat&gt; {
+    match style {
+        Style::Named { prefix } =&gt; Box::new(NamedFormat { prefix }),
+        Style::Compact =&gt; Box::new(CompactFormat),
+    }
+}
+
+fn render_generic&lt;F: ReportFormat&gt;(formatter: &amp;F, report: &amp;Report) -&gt; String {
+    formatter.render(report)
+}
+
+fn render_borrowed(formatter: &amp;dyn ReportFormat, report: &amp;Report) -&gt; String {
+    formatter.render(report)
+}
+
+fn render_all(formatters: &amp;[Box&lt;dyn ReportFormat&gt;], report: &amp;Report) -&gt; Vec&lt;String&gt; {
+    formatters
+        .iter()
+        .map(|formatter| formatter.render(report))
+        .collect()
+}
+
+fn fixture() -&gt; Report {
+    Report {
+        actor: 7,
+        tick: 5,
+        reserve_units: Some(10),
+    }
+}
+
+fn main() {
+    let report = fixture();
+    let styles = [
+        Style::Named {
+            prefix: &quot;Inspector&quot;.into(),
+        },
+        Style::Compact,
+    ];
+    let expected: Vec&lt;_&gt; = styles
+        .iter()
+        .map(|style| render_generic(style, &amp;report))
+        .collect();
+    let formatters: Vec&lt;_&gt; = styles.into_iter().map(boxed_format).collect();
+    let actual = render_all(&amp;formatters, &amp;report);
+    assert_eq!(expected, actual);
+    for line in actual {
+        println!(&quot;{line}&quot;);
+    }
+    println!(&quot;borrowed: {}&quot;, render_borrowed(&amp;CompactFormat, &amp;report));
+    let shared = std::rc::Rc::new(report);
+    let second_panel = std::rc::Rc::clone(&amp;shared);
+    println!(
+        &quot;same allocation: {}&quot;,
+        std::rc::Rc::ptr_eq(&amp;shared, &amp;second_panel)
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use std::sync::Arc;
+
+    #[test]
+    fn enum_and_boxed_adapters_agree_for_each_style_and_absence_case() {
+        for reserve_units in [None, Some(0), Some(10)] {
+            let report = Report {
+                reserve_units,
+                ..fixture()
+            };
+            for style in [
+                Style::Named {
+                    prefix: &quot;Inspector&quot;.into(),
+                },
+                Style::Compact,
+            ] {
+                let expected = style.render(&amp;report);
+                assert_eq!(boxed_format(style).render(&amp;report), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn output_preserves_identity_time_zero_and_unknown() {
+        let unknown = Report {
+            reserve_units: None,
+            ..fixture()
+        };
+        let zero = Report {
+            reserve_units: Some(0),
+            ..fixture()
+        };
+        assert_eq!(boxed_format(Style::Compact).render(&amp;unknown), &quot;7@5:unknown&quot;);
+        assert_eq!(boxed_format(Style::Compact).render(&amp;zero), &quot;7@5:0&quot;);
+        assert_eq!(
+            boxed_format(Style::Named {
+                prefix: &quot;观察&quot;.into()
+            })
+            .render(&amp;fixture()),
+            &quot;观察: actor=7 tick=5 reserve=10&quot;
+        );
+    }
+
+    #[test]
+    fn stored_formatter_owns_its_prefix_after_construction_scope_ends() {
+        let formatter = {
+            let prefix = String::from(&quot;Saved&quot;);
+            boxed_format(Style::Named { prefix })
+        };
+        assert_eq!(
+            formatter.render(&amp;fixture()),
+            &quot;Saved: actor=7 tick=5 reserve=10&quot;
+        );
+    }
+
+    #[test]
+    fn heterogeneous_collection_accepts_a_new_formatter_without_an_enum_variant() {
+        struct IdOnly;
+        impl ReportFormat for IdOnly {
+            fn render(&amp;self, report: &amp;Report) -&gt; String {
+                format!(&quot;ID {}&quot;, report.actor)
+            }
+        }
+        let formatters: Vec&lt;Box&lt;dyn ReportFormat&gt;&gt; = vec![
+            boxed_format(Style::Compact),
+            Box::new(IdOnly),
+            boxed_format(Style::Named {
+                prefix: &quot;Last&quot;.into(),
+            }),
+        ];
+        assert_eq!(
+            render_all(&amp;formatters, &amp;fixture()),
+            vec![&quot;7@5:10&quot;, &quot;ID 7&quot;, &quot;Last: actor=7 tick=5 reserve=10&quot;]
+        );
+        assert!(render_all(&amp;[], &amp;fixture()).is_empty());
+    }
+
+    #[test]
+    fn borrowed_dispatch_needs_no_box_and_keeps_source_unchanged() {
+        let report = fixture();
+        let before = report.clone();
+        let formatter = Style::Compact;
+        assert_eq!(
+            render_generic(&amp;formatter, &amp;report),
+            render_borrowed(&amp;formatter, &amp;report)
+        );
+        assert_eq!(report, before);
+    }
+
+    #[test]
+    fn rc_handles_share_ownership_while_a_report_clone_is_independent() {
+        let first = Rc::new(fixture());
+        let second = Rc::clone(&amp;first);
+        assert!(Rc::ptr_eq(&amp;first, &amp;second));
+        let mut independent = (*first).clone();
+        independent.reserve_units = Some(0);
+        drop(first);
+        assert_eq!(second.reserve_units, Some(10));
+        assert_eq!(independent.reserve_units, Some(0));
+    }
+
+    #[test]
+    fn refcell_rejects_overlapping_mutation_until_read_guard_is_dropped() {
+        let cache = RefCell::new(String::from(&quot;old preview&quot;));
+        let reading = cache.borrow();
+        assert!(cache.try_borrow_mut().is_err());
+        assert_eq!(&amp;*reading, &quot;old preview&quot;);
+        drop(reading);
+        *cache.try_borrow_mut().unwrap() = String::from(&quot;new preview&quot;);
+        assert_eq!(&amp;*cache.borrow(), &quot;new preview&quot;);
+    }
+
+    #[test]
+    fn this_owned_report_can_be_shared_with_a_native_worker() {
+        fn assert_send_sync&lt;T: Send + Sync&gt;() {}
+        assert_send_sync::&lt;Report&gt;();
+        assert_send_sync::&lt;Arc&lt;Report&gt;&gt;();
+        let report = Arc::new(fixture());
+        let worker_report = Arc::clone(&amp;report);
+        let worker = std::thread::spawn(move || CompactFormat.render(&amp;worker_report));
+        assert_eq!(worker.join().unwrap(), &quot;7@5:10&quot;);
+        assert_eq!(report.reserve_units, Some(10));
+    }
+}
+</code></pre></details>
+<p>Run <code>python3 learning/scripts/labs.py check indirection</code> for the reference, or rerun the learner-file command for your edit. The program checks that both designs agree, then prints:</p>
+<pre><code class="language-text">Inspector: actor=7 tick=5 reserve=10
+7@5:10
+borrowed: 7@5:10
+same allocation: true</code></pre>
+<p>The first three lines show different call paths producing the expected text while leaving the report intact. The tests also exercise collection order, an empty formatter collection, Unicode prefixes, and the distinction between unknown and zero. Those are behavioral promises we checked for these implementations. The trait method's signature makes a formatter callable; it cannot by itself guarantee that every future implementation labels units correctly or avoids unrelated side effects.</p>
+<h2 id="know-which-methods-can-cross-the-object-boundary">Know which methods can cross the object boundary</h2>
+<p>We have a working collection of formatters; before adding methods to its interface, we need to know which calls it can continue to support. Look at what a call through the trait object has to know. Our render method takes a shared receiver, a concrete report argument, and returns an owned string, so the caller can make the same kind of call through every object. A method with its own generic type parameter asks for an additional choice of type at the call site. The object's dispatch information cannot provide a separate callable implementation for every type a future caller might select, so that generic method cannot be dispatched through this trait object. Save the following small experiment as <code>work/indirection-practice/generic_object.rs</code> to see where Rust rejects that change.</p>
+<pre><code class="language-rust" id="generic-object-probe">trait Preview {
+    fn decorate&lt;T: std::fmt::Display&gt;(&amp;self, value: T) -&gt; String;
+}
+fn main() {
+    let _: Option&lt;&amp;dyn Preview&gt; = None;
+}</code></pre>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 work/indirection-practice/generic_object.rs -o work/indirection-practice/generic_object</code></pre>
+<details open><summary>Immediate correction: give the dispatchable method a concrete argument</summary><p>Rust reports <code>E0038</code>. Replace the entire probe with this version and rerun the compile command. Running <code>work/indirection-practice/generic_object</code> prints <code>actor=7</code>.</p><pre><code class="language-rust" id="concrete-object-probe">trait Preview {
+    fn decorate(&amp;self, value: &amp;str) -&gt; String;
+}
+struct Plain;
+impl Preview for Plain {
+    fn decorate(&amp;self, value: &amp;str) -&gt; String { value.to_owned() }
+}
+fn main() {
+    let preview: &amp;dyn Preview = &amp;Plain;
+    println!("{}", preview.decorate("actor=7"));
+}</code></pre></details>
+<p>The correction gives the dispatchable method a concrete argument, matching the operation our callers need. Another design can keep a generic helper on the trait with <code>where Self: Sized</code>, excluding that method from object dispatch while leaving other methods available. You do not have to discard a whole trait because it contains such a helper. The <a href="https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility">complete dyn-compatibility rules</a> describe the remaining constraints when you design a different interface.</p>
+<h2 id="share-a-snapshot-only-when-needed">Share a snapshot only when needed</h2>
+<p>We have decided how to store formatters and call their methods. A separate question arises if two panels must each keep the same report after the function that created them returns. The program's last line uses two <code>Rc&lt;Report&gt;</code> handles for that situation. <code>Rc::clone</code> adds another owner of the same allocation, so dropping the first handle leaves the second able to read the report. The separate <code>Report::clone</code> test instead creates a new report value whose reserve can change independently.</p>
+<p>Shared ownership is useful when those readers have independent lifetimes on one thread. If two inspector functions merely need the report during their calls, ordinary <code>&amp;Report</code> borrows are enough. <code>Rc</code> uses non-atomic reference counting and is neither <code>Send</code> nor <code>Sync</code>, so its handles cannot be used to transfer this ownership across threads. The <a href="https://doc.rust-lang.org/std/rc/index.html">Rc documentation</a> also explains the cycle limitations that matter when owned values point back to one another.</p>
+<p>For readers on different threads, <code>Arc</code> uses atomic reference counting. With the default allocator, <code>Arc&lt;T&gt;</code> can be <code>Send</code> and <code>Sync</code> when <code>T</code> satisfies both bounds. Our native test establishes those bounds for this report, shares it with a worker that formats it, joins the worker, and reads the report again. The atomic ownership count permits this sharing; it does not make an arbitrary payload safe. This is a native-thread example, so a browser worker would need its own setup and checks.</p>
+<p>Read the two bounds in terms of the access you need. <a href="https://doc.rust-lang.org/std/marker/trait.Send.html">Send</a> permits transferring a value between threads; <a href="https://doc.rust-lang.org/std/marker/trait.Sync.html">Sync</a> permits sending shared references to that value between threads. A plain <code>Box&lt;dyn ReportFormat&gt;</code> does not retain either promise in its exposed type, even if a particular implementation happens to satisfy them. An API requiring both must say so with bounds such as <code>dyn ReportFormat + Send + Sync</code> and accept only implementations that meet them.</p>
+<h2 id="interior-mutability-still-has-rules">Interior mutability still has rules</h2>
+<p>So far the shared report has been read-only. To decide what a changing cache would require, separate keeping an allocation alive from accessing its contents. Keeping several owners alive does not grant any of them unrestricted permission to mutate it. If a local preview cache needs to change through a shared API, an interior-mutability type can supply a specific operation for that purpose. <code>Cell</code> supports copying or replacing small values, while <code>RefCell</code> lets code obtain borrows whose exclusivity is checked at runtime.</p>
+<p>Follow the cache test in two stages. While a read guard is alive, <code>try_borrow_mut()</code> returns an error because writing would conflict with that read. Dropping the guard ends the borrow, allowing the next attempt to update the preview. Calling ordinary <code>borrow_mut()</code> during the conflict would panic instead. The access rule has not disappeared; its check now happens at runtime, and the guard determines how long the access lasts. The <a href="https://doc.rust-lang.org/std/cell/struct.RefCell.html">RefCell methods</a> describe both forms.</p>
+<p>That runtime borrowing mechanism is local to a thread. <code>RefCell&lt;T&gt;</code> is not <code>Sync</code>, although it can be <code>Send</code> when <code>T</code> is. Adding an atomic ownership count with <code>Arc</code> does not change the payload's sharing capability. If the real requirement is concurrent shared mutation, synchronization types such as <code>Mutex</code> or <code>RwLock</code> address it. The <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html">Arc thread-safety section</a> connects these bounds to the inner value.</p>
+<p>You can check that distinction before any threads run. Save this optional probe as <code>work/indirection-practice/arc_refcell.rs</code>; it asks the compiler whether the combined type has the required capability. The expected rejection identifies the unsupported sharing directly, without depending on a race to expose it.</p>
+<pre><code class="language-rust" id="arc-refcell-probe">use std::cell::RefCell;
+use std::sync::Arc;
+fn require_send_sync&lt;T: Send + Sync&gt;() {}
+fn main() {
+    require_send_sync::&lt;Arc&lt;RefCell&lt;String&gt;&gt;&gt;();
+}</code></pre>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 work/indirection-practice/arc_refcell.rs -o work/indirection-practice/arc_refcell</code></pre>
+<details open><summary>Immediate correction for an immutable shared snapshot</summary><p>The check fails with <code>E0277</code> because <code>RefCell&lt;String&gt;</code> cannot be shared safely. Replace the requested type with <code>Arc&lt;String&gt;</code> and remove the unused <code>RefCell</code> import. The same command now compiles. This correction fits a read-only snapshot; it does not implement shared mutation.</p></details>
+<p>For our presentation problem, an owned snapshot and short formatter borrows already give each piece the access it needs. Moss's mutable simulation state can stay in its authoritative world, where system parameters state how it is accessed. Wrapping that world in <code>Rc&lt;RefCell&lt;World&gt;&gt;</code> would move conflicts to runtime and obscure the boundaries without helping either of our two formatting choices.</p>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Give each extra type a specific job</h2>
+<p>The two lines from the opening still describe the same unchanged report. An enum keeps the known styles together; a trait object gives independently implemented formatters a common calling interface; a box lets the collection own them. Readers with independent lifetimes may need shared ownership, and mutation or cross-thread access adds further requirements. Keeping those decisions separate lets you choose the access the example actually needs.</p>
+<p>In <a href="27-async.html">accepting asynchronous results</a>, an owned value will arrive after its request has been replaced. We'll use that delay to distinguish safe ownership transfer from the application's permission to accept the result.</p>
+</section>

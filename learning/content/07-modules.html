@@ -1,0 +1,189 @@
+<p class="lesson-lead">The inspector prints “Fern: 60 units.” You want to move the reserve implementation into another file without changing that report or every caller that asks for it. Rust's modules let you separate the implementation from the names a caller uses, but the file move is only part of the work: we also need to decide which details the inspector may depend on.</p>
+<aside class="scope-note"><p><strong>Isolated Rust lab and read-only source navigation.</strong> This lesson continues <a href="06-results.html">validated construction with Result</a>. You'll complete a reporting function in a separate practice file containing two inline modules, then trace an existing public type through Moss. The live modules, biological rules, dependencies, and assignment remain unchanged.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Protect the measurement while exposing the report</h2>
+<p>We'll trace a public name through Moss, then recreate that boundary with a measurement module and an inspector in one practice file. Your reporting function will borrow through the public interface and return text it owns. A deliberate privacy error will help locate the boundary: the finished report should distinguish a measured zero from an unknown reserve without gaining access that could bypass construction rules.</p>
+</section>
+<h2 id="follow-a-name">Follow the public name into the project</h2>
+<p>Start with a caller's view of the real project. Open <code>crates/moss-sim/src/lib.rs</code> and find <code>pub use energy::{Energy, MovementRules, SpeciesEnergyRules};</code>, then find <code>mod energy;</code>. The second declaration makes the implementation module part of the crate. The first offers selected names from that module at the crate root, so a caller can write <code>moss_sim::Energy</code> without including the implementation module's name in its path. That gives us a public route we can keep stable when the implementation moves.</p>
+<p>Follow the declaration into <code>crates/moss-sim/src/energy.rs</code> to see who implements the type. Then open <code>crates/moss-web/src/browser/snapshot.rs</code> and find the browser consumer's import. You don't need to understand the whole energy module yet. Trace the name from public entry point to implementation and back to a caller; that route shows where an internal change could stop without spreading into presentation code.</p>
+<p>Before moving any files, it helps to distinguish the three levels you've just crossed. A package is described by a <code>Cargo.toml</code> and can contain compilation units called crates, such as a library and a binary. Modules organize items inside a crate. Moss's workspace contains simulation and browser packages, while this lab needs only one binary crate with two inline modules. Splitting that binary's code into modules doesn't require another manifest or another application process.</p>
+<p>The separation between Moss's packages serves a larger purpose than navigation. The simulation owns authoritative state and uses ECS without requiring a renderer; the browser depends on that simulation and presents what it reports. A native test can therefore exercise the simulation library without opening a window. Moving a file inside one crate leaves that dependency direction alone, which is why source organization and application architecture are different decisions.</p>
+<h2 id="one-public-reading">Give two responsibilities one public reading</h2>
+<p>We'll make the same boundary small enough to inspect in one file. A <code>measurement</code> module owns a validated <code>Energy</code> value, and an <code>inspector</code> module turns an optional borrowed measurement into owned text. The caller sees the re-exported <code>Energy</code> and <code>report</code> names. To produce Fern's line, the inspector only needs the public <code>units()</code> accessor; it doesn't need access to the representation that construction protects.</p>
+<p>For this lab, an energy value may contain zero through 100 units. That gives the constructor a boundary we can test: <code>Energy::new(101)</code> returns an error, while zero and 100 are valid. You already established that distinction in the preceding lesson. Putting the type in a module should protect the same distinction, so a caller can't bypass validation by writing an arbitrary number into a field.</p>
+<p>The inspector also has to describe a measurement that wasn't collected. Its input is <code>Option&lt;&amp;Energy&gt;</code>, so it can receive either a shared reference to a valid measurement or no measurement at all. A reference to a zero reserve should produce “0 units”; the absent case should produce “unknown reserve.” The inspector can make that presentation choice without knowing why collection failed.</p>
+<p>Follow the ownership through the call: the caller first constructs a valid reserve, then lets the inspector borrow it through the public interface. The inspector returns a string that owns the finished description. Once the call ends, the caller can change or discard the nickname without affecting the already prepared text. The module boundary changes how the function finds the type, but it doesn't change those borrowing and ownership relationships.</p>
+<h2 id="complete-the-boundary">Complete the reporting function</h2>
+<p>Now use that interface from <code>inspector::report</code>. Prepare the starter in a new directory and replace only that function's body; the preparation command refuses to overwrite an earlier attempt. Its initial <code>todo!</code> deliberately fails at runtime, so the first check should reach the unfinished function. If it fails on syntax or dependencies instead, resolve that setup problem before using the output to reason about reporting.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare modules --dest work/modules-practice
+python3 learning/scripts/labs.py check modules --file work/modules-practice/modules.rs</code></pre>
+<p>Before you edit, predict the two lines in <code>main</code>: one call receives a valid reserve and the other receives none. Then look at the return type and explain why changing the caller's nickname afterwards cannot alter the result. The function now lives across a module boundary, but the ownership question is the same one you've already practiced.</p>
+<details><summary>Hint 1: use the same two cases as the input type</summary><p>Match the optional reference. The <code>Some</code> branch has an <code>&amp;Energy</code>; call its public <code>units()</code> method. The <code>None</code> branch has no reserve number to print, so preserve that absence in the wording.</p></details>
+<details><summary>Hint 2: return text with its own storage</summary><p><code>format!</code> constructs a <code>String</code>. Use the supplied name in both branches and place the available units only in the measured branch. You do not need to clone the reserve, expose its field, or take ownership of the caller's nickname.</p></details>
+<details><summary>Complete starter file: modules.rs</summary>
+<pre><code class="language-rust" data-starter="modules">mod measurement {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct Energy { units: u32 }
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct InvalidReserve;
+
+    fn check_limit(units: u32) -&gt; Result&lt;(), InvalidReserve&gt; {
+        if units &lt;= 100 { Ok(()) } else { Err(InvalidReserve) }
+    }
+
+    impl Energy {
+        pub fn new(units: u32) -&gt; Result&lt;Self, InvalidReserve&gt; {
+            check_limit(units)?;
+            Ok(Self { units })
+        }
+        pub fn units(&amp;self) -&gt; u32 { self.units }
+    }
+}
+
+pub use measurement::{Energy, InvalidReserve};
+
+mod inspector {
+    use crate::Energy;
+
+    pub fn report(name: &amp;str, reserve: Option&lt;&amp;Energy&gt;) -&gt; String {
+        let _ = (name, reserve);
+        todo!(&quot;format the public reading without reaching into private fields&quot;)
+    }
+}
+
+pub use inspector::report;
+
+fn main() {
+    let reserve = Energy::new(60).expect(&quot;the authored fixture is valid&quot;);
+    println!(&quot;{}&quot;, report(&quot;Fern&quot;, Some(&amp;reserve)));
+    println!(&quot;{}&quot;, report(&quot;Unmeasured&quot;, None));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Energy, InvalidReserve, report};
+
+    #[test]
+    fn callers_keep_the_same_public_names() {
+        let reserve = Energy::new(60).unwrap();
+        assert_eq!(report(&quot;Fern&quot;, Some(&amp;reserve)), &quot;Fern: 60 units&quot;);
+        assert_eq!(reserve.units(), 60);
+    }
+    #[test]
+    fn missing_measurement_is_not_a_zero_measurement() {
+        let zero = Energy::new(0).unwrap();
+        assert_eq!(report(&quot;Fern&quot;, Some(&amp;zero)), &quot;Fern: 0 units&quot;);
+        assert_eq!(report(&quot;Fern&quot;, None), &quot;Fern: unknown reserve&quot;);
+    }
+    #[test]
+    fn the_constructor_retains_its_boundary() {
+        assert_eq!(Energy::new(100).unwrap().units(), 100);
+        assert_eq!(Energy::new(101), Err(InvalidReserve));
+    }
+    #[test]
+    fn returned_text_does_not_borrow_the_nickname() {
+        let mut nickname = String::from(&quot;Fern&quot;);
+        let text = report(&amp;nickname, None);
+        nickname.clear();
+        assert_eq!(text, &quot;Fern: unknown reserve&quot;);
+        assert!(nickname.is_empty());
+    }
+}</code></pre>
+</details>
+<details><summary>Complete worked answer: modules.rs</summary>
+<pre><code class="language-rust" data-runnable="modules">mod measurement {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct Energy { units: u32 }
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct InvalidReserve;
+
+    fn check_limit(units: u32) -&gt; Result&lt;(), InvalidReserve&gt; {
+        if units &lt;= 100 { Ok(()) } else { Err(InvalidReserve) }
+    }
+
+    impl Energy {
+        pub fn new(units: u32) -&gt; Result&lt;Self, InvalidReserve&gt; {
+            check_limit(units)?;
+            Ok(Self { units })
+        }
+        pub fn units(&amp;self) -&gt; u32 { self.units }
+    }
+}
+
+pub use measurement::{Energy, InvalidReserve};
+
+mod inspector {
+    use crate::Energy;
+
+    pub fn report(name: &amp;str, reserve: Option&lt;&amp;Energy&gt;) -&gt; String {
+        match reserve {
+            Some(value) =&gt; format!(&quot;{name}: {} units&quot;, value.units()),
+            None =&gt; format!(&quot;{name}: unknown reserve&quot;),
+        }
+    }
+}
+
+pub use inspector::report;
+
+fn main() {
+    let reserve = Energy::new(60).expect(&quot;the authored fixture is valid&quot;);
+    println!(&quot;{}&quot;, report(&quot;Fern&quot;, Some(&amp;reserve)));
+    println!(&quot;{}&quot;, report(&quot;Unmeasured&quot;, None));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Energy, InvalidReserve, report};
+
+    #[test]
+    fn callers_keep_the_same_public_names() {
+        let reserve = Energy::new(60).unwrap();
+        assert_eq!(report(&quot;Fern&quot;, Some(&amp;reserve)), &quot;Fern: 60 units&quot;);
+        assert_eq!(reserve.units(), 60);
+    }
+    #[test]
+    fn missing_measurement_is_not_a_zero_measurement() {
+        let zero = Energy::new(0).unwrap();
+        assert_eq!(report(&quot;Fern&quot;, Some(&amp;zero)), &quot;Fern: 0 units&quot;);
+        assert_eq!(report(&quot;Fern&quot;, None), &quot;Fern: unknown reserve&quot;);
+    }
+    #[test]
+    fn the_constructor_retains_its_boundary() {
+        assert_eq!(Energy::new(100).unwrap().units(), 100);
+        assert_eq!(Energy::new(101), Err(InvalidReserve));
+    }
+    #[test]
+    fn returned_text_does_not_borrow_the_nickname() {
+        let mut nickname = String::from(&quot;Fern&quot;);
+        let text = report(&amp;nickname, None);
+        nickname.clear();
+        assert_eq!(text, &quot;Fern: unknown reserve&quot;);
+        assert!(nickname.is_empty());
+    }
+}</code></pre>
+</details>
+<p>The reference should print <code>Fern: 60 units</code> and <code>Unmeasured: unknown reserve</code>, with four passing tests. Run <code>python3 learning/scripts/labs.py check modules</code> to check that printed reference. The command with <code>--file</code> checks your saved implementation instead. Neither command edits the real <code>moss-sim</code> library.</p>
+<h2 id="privacy-is-a-caller-rule">Use a privacy error to locate a responsibility</h2>
+<p>A working report shows that the public interface gives the inspector enough access. Now we'll check which implementation details that interface keeps private. The inspector can name <code>Energy</code> because the type is public, yet it still can't reach the private <code>units</code> field directly. Rust lets a module expose a type while controlling how callers construct and inspect its values. That is useful here: making the field public to silence an access error would also let callers create the out-of-range value the constructor was meant to reject.</p>
+<p>Try the following <strong>intentional compile-error line</strong> inside the isolated program's <code>main</code>, then remove it. The expected diagnostic is E0603: the helper function is private. You are deliberately attempting to call an implementation detail from its parent module, not discovering a runtime failure in reserve validation.</p>
+<pre><code class="language-rust">let _ = measurement::check_limit(60);</code></pre>
+<p>Call <code>Energy::new(60)</code> instead. It validates the input and constructs the value in one operation, so a successful call gives you an energy value that meets the module's rule. Calling the hidden helper on its own would only validate a number; the caller could ignore that result and would still need another way to construct the value. Keeping those steps together gives the public method a clear responsibility.</p>
+<p>Private items are usable within their defining module and its descendants. Broader visibility can be deliberately limited with <code>pub(super)</code> for the parent scope or <code>pub(crate)</code> for the crate. Those tools serve real internal consumers; they are not a ladder every function must climb. Start with the caller that needs access, then choose the narrowest suitable scope. The <a href="https://doc.rust-lang.org/reference/visibility-and-privacy.html">Rust Reference's privacy rules</a> supply the precise cases.</p>
+<h2 id="imports-do-not-create-another-type">Imports name existing items</h2>
+<p>Inside the inspector, <code>use crate::Energy;</code> makes the root's re-exported name available without repeating its full path. It names the type that already exists; no energy value is copied and no second library is loaded at runtime. Here <code>crate</code> starts at the current crate root, while <code>super</code> would start at the parent module. These paths locate a definition. A borrow such as <code>&amp;Energy</code> separately describes access to one of its values.</p>
+<p>Suppose you later rename <code>measurement</code>. If the crate root still re-exports <code>Energy</code> and preserves its behavior, the inspector and caller tests can keep using the same public path. This is the useful promise behind the re-export: callers depend on selected entry points, giving you room to reorganize implementation files without asking every consumer to follow along.</p>
+<p>The lab's tests live in the same crate, so they check its chosen names and behavior rather than the exact external API of the real Moss library. Moss also has separate integration tests that import its library as consumers. For this standalone exercise, the intentional privacy error is the additional compiler check that the helper stays hidden.</p>
+<h2 id="move-files-only-when-it-helps">Change file placement without inventing another architecture</h2>
+<p>So far the module bodies have stayed inline to make the practice file complete when copied. When navigation would benefit from separate files, replace the inline <code>mod measurement { ... }</code> body with <code>mod measurement;</code> and put that body in <code>src/measurement.rs</code> in a normal Cargo binary. You can do the same for the inspector. Each module is still declared once, so remove the inline definition when you move its contents.</p>
+<p>This file move leaves the module paths and public calls intact. A <code>use</code> declaration cannot replace <code>mod</code>, because an import names an item that must already be part of the module tree. The Book's <a href="https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html">file-separation example</a> is a useful reference when the compiler cannot find a newly moved module.</p>
+<p>For one final check, imagine moving <code>report</code> into another private implementation module while keeping its root re-export. The reporting, absence, construction, and ownership assertions should all remain the same: their inputs and results don't depend on an implementation folder. If a caller changes purely because you renamed that folder, trace whether it was reaching through the public boundary into an internal path.</p>
+<details><summary>Recall answer: a path and a borrow answer different questions</summary><p><code>crate::Energy</code> identifies the type through the crate's public route. <code>&amp;Energy</code> describes shared access to an instance. Re-exporting the type does not change the borrow, and owning the returned string does not make the private reserve field accessible.</p></details>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Keep the public promise when the implementation moves</h2>
+<p>Fern's report still says 60 units after the function crosses a module boundary, and its returned text still owns what it needs. Once your reporting check passes, return to the real <code>Energy</code> type and trace the same route from crate root to implementation to browser consumer. In <a href="08-collections.html">the collection lesson</a>, we'll turn this one owned description into a population report that stays understandable even when its inputs arrive in a different order.</p>
+</section>
+<p class="source-note">Optional reference: the Rust Book's <a href="https://doc.rust-lang.org/book/ch07-02-defining-modules-to-control-scope-and-privacy.html">module guide</a> distinguishes crate roots and module trees; its <a href="https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html">imports and re-exports chapter</a> explains the naming boundary. This original lab targets Rust 1.93.1, edition 2024; it has no external dependencies.</p>

@@ -66,8 +66,9 @@ from the schedule. The prepared movement adapter is also unscheduled. [Ecology](
 The renderer asks for zero or more complete simulation ticks. The simulation never reads render delta time to determine hunger or movement. Pause runs no ticks; Step runs exactly one. Playback speed changes how many ticks are requested, not what each tick means.
 
 The running schedule contains maintenance → complete tick. Movement is prepared
-but unscheduled. The [learning path](../tutorial/path/README.md) adds phases only
-when their rules have been reviewed. Its proposed dependencies are:
+but unscheduled. [Fieldnotes](../../learning/README.md) practices additional phases in its separate
+course project. Live Moss adds phases only when their rules have been reviewed.
+Its proposed dependencies are:
 
 | Relationship | Why the order matters |
 | --- | --- |
@@ -108,7 +109,7 @@ When choice is added, begin with direct conditions and a concrete activity enum.
 The proposed start/stop thresholds remember whether an animal is seeking;
 `FoodTarget` separately identifies a currently eligible opportunity. Remembering
 an activity does not guarantee that its old target is still valid. The
-[choice lesson](../tutorial/path/04-when-to-seek.md#turn-the-decision-into-behavior)
+[choice lesson](../../learning/content/16-targets.html)
 explains that data flow. Longer target commitment is a later policy choice if
 reselection exposes a problem; it needs no general policy engine in advance.
 
@@ -138,7 +139,7 @@ values. Temporary effects and live retuning need explicit policies when added.
 
 Group fields by ownership and query use. Keep small frequently read values on
 entities and larger shared definitions behind keys. The [ecology plan](ecology.md)
-owns the selected policy; [attributes context](../tutorial/context/attributes-and-defaults.md)
+owns the selected policy; [individual variation lesson](../../learning/content/17-variation.html)
 explains its tradeoffs. This is not a performance claim. Add derived caches or a
 new storage abstraction only after measuring a real need.
 

@@ -171,7 +171,7 @@ or meal, with one next action in `NOW.md`.
 ## Learning in short sessions — September 22, 2026
 
 Nick requested a week-to-month horizon while leaving today's movement session
-unchanged. The [new path](../tutorial/path/README.md) contains sixteen independent
+unchanged. The [new path](https://github.com/NicholasHazen/moss/blob/015ecdbf76a4c5253df8e1b182c0bee84c0cca9e/docs/tutorial/path/README.md) contains sixteen independent
 20–30 minute focus blocks, grouped by visible outcomes: foraging, individual
 variation, renewable supply/light, and explainable scarcity. These are flexible
 learning arcs, not promised calendar delivery dates or another active backlog.

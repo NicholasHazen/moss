@@ -1,0 +1,173 @@
+<p class="lesson-lead">Suppose you pause beside Fern and write down her reserve: 60 units. You let the world run for three more ticks, then check again. Fern now has 57, while your note still says 60. Both readings are useful, provided you know which moment each describes.</p>
+<aside class="scope-note"><p>This is an isolated Rust exercise in <code>ownership.rs</code>, using the distinction between ticks and observations from <a href="01-observe.html">the previous lesson</a>. You'll implement <code>capture</code> in a scratch project; the live movement assignment in <code>NOW.md</code> stays where it is.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Save a reading the world can leave behind</h2>
+<p>You'll build an observation that keeps Fern's earlier reserve and name while the caller continues using its live values. First we'll decide what the function needs to borrow and what its result needs to own; then you'll complete the capture and examine a borrow the compiler rejects. The finished example should explain why a saved 60 and a current 57 can coexist without either being wrong.</p>
+</section>
+
+<h2 id="two-questions">Read Fern's reserve without taking it away</h2>
+<p>The inspector needs to see the reserve that belongs to the simulation. Afterward, the simulation still needs that value so it can pay Fern's upkeep on the next tick. That gives us a useful starting point for the function's signature: <code>capture</code> should borrow the reserve while it reads it. In Rust, the parameter <code>reserve: &amp;Reserve</code> asks for that access. The <code>&amp;</code> means the function receives a reference to the caller's value, so it can inspect the reserve without becoming its owner.</p>
+<p>Borrowing is enough to read the value now, but our note needs to survive what happens next. If we want it to remember 60 after Fern's reserve becomes 57, the returned observation must store a number of its own. We'll therefore borrow the live reserve at the entrance to <code>capture</code>, then put a copy into the observation we return. These two choices fit together: borrowing describes how we access the input, while copying describes what we keep.</p>
+<p>Our <code>Reserve</code> is a small struct containing one <code>u32</code>. It derives <code>Copy</code>, which allows Rust to duplicate that value when an expression needs to provide an owned <code>Reserve</code>. The copy is independent of the original. Once we have saved it, a later assignment to Fern's live reserve affects only the live value, just as changing a measurement doesn't rewrite an earlier note.</p>
+<p>You can read a function's parameter types as a description of this relationship with its caller. Keep the following table nearby while working through the example; the important distinction is what the function receives and what the caller can still use afterward.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Function parameter ownership and access"><table><caption>How each parameter relates to the caller's value</caption><thead><tr><th scope="col">Parameter</th><th scope="col">Meaning in this lab</th></tr></thead><tbody><tr><td><code>reserve: Reserve</code></td><td>The function receives an owned value. Because <code>Reserve</code> implements <code>Copy</code>, passing it also leaves the caller's value available.</td></tr><tr><td><code>reserve: &amp;Reserve</code></td><td>The function borrows the caller's value for reading.</td></tr><tr><td><code>reserve: &amp;mut Reserve</code></td><td>The function borrows exclusive mutable access, allowing it to change the caller's value.</td></tr><tr><td><code>name: String</code></td><td>The function receives ownership of the string. Passing an existing variable moves that string unless the caller explicitly provides a clone.</td></tr></tbody></table></div>
+<p>The <code>String</code> row shows why we need to look at the type, rather than guess from the size of a variable or whether it sits on the stack. A <code>String</code> owns a growable text buffer and doesn't implement <code>Copy</code>. Duplicating its text requires an explicit operation. We'll use that distinction to give the saved reserve a name.</p>
+
+<h2 id="a-snapshot-with-a-name">Keep the name with the measurement</h2>
+<p>A reserve of 60 isn't much of a historical record unless we also know whose reserve it was. Our <code>Observation</code> will contain both the copied <code>Reserve</code> and an owned <code>String</code>. Keeping its own name means that the observation can still say “Fern” even if someone later changes the live nickname to “Fern the hare.” The whole reading should describe the moment we captured it.</p>
+<p>To read the name, <code>capture</code> takes a <code>&amp;str</code>: a borrowed view of UTF-8 text, also called a string slice. This gives callers some flexibility. They can pass the literal <code>"Fern"</code>, or borrow an existing <code>String</code> with <code>&amp;nickname</code>; Rust can convert that reference to the string slice the function expects. In either case, the function can read the text while its existing owner keeps it.</p>
+<p>Inside the function, we'll turn that borrowed text into an owned string with <code>name.to_owned()</code>. This allocation is doing useful work: it gives the observation text that can outlive changes to the nickname. The reserve field takes a different route. Writing <code>*reserve</code> reads through the reference, and using that expression to initialize the field copies our <code>Copy</code> value. The asterisk is a dereference operator; it isn't a request to clone an arbitrary object. If <code>Reserve</code> instead owned a non-copyable buffer, Rust would reject an attempt to move it out through this shared reference.</p>
+<p>Our <code>Observation</code> contains that owned <code>String</code> and does not implement <code>Copy</code>, so transferring the whole observation will move it. Before filling in the function, follow one observation through its caller. We capture Fern at 60, change the live reserve to 57, and then write <code>let saved = reading;</code>. Predict the live reserve, the saved reserve, and the saved name at the end. In particular, consider whether giving the observation a new owner changes the values stored inside it.</p>
+<details><summary>Hint 1: what access do the inputs allow?</summary><p>Both inputs are shared references. They let <code>capture</code> read the caller's data, but they don't let it take an owned string away from the caller or assign a new value to the caller's reserve. The returned observation therefore needs its own values.</p></details>
+<details><summary>Hint 2: build the two fields</summary><p>Construct an <code>Observation</code> with <code>name.to_owned()</code> in its name field and <code>*reserve</code> in its reserve field. The first expression creates owned text; the second provides a copy of this small struct.</p></details>
+<details><summary>Prediction answer</summary><p>The live reserve ends at 57, while the saved observation contains 60 and “Fern.” The assignment to <code>saved</code> moves ownership of the existing observation, including its string. It doesn't make another observation or alter the one we already captured. After that move, use <code>saved</code> to access it; <code>reading</code> is no longer available as an observation.</p></details>
+
+<h2 id="one-edit">Build the saved observation</h2>
+<p>From the repository root, run the commands below to prepare and check your practice file. The destination must be a new directory, so choose another name if you've used this one before. The first check should compile successfully and then fail when <code>capture</code> reaches its unfinished <code>todo!</code>. That failure gives you the starting point for the edit.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare ownership --dest work/ownership-practice
+python3 learning/scripts/labs.py check ownership --file work/ownership-practice/ownership.rs</code></pre>
+<p>Replace the body of <code>capture</code> and run the second command again. The three tests follow the promises we've made: capturing must leave the source usable, the stored reserve must survive a later reserve change, and the saved name must survive a later nickname change. If the compiler rejects your edit before those tests run, use its diagnostic to resolve the type or syntax problem first.</p>
+<details><summary>Complete starter file: ownership.rs</summary>
+<pre><code class="language-rust" data-starter="ownership">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Reserve { units: u32 }
+
+#[derive(Debug, PartialEq, Eq)]
+struct Observation {
+    name: String,
+    reserve: Reserve,
+}
+
+fn capture(name: &amp;str, reserve: &amp;Reserve) -&gt; Observation {
+    let _ = (name, reserve);
+    todo!("save owned text and a copied reserve")
+}
+
+fn main() {
+    let nickname = String::from("Fern");
+    let mut reserve = Reserve { units: 60 };
+    let reading = capture(&amp;nickname, &amp;reserve);
+    reserve.units = 57;
+    let saved = reading;
+    println!("{}: live={} saved={}", nickname, reserve.units, saved.reserve.units);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capture_preserves_the_source() {
+        let name = String::from("Fern");
+        let reserve = Reserve { units: 60 };
+        let reading = capture(&amp;name, &amp;reserve);
+        assert_eq!(name, "Fern");
+        assert_eq!(reserve.units, 60);
+        assert_eq!(reading.name, "Fern");
+        assert_eq!(reading.reserve.units, 60);
+    }
+
+    #[test]
+    fn captured_reserve_is_independent() {
+        let mut reserve = Reserve { units: 60 };
+        let reading = capture("Fern", &amp;reserve);
+        reserve.units = 57;
+        assert_eq!(reserve.units, 57);
+        assert_eq!(reading.reserve.units, 60);
+    }
+
+    #[test]
+    fn captured_text_is_independent() {
+        let mut name = String::from("Fern");
+        let reading = capture(&amp;name, &amp;Reserve { units: 60 });
+        name.push_str(" the hare");
+        assert_eq!(name, "Fern the hare");
+        assert_eq!(reading.name, "Fern");
+    }
+}</code></pre>
+</details>
+<details><summary>Complete worked answer: ownership.rs</summary>
+<pre><code class="language-rust" data-runnable="ownership">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Reserve { units: u32 }
+
+#[derive(Debug, PartialEq, Eq)]
+struct Observation {
+    name: String,
+    reserve: Reserve,
+}
+
+fn capture(name: &amp;str, reserve: &amp;Reserve) -&gt; Observation {
+    Observation { name: name.to_owned(), reserve: *reserve }
+}
+
+fn main() {
+    let nickname = String::from("Fern");
+    let mut reserve = Reserve { units: 60 };
+    let reading = capture(&amp;nickname, &amp;reserve);
+    reserve.units = 57;
+    let saved = reading;
+    println!("{}: live={} saved={}", nickname, reserve.units, saved.reserve.units);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capture_preserves_the_source() {
+        let name = String::from("Fern");
+        let reserve = Reserve { units: 60 };
+        let reading = capture(&amp;name, &amp;reserve);
+        assert_eq!(name, "Fern");
+        assert_eq!(reserve.units, 60);
+        assert_eq!(reading.name, "Fern");
+        assert_eq!(reading.reserve.units, 60);
+    }
+
+    #[test]
+    fn captured_reserve_is_independent() {
+        let mut reserve = Reserve { units: 60 };
+        let reading = capture("Fern", &amp;reserve);
+        reserve.units = 57;
+        assert_eq!(reserve.units, 57);
+        assert_eq!(reading.reserve.units, 60);
+    }
+
+    #[test]
+    fn captured_text_is_independent() {
+        let mut name = String::from("Fern");
+        let reading = capture(&amp;name, &amp;Reserve { units: 60 });
+        name.push_str(" the hare");
+        assert_eq!(name, "Fern the hare");
+        assert_eq!(reading.name, "Fern");
+    }
+}</code></pre>
+</details>
+<p>In the answer, the only persistent data created by <code>capture</code> is the observation it returns. Its inputs are borrowed for the duration of the call, so the caller can carry on using the nickname and reserve afterward. Running the program prints <code>Fern: live=57 saved=60</code>, making the difference between the live value and the saved measurement visible.</p>
+<details><summary>Check the printed reference or use rustc directly</summary><p>The command <code>python3 learning/scripts/labs.py check ownership</code> checks the course's printed answer. Keep using <code>--file</code> to check your own edit. If you'd like to run the file without the course runner, use the commands below from the directory containing <code>ownership.rs</code>. They run the example and its three tests with the pinned compiler.</p>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 ownership.rs -o ownership
+./ownership
+rustc +1.93.1 --edition=2024 --test ownership.rs -o ownership-tests
+./ownership-tests</code></pre>
+</details>
+
+<h2 id="a-borrow-ends-when-it-is-no-longer-needed">Why can the caller change Fern afterward?</h2>
+<p>The saved reading works, but we should also be able to explain why Rust permits the caller's next change. We have borrowed Fern's reserve and then changed it in the same caller. That may seem at odds with the idea of a shared reference: if somebody is reading the reserve, shouldn't Rust prevent us from changing it? The missing detail is when that access is still needed. Our <code>capture</code> function returns owned data, so nothing in its result continues to borrow the input. Once the call finishes, that shared borrow has done its job, and the caller can mutate the live reserve.</p>
+<p>Now keep a reference to the live value instead of making a saved observation. The following fragment intentionally fails to compile; consider it separately from your working file. Pay attention to the order of the assignment and the final print.</p>
+<pre><code class="language-rust">let mut reserve = Reserve { units: 60 };
+let borrowed = &amp;reserve;
+reserve.units = 57;
+println!("{}", borrowed.units);</code></pre>
+<p>The print still needs <code>borrowed</code>, so the shared borrow remains in use across the attempted assignment. Rust rejects that mutation because we would be changing the value while the shared reference is still needed. Moving the print before the assignment gives the borrow an earlier last use and allows the later change. Keeping an independent copy would solve a different problem: it would let us print the earlier value after changing the live one, which is exactly what our observation does.</p>
+<p>The word <code>mut</code> has a specific part in this story. Declaring <code>let mut reserve</code> allows us to assign to that local value; lending <code>&amp;mut reserve</code> would let a function change it through an exclusive reference. Our inspector asks only for <code>&amp;Reserve</code>, because reading is all it needs.</p>
+<details><summary>What if the variable holding the reference is mutable?</summary><p>A mutable binding that holds a shared reference lets you assign a different reference to that binding. It still holds a shared reference, so it doesn't gain permission to mutate the referred-to reserve.</p></details>
+<p>This gives us a more useful response to an ownership error than cloning everything until the compiler accepts it. Decide what needs to remain usable and what needs to be remembered. Here, a short borrow provides access, a copy preserves the measurement, and an owned string preserves its name. Each operation has a reason in the design.</p>
+
+<section class="lesson-summary" id="a-useful-stopping-point" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">An old reading can be the right reading</h2>
+<p>We can now explain the two numbers that opened the lesson. Fern has 57 because the world has continued to change; the saved observation has 60 because it owns the measurement taken earlier. The remaining responsibility belongs to the interface: it must tell the reader that 60 is historical. If it labels that value “current reserve,” correct ownership won't rescue the misleading display. A fuller journal would attach a tick and run identity to each observation, then decide how many old observations to keep.</p>
+<p>Before leaving the example, trace the data once more and identify where duplication actually occurs: when we pass <code>&amp;reserve</code>, when we store <code>*reserve</code>, or when we move <code>reading</code> into <code>saved</code>. Being able to distinguish these operations will help when an ECS query lends you access to a much larger world.</p>
+<details><summary>Recall answer</summary><p>Passing <code>&amp;reserve</code> gives borrowed access. Storing <code>*reserve</code> copies our <code>Copy</code> struct, producing an independent measurement. Moving the observation into <code>saved</code> transfers ownership of the existing data, without allocating another string. The text was duplicated earlier, when <code>to_owned()</code> created the observation's name.</p></details>
+<p>The exercise checks those ownership decisions in a small function. In <a href="03-queries.html">the next lesson</a>, we'll use the same reasoning to describe an ECS system's access: which entities it can read, and which components it is allowed to change.</p>
+</section>
+<p class="source-note">For another explanation of moves and borrows, follow <a href="https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html">the Rust Book's ownership chapter</a> into <a href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">its borrowing chapter</a>. The <a href="https://doc.rust-lang.org/std/marker/trait.Copy.html">Copy documentation</a> and <a href="https://doc.rust-lang.org/std/string/struct.String.html">String reference</a> are useful when you want to check a particular type's behavior. Keep our inspector's question in mind as you read: what must the caller still be able to use after this function returns?</p>

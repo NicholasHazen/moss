@@ -1,0 +1,396 @@
+<p class="lesson-lead">Fern chooses a nearby patch after seeing one unit of biomass there. Before she takes a bite, that unit is gone. Her observation can still be an accurate record of what she saw, even though the meal must now fail.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Choose from an observation, then check the action</h2>
+<p>We'll follow Fern's intention through three different values: an owned reading of a patch, the identity she selects, and the current patch she eventually tries to use. You'll implement <code>select_target</code> with a distance rule and a stable tie-breaker. The supplied observer and bite helper let us examine that choice before and after the world changes.</p>
+<p>The goal is to make a repeatable choice without treating it as permission to eat. You should finish able to explain why reversing observations leaves the chosen ID unchanged, why visibility doesn't establish contact, and why an emptied or missing target produces a rejection while the old reading remains intact.</p>
+</section>
+<aside class="scope-note"><p>This isolated lab proposes a grid policy: choose the nearest observed nonempty patch within a Manhattan radius, break distance ties by stable ID, and require same-cell contact for a one-unit bite. These teaching rules don't activate choice, travel, or feeding in live Moss.</p></aside>
+
+<h2 id="three-moments">Follow an intention from observation to action</h2>
+<p><a href="15-meals.html">The finite-meal lesson</a> made each consumer act on the patch's current balance. Now we'll put some time between learning about a patch and attempting to use it. That gap matters because another action can change the world while Fern retains her intention.</p>
+<p>We'll represent what she saw with an owned <code>PatchReading</code>: an ID, position, and biomass copied at observation time. The selector examines those readings and returns only the chosen ID. Later, the action helper uses that ID to find a current patch and checks whether a bite is still possible.</p>
+<p>Each stage has a different job. Observation limits what the actor knows. Selection expresses a preference among those known opportunities. Resolution checks whether the remembered interaction can happen now. If resolution simply searched the entire world for the best current patch, it could silently replace Fern's choice with information she never observed.</p>
+
+<h2 id="give-perception-a-boundary">Build the actor's local view</h2>
+<p>To make the choice belong to Fern, first limit what information reaches it. The observation function can read authoritative patches to construct a local view, but the selector receives only the copied readings. This keeps its inputs smaller than the browser's global inspector. We may want to show every patch to a person investigating the simulation without giving every animal that same knowledge.</p>
+<p>For this lab, local means within a Manhattan distance from the actor. Add the absolute horizontal and vertical differences: from (0, 0), both (2, 0) and (1, 1) are two steps away, while (2, 1) is three. A radius of two includes the first pair and excludes the third. There are no walls or occlusion rules in this model.</p>
+<p>The arithmetic needs to support the coordinate type we chose. Subtracting two extreme signed coordinates can overflow before an absolute-value operation gets a chance to run. Our helper uses <code>abs_diff</code> separately on each axis, then converts the results to <code>u64</code> before adding them. The <a href="https://doc.rust-lang.org/std/primitive.i32.html#method.abs_diff">standard integer reference</a> describes the absolute-difference operation; the maximum-coordinate test checks that the combined distance remains correct.</p>
+<p>The selector repeats the radius filter even though the supplied observer already limits its output. That makes the selector's own contract hold when a caller supplies a broader set of readings. It doesn't establish when those readings were captured or whether their IDs belong to the current run. The fixture assumes unique identities within one run, leaving retained history and reset provenance to later work.</p>
+
+<h2 id="make-the-tie-rule-visible">Choose the nearest eligible reading</h2>
+<p>Once we've excluded empty and out-of-range readings, we still need a repeatable answer when several candidates remain. We'll compare <code>(distance, stable ID)</code> pairs. Distance comes first; ID resolves only a distance tie. This means that a closer high-ID patch beats a farther low-ID patch, while reversing the input order can't change an equal-distance winner.</p>
+<p>Rust compares ordered tuples element by element, so <code>min_by_key</code> can express that policy directly. The <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.min_by_key">iterator reference</a> explains the operation. The consequential decision is the ordering of the fields in our key: reversing them would make identity more important than proximity.</p>
+<table><caption>Choices from (0, 0) with radius four</caption><thead><tr><th scope="col">Observed candidates</th><th scope="col">Selected result</th></tr></thead><tbody><tr><td>ID 9 at (1, 0), ID 2 at (0, 1), both nonempty</td><td>ID 2: equal distances are resolved by stable ID.</td></tr><tr><td>ID 1 at (4, 0), ID 9 at (2, 0), both nonempty</td><td>ID 9: the closer patch wins.</td></tr><tr><td>ID 0 at (1, 0) with zero biomass</td><td>No target from this reading alone: the observed supply is empty.</td></tr></tbody></table>
+<p>This policy is intentionally small enough to explain through those examples. It doesn't weigh danger, nutrition, crowding, or the energy needed to travel. Adding such criteria would require us to decide how they compare and which observations supply them. A deterministic choice gives us a result we can reproduce; it doesn't by itself show that the choice is good for the animal.</p>
+
+<h2 id="revalidate-the-selected-action">Find out whether the chosen bite still fits</h2>
+<p>Selection has given us an identity to attempt, so the next task is to establish whether that exact interaction is possible now. The supplied <code>bite_selected</code> helper begins by checking that the actor's reserve is valid. It then obtains the selected ID and looks for that exact patch in the current collection. A missing target returns an error, even if another patch is available beside the actor. Choosing that other patch would hide the failure of the remembered intention.</p>
+<p>After finding the patch, the helper checks current biomass, same-cell contact, and room in reserve. Visibility was enough to consider a patch, but it wasn't enough to eat from it. With all checks satisfied, the helper adds one reserve unit and removes one biomass unit. Positive biomass makes that subtraction safe, and reserve strictly below a valid capacity makes the addition safe.</p>
+<p>Rejection leaves the target stored on the actor. The helper reports what prevented this attempt; it doesn't decide whether the animal should wait, clear its target, or observe again. An activity policy can use the returned reason to make that decision later.</p>
+<p>To create the opening failure deliberately, <code>main</code> changes the patch's current biomass to zero after observation and selection. This models the state left by an intervening meal, but no second animal executes in this standalone fixture. The distinction matters when reading the result: we've tested the effect of intervening depletion, not a complete competing-actor schedule.</p>
+
+<h2 id="predict-the-stale-reading">Keep the old reading and change the patch</h2>
+<p>Begin with a reading of ID 3 containing one biomass unit. After selecting it, empty the current patch while keeping the reading. Predict the bite result, Fern's reserve, and the value in that old reading. Then consider removing ID 3 entirely while leaving a different patch beside Fern.</p>
+<details><summary>Hint 1: identify which values were copied</summary><p>The reading owns the biomass amount recorded earlier. Changing the current patch doesn't assign anything to that saved value.</p></details>
+<details><summary>Hint 2: resolve the chosen identity</summary><p>The requested action still names ID 3. A different available patch can't make that identity resolve or authorize redirecting the bite.</p></details>
+<details><summary>Prediction answer</summary><p>An emptied ID 3 produces an empty-target rejection while the old reading still reports one. Removing ID 3 produces a missing-target rejection and leaves the other patch untouched. Neither attempt increases reserve.</p></details>
+<p>Prepare a separate practice file from the repository root. Your edit is the body of <code>select_target</code>; the observer and action checks are provided so its choice can be tested through the complete sequence.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare targets --dest work/targets-practice
+python3 learning/scripts/labs.py check targets --file work/targets-practice/targets.rs</code></pre>
+<p>The first run reaches the selector's intentional <code>todo!</code>. After your edit, expect nine named tests to pass. If reversing readings changes the chosen ID, inspect the comparison key. If the emptied patch grants reserve, follow the action's current-state checks rather than changing the saved observation.</p>
+<details><summary>Complete starter: targets.rs</summary><pre><code class="language-rust" data-starter="targets">#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Id(u32);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Position { x: i32, y: i32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Patch { id: Id, position: Position, biomass_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PatchReading { id: Id, position: Position, biomass_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Actor {
+    position: Position,
+    reserve_units: u32,
+    capacity_units: u32,
+    target: Option&lt;Id&gt;,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Rejection { InvalidReserve, NoTarget, MissingTarget, EmptyTarget, NotInContact, NoRoom }
+
+fn distance(a: Position, b: Position) -&gt; u64 {
+    u64::from(a.x.abs_diff(b.x)) + u64::from(a.y.abs_diff(b.y))
+}
+
+fn observe_local(position: Position, radius: u32, patches: &amp;[Patch]) -&gt; Vec&lt;PatchReading&gt; {
+    patches.iter().filter(|patch| distance(position, patch.position) &lt;= u64::from(radius))
+        .map(|patch| PatchReading {
+            id: patch.id, position: patch.position, biomass_units: patch.biomass_units,
+        }).collect()
+}
+
+fn select_target(position: Position, radius: u32, readings: &amp;[PatchReading]) -&gt; Option&lt;Id&gt; {
+    let _ = (position, radius, readings);
+    todo!("choose nearby nonempty supply by distance, then stable ID")
+}
+
+fn bite_selected(actor: &amp;mut Actor, patches: &amp;mut [Patch]) -&gt; Result&lt;u32, Rejection&gt; {
+    if actor.reserve_units &gt; actor.capacity_units { return Err(Rejection::InvalidReserve); }
+    let target = actor.target.ok_or(Rejection::NoTarget)?;
+    let patch = patches.iter_mut().find(|patch| patch.id == target)
+        .ok_or(Rejection::MissingTarget)?;
+    if patch.biomass_units == 0 { return Err(Rejection::EmptyTarget); }
+    if actor.position != patch.position { return Err(Rejection::NotInContact); }
+    if actor.reserve_units == actor.capacity_units { return Err(Rejection::NoRoom); }
+    actor.reserve_units += 1;
+    patch.biomass_units -= 1;
+    Ok(1)
+}
+
+fn main() {
+    let position = Position { x: 0, y: 0 };
+    let mut patches = [Patch { id: Id(3), position, biomass_units: 1 }];
+    let mut actor = Actor { position, reserve_units: 0, capacity_units: 10, target: None };
+    let readings = observe_local(position, 2, &amp;patches);
+    actor.target = select_target(position, 2, &amp;readings);
+    println!("chosen={:?}", actor.target);
+    patches[0].biomass_units = 0; // Authored intervening depletion, after observation.
+    println!("action={:?}", bite_selected(&amp;mut actor, &amp;mut patches));
+    println!("reserve={} biomass={}", actor.reserve_units, patches[0].biomass_units);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn origin() -&gt; Position { Position { x: 0, y: 0 } }
+    fn actor() -&gt; Actor {
+        Actor { position: origin(), reserve_units: 0, capacity_units: 10, target: None }
+    }
+    fn reading(id: u32, x: i32, y: i32, biomass_units: u32) -&gt; PatchReading {
+        PatchReading { id: Id(id), position: Position { x, y }, biomass_units }
+    }
+
+    #[test]
+    fn local_observation_excludes_distant_supply() {
+        let patches = [
+            Patch { id: Id(9), position: Position { x: 2, y: 0 }, biomass_units: 1 },
+            Patch { id: Id(1), position: Position { x: 3, y: 0 }, biomass_units: 100 },
+        ];
+        let readings = observe_local(origin(), 2, &amp;patches);
+        assert_eq!(readings.iter().map(|p| p.id).collect::&lt;Vec&lt;_&gt;&gt;(), vec![Id(9)]);
+        assert_eq!(select_target(origin(), 2, &amp;readings), Some(Id(9)));
+    }
+
+    #[test]
+    fn ties_choose_lowest_id_independently_of_input_order() {
+        let mut readings = [reading(9, 1, 0, 3), reading(2, 0, 1, 3)];
+        assert_eq!(select_target(origin(), 4, &amp;readings), Some(Id(2)));
+        readings.reverse();
+        assert_eq!(select_target(origin(), 4, &amp;readings), Some(Id(2)));
+    }
+
+    #[test]
+    fn distance_beats_identity_and_empty_supply_is_ineligible() {
+        let readings = [reading(1, 4, 0, 10), reading(9, 2, 0, 1), reading(0, 1, 0, 0)];
+        assert_eq!(select_target(origin(), 4, &amp;readings), Some(Id(9)));
+    }
+
+    #[test]
+    fn empty_or_out_of_range_readings_do_not_invent_a_target() {
+        assert_eq!(select_target(origin(), 2, &amp;[]), None);
+        assert_eq!(select_target(origin(), 2, &amp;[reading(3, 0, 0, 0)]), None);
+        assert_eq!(select_target(origin(), 2, &amp;[reading(3, 3, 0, 10)]), None);
+    }
+
+    #[test]
+    fn depletion_after_observation_rejects_without_partial_state() {
+        let mut actor = actor();
+        let mut patches = [Patch { id: Id(3), position: origin(), biomass_units: 1 }];
+        let readings = observe_local(actor.position, 2, &amp;patches);
+        actor.target = select_target(actor.position, 2, &amp;readings);
+        patches[0].biomass_units = 0;
+        let before = (actor, patches);
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::EmptyTarget));
+        assert_eq!((actor, patches), before);
+        assert_eq!(readings[0].biomass_units, 1);
+    }
+
+    #[test]
+    fn removed_target_does_not_redirect_the_action() {
+        let mut actor = actor();
+        let mut patches = vec![
+            Patch { id: Id(3), position: origin(), biomass_units: 1 },
+            Patch { id: Id(4), position: origin(), biomass_units: 5 },
+        ];
+        let readings = observe_local(actor.position, 2, &amp;patches);
+        actor.target = select_target(actor.position, 2, &amp;readings);
+        patches.retain(|patch| patch.id != Id(3));
+        let before_actor = actor;
+        let before_patches = patches.clone();
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::MissingTarget));
+        assert_eq!(actor, before_actor);
+        assert_eq!(patches, before_patches);
+    }
+
+    #[test]
+    fn seeing_a_target_does_not_mean_contact_at_action_time() {
+        let mut actor = actor();
+        let mut patches = [Patch {
+            id: Id(3), position: Position { x: 1, y: 0 }, biomass_units: 3,
+        }];
+        let readings = observe_local(actor.position, 2, &amp;patches);
+        actor.target = select_target(actor.position, 2, &amp;readings);
+        let before = (actor, patches);
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::NotInContact));
+        assert_eq!((actor, patches), before);
+    }
+
+    #[test]
+    fn successful_bite_checks_room_and_reports_only_actual_gain() {
+        let mut actor = Actor { reserve_units: 9, target: Some(Id(3)), ..actor() };
+        let mut patches = [Patch { id: Id(3), position: origin(), biomass_units: 2 }];
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Ok(1));
+        assert_eq!((actor.reserve_units, patches[0].biomass_units), (10, 1));
+        let before = (actor, patches);
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::NoRoom));
+        assert_eq!((actor, patches), before);
+    }
+
+    #[test]
+    fn extreme_coordinates_do_not_overflow_the_distance() {
+        let a = Position { x: i32::MIN, y: i32::MIN };
+        let b = Position { x: i32::MAX, y: i32::MAX };
+        assert_eq!(distance(a, b), 8_589_934_590);
+        let readings = [PatchReading { id: Id(3), position: b, biomass_units: 1 }];
+        assert_eq!(select_target(a, u32::MAX, &amp;readings), None);
+    }
+}</code></pre></details>
+<details><summary>Complete worked answer: targets.rs</summary><pre><code class="language-rust" data-runnable="targets">#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Id(u32);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Position { x: i32, y: i32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Patch { id: Id, position: Position, biomass_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PatchReading { id: Id, position: Position, biomass_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Actor {
+    position: Position,
+    reserve_units: u32,
+    capacity_units: u32,
+    target: Option&lt;Id&gt;,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Rejection { InvalidReserve, NoTarget, MissingTarget, EmptyTarget, NotInContact, NoRoom }
+
+fn distance(a: Position, b: Position) -&gt; u64 {
+    u64::from(a.x.abs_diff(b.x)) + u64::from(a.y.abs_diff(b.y))
+}
+
+fn observe_local(position: Position, radius: u32, patches: &amp;[Patch]) -&gt; Vec&lt;PatchReading&gt; {
+    patches.iter().filter(|patch| distance(position, patch.position) &lt;= u64::from(radius))
+        .map(|patch| PatchReading {
+            id: patch.id, position: patch.position, biomass_units: patch.biomass_units,
+        }).collect()
+}
+
+fn select_target(position: Position, radius: u32, readings: &amp;[PatchReading]) -&gt; Option&lt;Id&gt; {
+    readings.iter()
+        .filter(|patch| patch.biomass_units &gt; 0
+            &amp;&amp; distance(position, patch.position) &lt;= u64::from(radius))
+        .min_by_key(|patch| (distance(position, patch.position), patch.id))
+        .map(|patch| patch.id)
+}
+
+fn bite_selected(actor: &amp;mut Actor, patches: &amp;mut [Patch]) -&gt; Result&lt;u32, Rejection&gt; {
+    if actor.reserve_units &gt; actor.capacity_units { return Err(Rejection::InvalidReserve); }
+    let target = actor.target.ok_or(Rejection::NoTarget)?;
+    let patch = patches.iter_mut().find(|patch| patch.id == target)
+        .ok_or(Rejection::MissingTarget)?;
+    if patch.biomass_units == 0 { return Err(Rejection::EmptyTarget); }
+    if actor.position != patch.position { return Err(Rejection::NotInContact); }
+    if actor.reserve_units == actor.capacity_units { return Err(Rejection::NoRoom); }
+    actor.reserve_units += 1;
+    patch.biomass_units -= 1;
+    Ok(1)
+}
+
+fn main() {
+    let position = Position { x: 0, y: 0 };
+    let mut patches = [Patch { id: Id(3), position, biomass_units: 1 }];
+    let mut actor = Actor { position, reserve_units: 0, capacity_units: 10, target: None };
+    let readings = observe_local(position, 2, &amp;patches);
+    actor.target = select_target(position, 2, &amp;readings);
+    println!("chosen={:?}", actor.target);
+    patches[0].biomass_units = 0; // Authored intervening depletion, after observation.
+    println!("action={:?}", bite_selected(&amp;mut actor, &amp;mut patches));
+    println!("reserve={} biomass={}", actor.reserve_units, patches[0].biomass_units);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn origin() -&gt; Position { Position { x: 0, y: 0 } }
+    fn actor() -&gt; Actor {
+        Actor { position: origin(), reserve_units: 0, capacity_units: 10, target: None }
+    }
+    fn reading(id: u32, x: i32, y: i32, biomass_units: u32) -&gt; PatchReading {
+        PatchReading { id: Id(id), position: Position { x, y }, biomass_units }
+    }
+
+    #[test]
+    fn local_observation_excludes_distant_supply() {
+        let patches = [
+            Patch { id: Id(9), position: Position { x: 2, y: 0 }, biomass_units: 1 },
+            Patch { id: Id(1), position: Position { x: 3, y: 0 }, biomass_units: 100 },
+        ];
+        let readings = observe_local(origin(), 2, &amp;patches);
+        assert_eq!(readings.iter().map(|p| p.id).collect::&lt;Vec&lt;_&gt;&gt;(), vec![Id(9)]);
+        assert_eq!(select_target(origin(), 2, &amp;readings), Some(Id(9)));
+    }
+
+    #[test]
+    fn ties_choose_lowest_id_independently_of_input_order() {
+        let mut readings = [reading(9, 1, 0, 3), reading(2, 0, 1, 3)];
+        assert_eq!(select_target(origin(), 4, &amp;readings), Some(Id(2)));
+        readings.reverse();
+        assert_eq!(select_target(origin(), 4, &amp;readings), Some(Id(2)));
+    }
+
+    #[test]
+    fn distance_beats_identity_and_empty_supply_is_ineligible() {
+        let readings = [reading(1, 4, 0, 10), reading(9, 2, 0, 1), reading(0, 1, 0, 0)];
+        assert_eq!(select_target(origin(), 4, &amp;readings), Some(Id(9)));
+    }
+
+    #[test]
+    fn empty_or_out_of_range_readings_do_not_invent_a_target() {
+        assert_eq!(select_target(origin(), 2, &amp;[]), None);
+        assert_eq!(select_target(origin(), 2, &amp;[reading(3, 0, 0, 0)]), None);
+        assert_eq!(select_target(origin(), 2, &amp;[reading(3, 3, 0, 10)]), None);
+    }
+
+    #[test]
+    fn depletion_after_observation_rejects_without_partial_state() {
+        let mut actor = actor();
+        let mut patches = [Patch { id: Id(3), position: origin(), biomass_units: 1 }];
+        let readings = observe_local(actor.position, 2, &amp;patches);
+        actor.target = select_target(actor.position, 2, &amp;readings);
+        patches[0].biomass_units = 0;
+        let before = (actor, patches);
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::EmptyTarget));
+        assert_eq!((actor, patches), before);
+        assert_eq!(readings[0].biomass_units, 1);
+    }
+
+    #[test]
+    fn removed_target_does_not_redirect_the_action() {
+        let mut actor = actor();
+        let mut patches = vec![
+            Patch { id: Id(3), position: origin(), biomass_units: 1 },
+            Patch { id: Id(4), position: origin(), biomass_units: 5 },
+        ];
+        let readings = observe_local(actor.position, 2, &amp;patches);
+        actor.target = select_target(actor.position, 2, &amp;readings);
+        patches.retain(|patch| patch.id != Id(3));
+        let before_actor = actor;
+        let before_patches = patches.clone();
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::MissingTarget));
+        assert_eq!(actor, before_actor);
+        assert_eq!(patches, before_patches);
+    }
+
+    #[test]
+    fn seeing_a_target_does_not_mean_contact_at_action_time() {
+        let mut actor = actor();
+        let mut patches = [Patch {
+            id: Id(3), position: Position { x: 1, y: 0 }, biomass_units: 3,
+        }];
+        let readings = observe_local(actor.position, 2, &amp;patches);
+        actor.target = select_target(actor.position, 2, &amp;readings);
+        let before = (actor, patches);
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::NotInContact));
+        assert_eq!((actor, patches), before);
+    }
+
+    #[test]
+    fn successful_bite_checks_room_and_reports_only_actual_gain() {
+        let mut actor = Actor { reserve_units: 9, target: Some(Id(3)), ..actor() };
+        let mut patches = [Patch { id: Id(3), position: origin(), biomass_units: 2 }];
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Ok(1));
+        assert_eq!((actor.reserve_units, patches[0].biomass_units), (10, 1));
+        let before = (actor, patches);
+        assert_eq!(bite_selected(&amp;mut actor, &amp;mut patches), Err(Rejection::NoRoom));
+        assert_eq!((actor, patches), before);
+    }
+
+    #[test]
+    fn extreme_coordinates_do_not_overflow_the_distance() {
+        let a = Position { x: i32::MIN, y: i32::MIN };
+        let b = Position { x: i32::MAX, y: i32::MAX };
+        assert_eq!(distance(a, b), 8_589_934_590);
+        let readings = [PatchReading { id: Id(3), position: b, biomass_units: 1 }];
+        assert_eq!(select_target(a, u32::MAX, &amp;readings), None);
+    }
+}</code></pre></details>
+<p>Check the reference separately with <code>python3 learning/scripts/labs.py check targets</code>. The program uses the standard library, so you can also save the full block as <code>targets.rs</code> and run it directly:</p>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 --test targets.rs -o targets-tests
+./targets-tests
+rustc +1.93.1 --edition=2024 targets.rs -o targets
+./targets</code></pre>
+<p>Expect nine passing tests and this program output:</p>
+<pre><code class="language-text">chosen=Some(Id(3))
+action=Err(EmptyTarget)
+reserve=0 biomass=0</code></pre>
+
+<h2 id="ask-which-mistake-the-test-excludes">Change one part of the opportunity</h2>
+<p>The selection cases separate several plausible mistakes. A distant rich patch tests the radius guard; reversed equal-distance readings test order independence; a nearer high-ID patch tests whether distance really has priority. The nearby empty patch checks that location alone doesn't qualify a food candidate.</p>
+<p>The action tests move the change to a later point in the sequence. They first select a target, then alter its current supply or remove it. Comparing complete actor and patch state before and after rejection catches both an early reward and a silent fallback. The old reading is allowed to remain old; the action is responsible for consulting current evidence.</p>
+<p>The successful-bite test adds a useful counterpart to those rejections. It reaches capacity through a valid meal, then attempts another. Without that positive path, an implementation that rejected every action could look correct against a suite containing only failures.</p>
+<p>These fixtures work because each change has an identifiable place and purpose. We'll use the same habit when <a href="17-variation.html">comparing individuals fairly</a>: keep enough of the situation fixed that a changed outcome can be traced to a changed input or rule.</p>
+
+<section class="lesson-summary" aria-labelledby="chapter-takeaway" id="prepare-the-future-ecs-boundary">
+<h2 id="chapter-takeaway">An intention still needs current permission</h2>
+<p>Fern's old reading can still describe what she saw while her selected action correctly fails. The reading preserves an observation, the ID preserves a choice, and the current patch determines whether that choice can resolve. In a larger ECS world, those values will have different owners and access paths. The selector should still consume the local readings, and the action phase should still resolve the selected identity after earlier competitors may have changed it. Passing a whole-world inspector to the selector would erase the perception boundary we just made visible.</p>
+<p>The standalone tests establish this policy and its checks on authored state changes. Installing it in a schedule requires additional evidence about when observation, competing actions, and revalidation occur. A browser investigation should then show the chosen ID, rejection reason, and unchanged reserve together. An animal facing a patch wouldn't tell us whether any of those steps succeeded.</p>
+<details><summary>Recall why a predictable choice can still fail</summary><p>Determinism gives the same choice for the same readings. It doesn't keep the world unchanged until the action, turn visibility into contact, or create reserve capacity. Those conditions still need to hold when the selected interaction resolves.</p></details>
+<p>In <a href="17-variation.html">authored populations and individual variation</a>, we'll extend this care with evidence to comparing animals: a larger total or a different reserve needs an explanation grounded in the starting conditions.</p>
+</section>

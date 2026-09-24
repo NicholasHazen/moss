@@ -1,0 +1,512 @@
+<p class="lesson-lead">A grazer rests, works, rests, then works again. Each choice follows its fatigue rule, yet the sequence keeps switching around one threshold.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Give rest a commitment you can trace</h2>
+<p>We'll compare that reactive policy with one that remembers a minimum rest duration and waits for a lower fatigue threshold before waking. You'll implement <code>decide</code> as a pure activity transition; the supplied <code>step</code> will charge upkeep and apply the chosen action. Keeping those jobs separate lets repeated decisions remain decisions, rather than secretly consuming time.</p>
+<p>The two traces should help you explain when each creature rests, when it resumes foraging, and why recovery never creates reserve. You'll also check fast recovery, continued fatigue after the minimum, and cancellation of an old destination. The outcome is an inspectable activity policy, with its energy costs and timing still visible.</p>
+</section>
+<aside class="scope-note"><p>This isolated standard-library lab proposes fatigue and activity rules for one creature. It installs nothing in live Moss and leaves <code>NOW.md</code> unchanged. After <a href="20-predation.html">resolving one prey once</a>, we'll focus on repeated decisions without food intake, travel, predation, or death.</p></aside>
+
+<h2 id="two-stores-two-meanings">Recover fatigue without creating energy</h2>
+<p>Our creature begins with twelve reserve units and six fatigue points. Every executed tick spends one reserve unit on maintenance, whichever activity is selected. A foraging tick adds two fatigue points, while a resting tick removes two. Fatigue stays between zero and ten; resting adds nothing to reserve.</p>
+<p>These integers describe different things. Reserve is an available energy store, so spending reduces it. Fatigue is an authored condition that increases during work and decreases during recovery. Putting a reserve increase inside the recovery function would give rest an energy source that this model never specified.</p>
+<p>We'll use “foraging” here to mean active searching rather than a successful meal. A creature can therefore forage without a selected target and still accumulate fatigue. A larger model would separately establish travel, action-time target validity, and actual food intake. This smaller example leaves intake out so that changing activity is the only effect we're comparing.</p>
+<p>Maintenance floors reserve at zero. If the creature continues resting there, its reserve remains zero; a bounded subtraction doesn't refill the account. The lab has no terminal transition, so its continued presence can't establish that rest would prevent death in an integrated ecosystem.</p>
+
+<h2 id="read-the-reactive-loop">Trace a decision with no memory</h2>
+<p>First we'll reproduce the alternating behavior without adding any remembered activity. The reactive policy asks the same question before each action: is fatigue at least six? If so, it rests for the tick. Otherwise, it forages. Starting at six, the first rest reduces fatigue to four. The next decision sees four below the entry threshold and chooses work, returning fatigue to six.</p>
+<p>Nothing in that rule refers to what the creature did before. The third decision therefore sees the same fatigue as the first and repeats the rest, followed by another foraging tick. This alternating trace is consistent with its implementation. Whether we want it depends on the behavior we're trying to model.</p>
+<p>For example, switching might have a cost, or we might want recovery to finish before active work resumes. We'll explore the latter by adding both a minimum duration and a lower exit threshold. Those additions give the policy a reason to continue resting even after fatigue falls below the threshold that started it.</p>
+
+<h2 id="continue-for-an-explicit-reason">Remember the work still owed to rest</h2>
+<p>To keep resting after the entry condition stops being true, the policy needs another reason to continue. We'll represent both the remaining duration and the recovery needed to wake. The committed policy enters rest at fatigue six too. Once there, it requires at least two executed resting ticks and enough recovery to reach fatigue two or lower. Leaving rest requires both conditions. A creature that recovers quickly still owes its minimum duration, while a very fatigued creature can need more recovery after that duration ends.</p>
+<p>The lower exit threshold creates a gap between entering and leaving rest, often called hysteresis. The minimum adds a time requirement. Because our paired trace changes both features together, it can't isolate which one explains every difference. The focused tests will do that with fast recovery and unusually high starting fatigue.</p>
+<p>We'll store the commitment as <code>Resting { ticks_left }</code>. It counts resting actions still owed before the next decision. Entering with two, executing one rest, and storing one lets us follow the obligation through the tick. Calling the decision function again doesn't consume another action.</p>
+<p>With the default recovery of two, the committed creature rests on ticks one and two, then resumes foraging on tick three. Now that both policies are defined, compare their paths through the same four ticks:</p>
+<table><caption>Two activity policies with one reserve unit of maintenance per tick</caption><thead><tr><th scope="col">Executed tick</th><th scope="col">Reactive activity / fatigue</th><th scope="col">Committed activity / fatigue</th><th scope="col">Reserve in both runs</th></tr></thead><tbody><tr><td>1</td><td>Rest / 4</td><td>Rest / 4</td><td>11</td></tr><tr><td>2</td><td>Forage / 6</td><td>Rest / 2</td><td>10</td></tr><tr><td>3</td><td>Rest / 4</td><td>Forage / 4</td><td>9</td></tr><tr><td>4</td><td>Forage / 6</td><td>Forage / 6</td><td>8</td></tr></tbody></table>
+<p>Both finish at reserve eight and fatigue six, although their intermediate activities differ. Reserve falls identically because maintenance occurs on every executed tick. The state remembered by the activity policy changes when fatigue recovers and when work resumes; it doesn't change that energy charge.</p>
+<p>The separation between deciding and executing is also important for an ECS host. A changed observation might cause a policy to be evaluated again, but reevaluation isn't elapsed time. Our pure <code>decide</code> function returns an activity value without mutating its caller. Only <code>step</code> charges maintenance, applies recovery or work, and reduces commitment.</p>
+
+<h2 id="cancel-the-old-destination">Make rest end the current destination</h2>
+<p>We also need to decide what happens to a target while the creature rests. The activity enum puts a target only inside <code>Foraging</code>; <code>Resting</code> contains its duration instead. Entering rest therefore discards the active destination. There is no separate movement target left beside a contradictory activity flag.</p>
+<p>Waking creates <code>Foraging { target: None }</code>. It doesn't restore the old patch ID or choose a new one. Recovery supplies evidence that the creature can leave rest, but it says nothing about whether an earlier destination remains appropriate. A remembered preference could be a separate value in a future design; it wouldn't automatically become permission to travel.</p>
+<p>A creature that stays in foraging mode also clears a target when the caller reports it invalid. Commitment can't make an invalid destination usable. Here the current-validity flag is supplied input; this helper doesn't establish that the patch exists, is reachable, or contains food when an action occurs.</p>
+<p>The enum makes resting without a target easy to express, while <code>Option</code> allows a forager that hasn't yet selected one. The <a href="https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html">Rust Book's enum chapter</a> explains that language mechanism. Canceling rather than preserving the old destination is our model choice, made visible in the transition instead of hidden in a caller.</p>
+
+<h2 id="write-the-transition">Choose an activity before applying its effect</h2>
+<p>Before editing, predict tick two in the default comparison. Then replace recovery two with recovery ten. After the first committed rest, fatigue will already be zero, but has the minimum duration been fulfilled? Finally, keep fatigue below the entry threshold and invalidate a forager's target. Decide what changes while its activity remains foraging.</p>
+<details><summary>Hint 1: continue an existing commitment first</summary><p>Under the committed policy, a resting creature with ticks left keeps resting. Once the minimum ends, fatigue above the exit threshold requests one more resting tick. Otherwise, wake with no target.</p></details>
+<details><summary>Hint 2: then consider entry and ordinary foraging</summary><p>Fatigue at or above the entry threshold starts rest with the chosen policy's duration. Below it, return foraging and retain an existing target only when the supplied validity flag permits it.</p></details>
+<details><summary>Prediction answer</summary><p>Tick two is foraging under the reactive policy and resting under the committed policy. Fast recovery doesn't remove the second committed resting action. An invalid foraging target becomes <code>None</code> without requiring a switch to rest.</p></details>
+<p>Prepare a new practice file from the repository root and implement <code>decide</code>. The supplied <code>step</code> performs maintenance, decision, and the selected activity effect in that order.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare rest --dest work/rest-practice
+python3 learning/scripts/labs.py check rest --file work/rest-practice/rest.rs</code></pre>
+<p>The complete starter compiles and then reaches its intentional <code>todo!</code>. After the edit, expect eight passing tests. If reserve increases during rest, follow the effect function's writes. If the minimum disappears after one action, check whether the counter is being interpreted before or after execution.</p>
+<details><summary>Complete starter file: rest.rs</summary><pre><code class="language-rust" data-starter="rest">const START_REST_AT: u8 = 6;
+const RESUME_AT: u8 = 2;
+const MIN_REST_TICKS: u8 = 2;
+const MAX_FATIGUE: u8 = 10;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SimId(u64);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Activity {
+    Foraging { target: Option&lt;SimId&gt; },
+    Resting { ticks_left: u8 },
+}
+
+impl Activity {
+    fn target(self) -&gt; Option&lt;SimId&gt; {
+        match self {
+            Self::Foraging { target } =&gt; target,
+            Self::Resting { .. } =&gt; None,
+        }
+    }
+    fn label(self) -&gt; &amp;'static str {
+        match self {
+            Self::Foraging { .. } =&gt; "forage",
+            Self::Resting { .. } =&gt; "rest",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Policy {
+    Reactive,
+    Committed,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Creature {
+    reserve_units: u32,
+    fatigue_points: u8,
+    activity: Activity,
+}
+
+fn decide(current: Activity, fatigue: u8, target_valid: bool, policy: Policy) -&gt; Activity {
+    let _ = (current, fatigue, target_valid, policy);
+    todo!("choose an activity while respecting commitment and target validity")
+}
+
+fn step(creature: &amp;mut Creature, policy: Policy, target_valid: bool, recovery: u8) {
+    creature.reserve_units = creature.reserve_units.saturating_sub(1);
+    creature.activity = decide(
+        creature.activity,
+        creature.fatigue_points,
+        target_valid,
+        policy,
+    );
+    match creature.activity {
+        Activity::Resting { ticks_left } =&gt; {
+            creature.fatigue_points = creature.fatigue_points.saturating_sub(recovery);
+            creature.activity = Activity::Resting {
+                ticks_left: ticks_left.saturating_sub(1),
+            };
+        }
+        Activity::Foraging { .. } =&gt; {
+            creature.fatigue_points = creature.fatigue_points.saturating_add(2).min(MAX_FATIGUE);
+        }
+    }
+}
+
+fn fixture() -&gt; Creature {
+    Creature {
+        reserve_units: 12,
+        fatigue_points: 6,
+        activity: Activity::Foraging {
+            target: Some(SimId(7)),
+        },
+    }
+}
+
+fn main() {
+    for policy in [Policy::Reactive, Policy::Committed] {
+        let mut creature = fixture();
+        println!("{policy:?}");
+        for tick in 1..=4 {
+            step(&amp;mut creature, policy, true, 2);
+            println!(
+                "tick={tick} {} reserve={} fatigue={} target={:?}",
+                creature.activity.label(),
+                creature.reserve_units,
+                creature.fatigue_points,
+                creature.activity.target()
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rest_recovers_fatigue_while_maintenance_still_spends_energy() {
+        let mut creature = fixture();
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(
+            creature,
+            Creature {
+                reserve_units: 11,
+                fatigue_points: 4,
+                activity: Activity::Resting { ticks_left: 1 }
+            }
+        );
+    }
+
+    #[test]
+    fn commitment_changes_the_same_reactive_trace() {
+        let trace = |policy| {
+            let mut creature = fixture();
+            (0..4)
+                .map(|_| {
+                    step(&amp;mut creature, policy, true, 2);
+                    (creature.activity.label(), creature.fatigue_points)
+                })
+                .collect::&lt;Vec&lt;_&gt;&gt;()
+        };
+        assert_eq!(
+            trace(Policy::Reactive),
+            [("rest", 4), ("forage", 6), ("rest", 4), ("forage", 6)]
+        );
+        assert_eq!(
+            trace(Policy::Committed),
+            [("rest", 4), ("rest", 2), ("forage", 4), ("forage", 6)]
+        );
+    }
+
+    #[test]
+    fn minimum_commitment_survives_early_recovery() {
+        let mut creature = fixture();
+        step(&amp;mut creature, Policy::Committed, true, 10);
+        assert_eq!(creature.fatigue_points, 0);
+        step(&amp;mut creature, Policy::Committed, true, 10);
+        assert_eq!(creature.activity, Activity::Resting { ticks_left: 0 });
+        assert_eq!(creature.reserve_units, 10);
+        step(&amp;mut creature, Policy::Committed, true, 10);
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+    }
+
+    #[test]
+    fn completed_commitment_waits_for_the_recovery_threshold() {
+        let mut creature = Creature {
+            fatigue_points: 10,
+            ..fixture()
+        };
+        for _ in 0..3 {
+            step(&amp;mut creature, Policy::Committed, true, 2);
+        }
+        assert_eq!(creature.fatigue_points, 4);
+        assert_eq!(creature.activity, Activity::Resting { ticks_left: 0 });
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(creature.fatigue_points, 2);
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+    }
+
+    #[test]
+    fn resting_cancels_a_target_and_waking_does_not_restore_it() {
+        let mut creature = fixture();
+        assert_eq!(creature.activity.target(), Some(SimId(7)));
+        for _ in 0..3 {
+            step(&amp;mut creature, Policy::Committed, true, 2);
+        }
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+    }
+
+    #[test]
+    fn an_invalid_target_is_cleared_even_without_an_activity_switch() {
+        let mut creature = Creature {
+            fatigue_points: 0,
+            ..fixture()
+        };
+        let mut valid = creature;
+        step(&amp;mut valid, Policy::Committed, true, 2);
+        assert_eq!(valid.activity.target(), Some(SimId(7)));
+        step(&amp;mut creature, Policy::Committed, false, 2);
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+        assert_eq!(creature.reserve_units, 11);
+    }
+
+    #[test]
+    fn rest_never_refills_an_empty_energy_store() {
+        let mut creature = Creature {
+            reserve_units: 0,
+            ..fixture()
+        };
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(creature.reserve_units, 0);
+        assert_eq!(creature.fatigue_points, 4);
+    }
+
+    #[test]
+    fn reevaluating_a_decision_does_not_spend_a_committed_tick() {
+        let creature = Creature {
+            activity: Activity::Resting { ticks_left: 2 },
+            ..fixture()
+        };
+        for _ in 0..100 {
+            assert_eq!(
+                decide(creature.activity, 0, false, Policy::Committed),
+                creature.activity
+            );
+        }
+        assert_eq!(creature.reserve_units, 12);
+    }
+}
+</code></pre></details>
+<details><summary>Complete worked answer: rest.rs</summary><pre><code class="language-rust" data-runnable="rest">const START_REST_AT: u8 = 6;
+const RESUME_AT: u8 = 2;
+const MIN_REST_TICKS: u8 = 2;
+const MAX_FATIGUE: u8 = 10;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SimId(u64);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Activity {
+    Foraging { target: Option&lt;SimId&gt; },
+    Resting { ticks_left: u8 },
+}
+
+impl Activity {
+    fn target(self) -&gt; Option&lt;SimId&gt; {
+        match self {
+            Self::Foraging { target } =&gt; target,
+            Self::Resting { .. } =&gt; None,
+        }
+    }
+    fn label(self) -&gt; &amp;'static str {
+        match self {
+            Self::Foraging { .. } =&gt; "forage",
+            Self::Resting { .. } =&gt; "rest",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Policy {
+    Reactive,
+    Committed,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Creature {
+    reserve_units: u32,
+    fatigue_points: u8,
+    activity: Activity,
+}
+
+fn decide(current: Activity, fatigue: u8, target_valid: bool, policy: Policy) -&gt; Activity {
+    if matches!(policy, Policy::Committed) {
+        if let Activity::Resting { ticks_left } = current {
+            if ticks_left &gt; 0 {
+                return current;
+            }
+            if fatigue &gt; RESUME_AT {
+                return Activity::Resting { ticks_left: 1 };
+            }
+            return Activity::Foraging { target: None };
+        }
+    }
+    if fatigue &gt;= START_REST_AT {
+        let ticks_left = match policy {
+            Policy::Reactive =&gt; 1,
+            Policy::Committed =&gt; MIN_REST_TICKS,
+        };
+        Activity::Resting { ticks_left }
+    } else {
+        Activity::Foraging {
+            target: current.target().filter(|_| target_valid),
+        }
+    }
+}
+
+fn step(creature: &amp;mut Creature, policy: Policy, target_valid: bool, recovery: u8) {
+    creature.reserve_units = creature.reserve_units.saturating_sub(1);
+    creature.activity = decide(
+        creature.activity,
+        creature.fatigue_points,
+        target_valid,
+        policy,
+    );
+    match creature.activity {
+        Activity::Resting { ticks_left } =&gt; {
+            creature.fatigue_points = creature.fatigue_points.saturating_sub(recovery);
+            creature.activity = Activity::Resting {
+                ticks_left: ticks_left.saturating_sub(1),
+            };
+        }
+        Activity::Foraging { .. } =&gt; {
+            creature.fatigue_points = creature.fatigue_points.saturating_add(2).min(MAX_FATIGUE);
+        }
+    }
+}
+
+fn fixture() -&gt; Creature {
+    Creature {
+        reserve_units: 12,
+        fatigue_points: 6,
+        activity: Activity::Foraging {
+            target: Some(SimId(7)),
+        },
+    }
+}
+
+fn main() {
+    for policy in [Policy::Reactive, Policy::Committed] {
+        let mut creature = fixture();
+        println!("{policy:?}");
+        for tick in 1..=4 {
+            step(&amp;mut creature, policy, true, 2);
+            println!(
+                "tick={tick} {} reserve={} fatigue={} target={:?}",
+                creature.activity.label(),
+                creature.reserve_units,
+                creature.fatigue_points,
+                creature.activity.target()
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rest_recovers_fatigue_while_maintenance_still_spends_energy() {
+        let mut creature = fixture();
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(
+            creature,
+            Creature {
+                reserve_units: 11,
+                fatigue_points: 4,
+                activity: Activity::Resting { ticks_left: 1 }
+            }
+        );
+    }
+
+    #[test]
+    fn commitment_changes_the_same_reactive_trace() {
+        let trace = |policy| {
+            let mut creature = fixture();
+            (0..4)
+                .map(|_| {
+                    step(&amp;mut creature, policy, true, 2);
+                    (creature.activity.label(), creature.fatigue_points)
+                })
+                .collect::&lt;Vec&lt;_&gt;&gt;()
+        };
+        assert_eq!(
+            trace(Policy::Reactive),
+            [("rest", 4), ("forage", 6), ("rest", 4), ("forage", 6)]
+        );
+        assert_eq!(
+            trace(Policy::Committed),
+            [("rest", 4), ("rest", 2), ("forage", 4), ("forage", 6)]
+        );
+    }
+
+    #[test]
+    fn minimum_commitment_survives_early_recovery() {
+        let mut creature = fixture();
+        step(&amp;mut creature, Policy::Committed, true, 10);
+        assert_eq!(creature.fatigue_points, 0);
+        step(&amp;mut creature, Policy::Committed, true, 10);
+        assert_eq!(creature.activity, Activity::Resting { ticks_left: 0 });
+        assert_eq!(creature.reserve_units, 10);
+        step(&amp;mut creature, Policy::Committed, true, 10);
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+    }
+
+    #[test]
+    fn completed_commitment_waits_for_the_recovery_threshold() {
+        let mut creature = Creature {
+            fatigue_points: 10,
+            ..fixture()
+        };
+        for _ in 0..3 {
+            step(&amp;mut creature, Policy::Committed, true, 2);
+        }
+        assert_eq!(creature.fatigue_points, 4);
+        assert_eq!(creature.activity, Activity::Resting { ticks_left: 0 });
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(creature.fatigue_points, 2);
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+    }
+
+    #[test]
+    fn resting_cancels_a_target_and_waking_does_not_restore_it() {
+        let mut creature = fixture();
+        assert_eq!(creature.activity.target(), Some(SimId(7)));
+        for _ in 0..3 {
+            step(&amp;mut creature, Policy::Committed, true, 2);
+        }
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+    }
+
+    #[test]
+    fn an_invalid_target_is_cleared_even_without_an_activity_switch() {
+        let mut creature = Creature {
+            fatigue_points: 0,
+            ..fixture()
+        };
+        let mut valid = creature;
+        step(&amp;mut valid, Policy::Committed, true, 2);
+        assert_eq!(valid.activity.target(), Some(SimId(7)));
+        step(&amp;mut creature, Policy::Committed, false, 2);
+        assert_eq!(creature.activity, Activity::Foraging { target: None });
+        assert_eq!(creature.reserve_units, 11);
+    }
+
+    #[test]
+    fn rest_never_refills_an_empty_energy_store() {
+        let mut creature = Creature {
+            reserve_units: 0,
+            ..fixture()
+        };
+        step(&amp;mut creature, Policy::Committed, true, 2);
+        assert_eq!(creature.reserve_units, 0);
+        assert_eq!(creature.fatigue_points, 4);
+    }
+
+    #[test]
+    fn reevaluating_a_decision_does_not_spend_a_committed_tick() {
+        let creature = Creature {
+            activity: Activity::Resting { ticks_left: 2 },
+            ..fixture()
+        };
+        for _ in 0..100 {
+            assert_eq!(
+                decide(creature.activity, 0, false, Policy::Committed),
+                creature.activity
+            );
+        }
+        assert_eq!(creature.reserve_units, 12);
+    }
+}
+</code></pre></details>
+<p>Check the printed reference separately with <code>python3 learning/scripts/labs.py check rest</code>; the earlier <code>--file</code> command checks your implementation. The program should print this trace:</p>
+<pre><code class="language-text">Reactive
+tick=1 rest reserve=11 fatigue=4 target=None
+tick=2 forage reserve=10 fatigue=6 target=None
+tick=3 rest reserve=9 fatigue=4 target=None
+tick=4 forage reserve=8 fatigue=6 target=None
+Committed
+tick=1 rest reserve=11 fatigue=4 target=None
+tick=2 rest reserve=10 fatigue=2 target=None
+tick=3 forage reserve=9 fatigue=4 target=None
+tick=4 forage reserve=8 fatigue=6 target=None</code></pre>
+
+<section class="lesson-summary" aria-labelledby="chapter-takeaway" id="choose-a-policy-with-its-costs-visible">
+<h2 id="chapter-takeaway">Explain the rest, then count the cost</h2>
+<p>The trace explains the opening alternation without treating it as an arithmetic error. The reactive policy keeps responding to a single threshold, while the committed policy remembers an obligation and requires a lower fatigue level before leaving. Both are reproducible choices whose consequences we can inspect.</p>
+<p>The fast-recovery test makes the time requirement visible even after fatigue reaches zero. The high-fatigue case tests the other direction: finishing the minimum doesn't force waking before recovery is sufficient. Repeated calls to <code>decide</code> check that policy evaluation itself can't shorten rest or charge another unit of upkeep.</p>
+<p>The shared final reserve and fatigue don't make the two sequences equivalent. A meal available only on tick two could matter because one creature is searching then and the other is resting. That would require a new integrated scenario; this lab contains no meal and doesn't establish that two resting ticks is a good choice for Moss.</p>
+<p>The tests establish the transition and arithmetic in an ordinary Rust value. An ECS integration would additionally need to connect current target validity, activity effects, and the chosen phase order. An ecological comparison would need enough repeated opportunities to expose the costs and benefits of changing the policy.</p>
+<details><summary>Recall why waking can leave the target empty</summary><p>Executed actions consume the rest duration; repeated decisions don't. Waking completes the recovery commitment, but it doesn't establish a current destination. Fatigue, energy, selected intent, and action eligibility each carry information the others can't supply.</p></details>
+<p>Keep those separate questions in view for <a href="22-births.html">the birth transaction</a>. A successful transition there will need energy payments and explicit timing too, including a decision about when the new individual may first act.</p>
+</section>

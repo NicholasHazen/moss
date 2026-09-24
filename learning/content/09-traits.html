@@ -1,0 +1,255 @@
+<p class="lesson-lead">Two readings both say “Fern,” but one has ID 2 and the other has ID 10. Another pair both refer to ID 10, yet their reserves differ because they were collected at different moments. Before asking Rust whether those values are equal, we have to decide what we're comparing.</p>
+<aside class="scope-note"><p><strong>Isolated identity and reporting lab.</strong> This continues <a href="08-collections.html">canonical reports</a> and reuses <a href="07-modules.html">a private representation with a public constructor</a>. Complete one small generic helper. The ID type is a teaching type, not a replacement for Moss's existing IDs or a new live identity allocator.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Order identities without taking their readings</h2>
+<p>Our practical destination is a helper that turns IDs 10, 2, 10 into 2, 10 while leaving the caller's readings available. To choose its trait bounds sensibly, we'll first distinguish equality of identities from equality of whole observations, then connect copying and ordering to the operations the helper performs. Compiler experiments with the owned nickname will show why a capability suitable for the ID need not suit the reading around it.</p>
+</section>
+<h2 id="make-the-contract-smaller">Make the identity contract smaller than the reading</h2>
+<p>The report in the preceding lesson used integers as IDs. An integer can also describe an energy amount or a tick count, so a function accepting a plain number doesn't tell us which meaning belongs there. Wrapping one <code>u64</code> in <code>StableId</code> gives identity a distinct type. Its module keeps the field private and provides a constructor that rejects zero, making that rule part of how callers obtain a valid ID.</p>
+<p>Zero is rejected because this lab explicitly chose that rule, not because an identity type or a derive automatically requires it. The constructor returns a <code>Result</code>, and the private field directs ordinary external callers through that constructor. The live simulation has its own ID rules; this small type lets us study the relationship between validation and traits without replacing that allocator.</p>
+<p>A <code>Reading</code> holds more than an identity: it contains the ID, an owned nickname, and an optional reserve. Derived equality compares all of those fields. If a later observation records a different reserve, it should differ from the earlier reading even when both describe the same individual. Comparing only their ID fields asks the narrower question of whether they name that same individual.</p>
+<p>That distinction resolves the opening pairs. Two Fern nicknames don't turn IDs 2 and 10 into the same ID, while equal IDs don't make two different observations equal. We can retain an application's stable identity long after collecting a reading. Discovering whether that identity still resolves to a living entity requires another operation against the current world.</p>
+<h2 id="read-each-derive-as-a-promise">Read each derive as a capability</h2>
+<p>To make those comparisons available, a type needs the appropriate trait implementations. <code>PartialEq</code> supplies <code>==</code> and <code>!=</code>; <code>Eq</code> adds the full equality contract, including the promise that a value equals itself. An integer-backed ID can meet that promise. A floating-point value illustrates why Rust distinguishes the traits: NaN does not equal itself, so a familiar-looking numeric value doesn't necessarily support the same equality contract.</p>
+<p>Our report also needs a predictable order. <code>PartialOrd</code> permits comparisons that may find no ordering for a pair, while <code>Ord</code> promises a total order. Deriving these traits compares a struct's fields in declaration order. <code>StableId</code> has one integer field, so its derived order puts 2 before 10, as the report expects. Sorting formatted strings would put “10” before “2” instead; that would order their written representation rather than their numeric identities.</p>
+<p>When one of those assertions fails, we want the diagnostic to show the values involved. <code>Debug</code> makes programmer-facing formatting such as <code>{:?}</code> available, and deriving it saves us from writing that inspection code by hand. Its output is helpful in a test failure, but an exported file would need its own defined schema rather than depending on derived debug text staying unchanged.</p>
+<p>The ID list also needs values it can keep after the input borrow ends. <code>Clone</code> provides an explicit duplication operation, while <code>Copy</code> allows implicit copying where an assignment would otherwise move ownership. A <code>Copy</code> type must also implement <code>Clone</code>. Our one-integer identity can derive both, letting a caller copy the ID without transferring ownership of the reading that contains it. These traits describe ownership behavior; they don't promise that every operation involving the type is free.</p>
+<p>The <a href="https://doc.rust-lang.org/std/cmp/trait.Ord.html">Ord reference</a>, <a href="https://doc.rust-lang.org/std/cmp/trait.PartialEq.html">PartialEq reference</a>, and <a href="https://doc.rust-lang.org/std/fmt/trait.Debug.html">Debug reference</a> are useful when checking one of these contracts. Read the required relationship first, then the derive behavior. The macro saves repetitive implementations; it does not remove their meaning.</p>
+<h2 id="borrow-readings-copy-identities">Borrow the readings and copy the identities</h2>
+<p>Now put those capabilities to work. A report helper can borrow a slice of readings and extract their small IDs into a new vector, leaving all the owned nicknames in place. Each output element is a copied <code>StableId</code>, so the list can outlive the borrowed slice. We get an independent list of identities without cloning all the text or moving the readings away from their owner.</p>
+<p>Suppose the extracted list is 10, 2, 10 and the caller wants each ID once, in numeric order. Sorting and removing repeated values don't require any knowledge of creatures, so we'll write <code>ordered_unique&lt;T: Ord + Copy&gt;</code>. The caller chooses a concrete <code>T</code>; the bounds promise that its values can be copied and totally ordered. That is enough for the same helper to process stable IDs or a short list of signed integers.</p>
+<p>The bounds are also the agreement under which Rust checks the generic function body. It can use copying and ordering because every accepted caller must provide those capabilities. If a call fails with an unsatisfied-bound diagnostic, consider the operation you intended before adding more derives. A function that only needs a list of IDs may be asking too much if you hand it complete readings instead.</p>
+<p>To preserve the caller's original order, start by copying the borrowed slice into a vector with <code>to_vec()</code>. Sort that owned vector, then call <code>dedup()</code> to remove consecutive equal values. The order of those operations matters: on 10, 2, 10, deduplication alone doesn't bring the two tens together. Sorting first turns the sequence into 2, 10, 10, from which deduplication can produce 2, 10.</p>
+<h2 id="complete-the-helper">Complete one helper and keep the inputs usable</h2>
+<p>Try that implementation in a fresh practice file. Only <code>ordered_unique</code> is unfinished, so the initial check should compile and then reach its <code>todo!</code>. The result must leave the caller's source slice unchanged. It should also handle an empty slice naturally by returning an empty vector, without inventing a special identity to fill the space.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare traits --dest work/traits-practice
+python3 learning/scripts/labs.py check traits --file work/traits-practice/traits.rs</code></pre>
+<details><summary>Hint 1: own a result before changing its order</summary><p>The input is borrowed. Build a vector using <code>values.to_vec()</code> and bind it mutably. Sorting that owned vector changes the result you will return, while leaving the caller's sequence untouched.</p></details>
+<details><summary>Hint 2: equal values need to meet before deduplication</summary><p>Call <code>sort()</code> before <code>dedup()</code>. Return the vector. The trait bounds let the compiler verify those operations for every type accepted by this helper.</p></details>
+<details><summary>Complete starter file: traits.rs</summary>
+<pre><code class="language-rust" data-starter="traits">mod identity {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct StableId(u64);
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct InvalidId;
+
+    impl StableId {
+        pub fn new(value: u64) -&gt; Result&lt;Self, InvalidId&gt; {
+            if value == 0 { Err(InvalidId) } else { Ok(Self(value)) }
+        }
+        pub fn value(self) -&gt; u64 { self.0 }
+    }
+}
+
+pub use identity::{InvalidId, StableId};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Reading { id: StableId, name: String, reserve: Option&lt;u32&gt; }
+
+fn ordered_unique&lt;T: Ord + Copy&gt;(values: &amp;[T]) -&gt; Vec&lt;T&gt; {
+    let _ = values;
+    todo!(&quot;return owned values in ascending order, with each distinct value once&quot;)
+}
+
+fn ids_of(readings: &amp;[Reading]) -&gt; Vec&lt;StableId&gt; {
+    let ids: Vec&lt;_&gt; = readings.iter().map(|reading| reading.id).collect();
+    ordered_unique(&amp;ids)
+}
+
+fn main() {
+    let fern = Reading {
+        id: StableId::new(10).unwrap(), name: &quot;Fern&quot;.into(), reserve: Some(57),
+    };
+    let mut renamed = fern.clone();
+    renamed.name.push_str(&quot; the hare&quot;);
+    println!(&quot;same ID: {}&quot;, fern.id == renamed.id);
+    println!(&quot;same reading: {}&quot;, fern == renamed);
+    let ids = ordered_unique(&amp;[fern.id, StableId::new(2).unwrap(), fern.id]);
+    println!(&quot;IDs: {:?}&quot;, ids.iter().map(|id| id.value()).collect::&lt;Vec&lt;_&gt;&gt;());
+    assert_eq!(ids_of(&amp;[fern, renamed]).len(), 1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identity_order_is_numeric_and_duplicates_collapse() {
+        let two = StableId::new(2).unwrap();
+        let ten = StableId::new(10).unwrap();
+        assert_eq!(ordered_unique(&amp;[ten, two, ten]), vec![two, ten]);
+        assert_ne!(two, ten);
+    }
+    #[test]
+    fn empty_input_stays_empty() {
+        assert_eq!(ordered_unique::&lt;StableId&gt;(&amp;[]), vec![]);
+    }
+    #[test]
+    fn collecting_ids_does_not_take_the_readings() {
+        let readings = vec![Reading {
+            id: StableId::new(4).unwrap(), name: &quot;Fern&quot;.into(), reserve: None,
+        }];
+        let ids = ids_of(&amp;readings);
+        assert_eq!(readings[0].name, &quot;Fern&quot;);
+        drop(readings);
+        assert_eq!(ids[0].value(), 4);
+    }
+    #[test]
+    fn equal_identity_does_not_mean_equal_observation() {
+        let first = Reading {
+            id: StableId::new(4).unwrap(), name: &quot;Fern&quot;.into(), reserve: None,
+        };
+        let mut later = first.clone();
+        later.reserve = Some(0);
+        assert_eq!(first.id, later.id);
+        assert_ne!(first, later);
+    }
+    #[test]
+    fn cloning_owned_text_produces_independent_text() {
+        let first = Reading {
+            id: StableId::new(4).unwrap(), name: &quot;Fern&quot;.into(), reserve: Some(57),
+        };
+        let mut second = first.clone();
+        second.name.push_str(&quot; the hare&quot;);
+        assert_eq!(first.name, &quot;Fern&quot;);
+        assert_eq!(second.name, &quot;Fern the hare&quot;);
+    }
+    #[test]
+    fn derives_do_not_replace_constructor_validation() {
+        assert_eq!(StableId::new(0), Err(InvalidId));
+        let id = StableId::new(1).unwrap();
+        let copied = id;
+        assert_eq!(id, copied);
+    }
+    #[test]
+    fn the_same_bound_supports_another_ordered_copy_type() {
+        assert_eq!(ordered_unique(&amp;[7_i32, -1, 7, 0]), vec![-1, 0, 7]);
+    }
+}</code></pre>
+</details>
+<details><summary>Complete worked answer: traits.rs</summary>
+<pre><code class="language-rust" data-runnable="traits">mod identity {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct StableId(u64);
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct InvalidId;
+
+    impl StableId {
+        pub fn new(value: u64) -&gt; Result&lt;Self, InvalidId&gt; {
+            if value == 0 { Err(InvalidId) } else { Ok(Self(value)) }
+        }
+        pub fn value(self) -&gt; u64 { self.0 }
+    }
+}
+
+pub use identity::{InvalidId, StableId};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Reading { id: StableId, name: String, reserve: Option&lt;u32&gt; }
+
+fn ordered_unique&lt;T: Ord + Copy&gt;(values: &amp;[T]) -&gt; Vec&lt;T&gt; {
+    let mut result = values.to_vec();
+    result.sort();
+    result.dedup();
+    result
+}
+
+fn ids_of(readings: &amp;[Reading]) -&gt; Vec&lt;StableId&gt; {
+    let ids: Vec&lt;_&gt; = readings.iter().map(|reading| reading.id).collect();
+    ordered_unique(&amp;ids)
+}
+
+fn main() {
+    let fern = Reading {
+        id: StableId::new(10).unwrap(), name: &quot;Fern&quot;.into(), reserve: Some(57),
+    };
+    let mut renamed = fern.clone();
+    renamed.name.push_str(&quot; the hare&quot;);
+    println!(&quot;same ID: {}&quot;, fern.id == renamed.id);
+    println!(&quot;same reading: {}&quot;, fern == renamed);
+    let ids = ordered_unique(&amp;[fern.id, StableId::new(2).unwrap(), fern.id]);
+    println!(&quot;IDs: {:?}&quot;, ids.iter().map(|id| id.value()).collect::&lt;Vec&lt;_&gt;&gt;());
+    assert_eq!(ids_of(&amp;[fern, renamed]).len(), 1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identity_order_is_numeric_and_duplicates_collapse() {
+        let two = StableId::new(2).unwrap();
+        let ten = StableId::new(10).unwrap();
+        assert_eq!(ordered_unique(&amp;[ten, two, ten]), vec![two, ten]);
+        assert_ne!(two, ten);
+    }
+    #[test]
+    fn empty_input_stays_empty() {
+        assert_eq!(ordered_unique::&lt;StableId&gt;(&amp;[]), vec![]);
+    }
+    #[test]
+    fn collecting_ids_does_not_take_the_readings() {
+        let readings = vec![Reading {
+            id: StableId::new(4).unwrap(), name: &quot;Fern&quot;.into(), reserve: None,
+        }];
+        let ids = ids_of(&amp;readings);
+        assert_eq!(readings[0].name, &quot;Fern&quot;);
+        drop(readings);
+        assert_eq!(ids[0].value(), 4);
+    }
+    #[test]
+    fn equal_identity_does_not_mean_equal_observation() {
+        let first = Reading {
+            id: StableId::new(4).unwrap(), name: &quot;Fern&quot;.into(), reserve: None,
+        };
+        let mut later = first.clone();
+        later.reserve = Some(0);
+        assert_eq!(first.id, later.id);
+        assert_ne!(first, later);
+    }
+    #[test]
+    fn cloning_owned_text_produces_independent_text() {
+        let first = Reading {
+            id: StableId::new(4).unwrap(), name: &quot;Fern&quot;.into(), reserve: Some(57),
+        };
+        let mut second = first.clone();
+        second.name.push_str(&quot; the hare&quot;);
+        assert_eq!(first.name, &quot;Fern&quot;);
+        assert_eq!(second.name, &quot;Fern the hare&quot;);
+    }
+    #[test]
+    fn derives_do_not_replace_constructor_validation() {
+        assert_eq!(StableId::new(0), Err(InvalidId));
+        let id = StableId::new(1).unwrap();
+        let copied = id;
+        assert_eq!(id, copied);
+    }
+    #[test]
+    fn the_same_bound_supports_another_ordered_copy_type() {
+        assert_eq!(ordered_unique(&amp;[7_i32, -1, 7, 0]), vec![-1, 0, 7]);
+    }
+}</code></pre>
+</details>
+<p>The printed reference should pass seven tests and display the three lines below. Run <code>python3 learning/scripts/labs.py check traits</code> to check that reference independently. Use the command with <code>--file</code> for your saved solution; opening the answer never certifies your practice file.</p>
+<pre><code class="language-text">same ID: true
+same reading: false
+IDs: [2, 10]</code></pre>
+<h2 id="owned-text-changes-copying">Owned text changes the copying decision</h2>
+<p>The complete <code>Reading</code> makes a different ownership choice from its ID. It derives <code>Clone</code> but omits <code>Copy</code> because its <code>String</code> owns text storage. Cloning the reading clones that string too. The test then appends to one clone and checks that the original still says “Fern,” demonstrating the independence this particular reporting type needs.</p>
+<p>That independence comes from the fields' clone implementations, so don't generalize it into a promise that every clone duplicates all underlying data. Later, a shared-ownership type can clone a handle while keeping the data shared. Here, deriving clone field by field for a struct containing <code>String</code> gives the new reading its own text, which is the behavior the test observes.</p>
+<p>You can see the difference by adding <code>Copy</code> to the derive on <code>Reading</code> as an <strong>intentional compiler experiment</strong>. The expected E0204 error identifies a field that can't meet the copying contract. Remove the derive afterwards and connect the error back to the owned string: implicitly copying its owner would not be the operation that <code>String</code> provides. The repair is to keep the intended ownership behavior, not to hide the field behind an arbitrary pointer.</p>
+<p>For a second diagnostic, pass a slice of <code>Reading</code> to <code>ordered_unique</code>. The helper asks for copying and ordering that a reading doesn't offer. Adding every suggested derive would choose a new meaning for whole observations, including an order based on field sequence. If your question is which individuals appear in the report, extracting and ordering IDs expresses it more accurately.</p>
+<p>The <a href="https://doc.rust-lang.org/std/marker/trait.Copy.html">Copy</a> and <a href="https://doc.rust-lang.org/std/clone/trait.Clone.html">Clone</a> references explain these distinctions. A diagnostic's suggested operation is useful evidence, but the correct repair depends on whether the caller needs ownership, a borrow, a copyable identity, or an independent snapshot.</p>
+<h2 id="derive-does-not-create-a-world-rule">A derive supplies integration, not a world rule</h2>
+<p>Traits connect ordinary Rust types to Bevy too. The earlier ECS lesson used <code>#[derive(Component)]</code> and <code>#[derive(Resource)]</code> to supply implementations Bevy requires for those roles. Naming a struct <code>Energy</code> doesn't register it as a component; deriving <code>Component</code> supplies that capability. Neither the name nor the derive, however, schedules an upkeep system.</p>
+<p>For upkeep to affect an entity, the relevant components still have to be installed and the system still has to run. Validation must separately protect the energy range and identity rules, and lifecycle code must separately define what the outcomes mean. A <code>Component</code> implementation lets these pieces integrate with Bevy without deciding their behavior for them.</p>
+<p>The same distinction applies to our derived ID order. It makes the report reproducible, but it doesn't establish that the lowest ID should win a competition for food. If a later ecological rule uses that order, we'll need to choose and explain it as a rule of the model. A capability that's convenient for display shouldn't silently decide who eats.</p>
+<details><summary>Recall answer: which equality belongs in each assertion?</summary><p>Compare IDs to ask whether two readings refer to the same named individual. Compare complete readings to ask whether their recorded fields match. Compare owned text after editing one clone to test independence. None of these assertions proves that the corresponding creature currently exists in the live world.</p></details>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Choose capabilities for the question you are asking</h2>
+<p>Check the opening puzzle again: two equal IDs can belong to unequal readings, and two equal nicknames can belong to different IDs. Your helper should now put ID 2 before ID 10, collapse repeated IDs, handle empty input, and leave the borrowed readings available to their owner. In <a href="10-borrows.html">conflicting component access in Bevy</a>, we'll carry that distinction between retained identity values and borrowed data into an actual system.</p>
+</section>
+<p class="source-note">This original lab targets Rust 1.93.1, edition 2024, with only the standard library. For the ECS connection, consult the exact-version <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/component/trait.Component.html">Bevy 0.18.1 Component</a> and <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/resource/trait.Resource.html">Resource</a> documentation. The standard-library links follow current documentation; the course runner uses its pinned compiler for actual checks.</p>

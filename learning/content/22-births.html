@@ -1,0 +1,761 @@
+<p class="lesson-lead">Imagine that our birth system has already taken a payment from the first parent when it discovers that the second is still in cooldown. No child can be created, but one parent has lost reserve anyway.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Plan a complete birth before paying for it</h2>
+<p>You'll implement <code>plan_birth</code> using copied parent values, so a rejected proposal cannot partly change the world. We'll account for the two payments, child reserve, cooldown deadlines and new identity before returning one accepted result. The supplied ECS resolver will commit that result and queue the child.</p>
+<p>Then we'll follow the accepted birth through two further complications: several requests may share a parent, and a child may be visible before it is allowed to act. The expected outcome is a transaction you can explain from proposal through first turn, with tests that distinguish a rejected payment, a duplicate birth and a premature newborn action.</p>
+</section>
+<aside class="scope-note"><p>This isolated Bevy exercise builds on <a href="21-rest.html">rest and commitment</a>, where recovery, reserve and permission to act had different meanings. Here we'll carry that distinction into deferred entity creation. The fixed costs and timing are authored teaching rules; the exercise leaves live Moss and <code>NOW.md</code> unchanged.</p></aside>
+
+<h2 id="make-one-acceptance-cover-both-parents">Make one acceptance cover both parents</h2>
+<p>Start with adults 1 and 2, each holding ten reserve units. Our rule charges three units to each parent and gives their child four, so an accepted birth leaves the parents at seven and seven. Of the six units they paid, four have moved into the child's reserve and two have been spent by the reproductive process. Following the units this way gives us a concrete accounting check before we involve the ECS world.</p>
+<p>Affording the payment is only part of being an eligible parent. Each animal must also be an adult, have reached its first eligible tick and be out of cooldown. Both participants must be present, and they must be distinct individuals: finding the same animal twice doesn't produce a pair. If either participant fails a condition, we'll reject the whole request while leaving both reserves alone.</p>
+<p>Cooldown determines when a successful parent may participate again. A birth on tick one assigns both parents a deadline of four, and the eligibility check accepts the parent once the current tick reaches that deadline. Ticks two and three are therefore too early; tick four is allowed. Expressing the rule in simulation ticks keeps its meaning stable when the browser draws more often or the reader pauses to inspect the world.</p>
+<p>Those future values need to be representable before we accept the birth. The planner will use checked arithmetic for the cooldown deadline, the child's first eligible tick and the next identity. A wrapped deadline could make a parent eligible again immediately, while a wrapped identity could give a new child an old animal's history. An overflow should therefore reject the request for the same reason an unaffordable payment does: we can't fulfill the complete outcome we promised.</p>
+
+<h2 id="plan-with-values-commit-through-borrows">Plan with values; commit through borrows</h2>
+<p>We can make that promise easier to keep by calculating the result away from the live components. <code>plan_birth</code> receives two copied <code>Animal</code> values and returns a <code>Result</code>. On success, the value contains both proposed parent states, the child and the next allocator value. On failure, it contains the reason for rejection. Because the function never receives references to the world's parents, it cannot accidentally take one parent's payment on the way to an error.</p>
+<p>The ECS resolver connects that calculation to the current world. It obtains mutable access to the two distinct parents, copies their states into the planner and, only if planning succeeds, writes the returned states back. All the expected ways to reject a birth therefore occur before those authoritative assignments. We're using a transaction in this local sense: one accepted result supplies all the changes. It doesn't promise durable storage or recovery if the process itself fails.</p>
+<p>This is also a useful application of the earlier borrowing lesson. We copy the small values needed to consider a proposal, while keeping mutation of the real parents in one clearly defined place. Bevy's <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Query.html#method.get_many_mut">0.18.1 get_many_mut method</a> helps us request both mutable accesses together; it rejects aliased or unavailable query items. The planner then answers the domain question that Bevy cannot answer for us: are these two animals allowed to produce a child now?</p>
+<p>The child needs a stable ID before its entity is spawned. As in the population lesson, the roster assumes those IDs are unique, so the resolver checks that the proposed child ID isn't already in the world. It advances the allocator immediately after each accepted birth. Otherwise, two accepted pairs could choose the same ID while both children were still waiting in the command queue, where a query wouldn't find them yet.</p>
+
+<h2 id="resolve-a-pair-once">Resolve an unordered pair once</h2>
+<p>A complete plan protects one attempt, but the resolver must also control how often that attempt is made. A second problem appears when we gather possible pairs. A neighborhood scan may encounter adults 1 and 2 as both <code>(1, 2)</code> and <code>(2, 1)</code>, although they describe the same partnership. Sort the two IDs inside each pair and collect the resulting keys in a <code>BTreeSet</code>. Both encounters then produce one key, and the ordered set gives us a reproducible sequence for considering different pairs.</p>
+<p>Deduplicating requests doesn't settle competition between different partnerships. Consider <code>(1, 2)</code> followed by <code>(1, 3)</code>: the pairs are distinct, but parent 1 is shared. Once the first pair succeeds, its payment and cooldown change parent 1 immediately. The second request must read those current components and will find the parent ineligible. The set prevents repeated consideration of the same pair; current-state validation prevents a parent being reused by another pair.</p>
+<p>Ordering pairs this way favors lower IDs, because <code>(1, 2)</code> precedes <code>(1, 3)</code>. That's a deliberate simplification for a fixture whose result we want to explain exactly. A different pairing policy could use another recorded priority without changing the requirement that each attempt validate the current parents and commit one complete result.</p>
+<p>Each resolver pass consumes its requests once. A rejected request doesn't wait around to become a birth on a later tick, and <code>LastBirths</code> is cleared for the next pass so it describes only that tick's accepted births. Parentage has a longer life: the child stores its parents' IDs in a separate field. Founders use <code>None</code> because this fixture supplies no parentage for them, rather than asserting that they had no parents.</p>
+
+<h2 id="presence-is-not-permission">Presence is not permission to act</h2>
+<p>Now we can follow a successful proposal into the child's first opportunity to act. After accepting the plan and paying the parents, the resolver queues the child with <code>Commands::spawn</code>. That queues a structural change rather than inserting the entity immediately. Our schedule explicitly applies the commands before the action phase, so the newborn will be present when that phase queries the world. We now need to decide whether being present is enough to earn a turn.</p>
+<p>For this model, the child first acts on the following tick. A child born on tick one therefore receives <code>first_eligible_tick = 2</code>, and the action system checks that field whenever it visits an animal. The newborn can appear in an inspection on its birth tick while still having an action count of zero. On tick two, the same entity becomes eligible and records its first action.</p>
+<p>Here an action only increments a counter, which lets us examine the timing without implementing movement or feeding again. Maturity remains a separate condition: the newborn has <code>adult: false</code>, so reaching its first action tick doesn't make it a potential parent. A later maturation rule would have to change that state explicitly.</p>
+<figure><pre><code class="language-text">Begin tick → resolve pairs and queue children → apply commands → act if eligible
+Tick 1: child 100 exists; first eligible tick 2; action count 0
+Tick 2: child 100 still exists; action count 1</code></pre><figcaption>A structural boundary makes the child visible; a separate domain check controls its first action.</figcaption></figure>
+<p>We could try to delay the first turn by relying on a convenient command-flush position, but that would make the rule fragile when the schedule changes. The explicit eligibility field continues to explain the intended timing even if an observation phase needs to see newborns earlier. The <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Commands.html">versioned Commands documentation</a> describes how structural changes become visible; the first-eligible tick states what a visible child may do.</p>
+
+<h2 id="complete-the-transaction">Complete the transaction</h2>
+<p>Before writing the planner, predict what happens when tick one receives the three requests <code>(2, 1)</code>, <code>(1, 2)</code> and <code>(2, 1)</code>. Then change parent 2's reserve to two and try the prediction again. Finally, restore affordable parents but choose timing that would overflow the cooldown deadline. For each variation, account for the parents as well as the child: a rejected birth should leave no partial payment behind.</p>
+<details><summary>Hint 1: reject before constructing a successful plan</summary><p>Establish that the parents are distinct, eligible and able to pay, and that the child ID is nonzero and differs from both parent IDs. Then calculate the future deadlines and next allocator value with checked addition. Only after all these checks succeed should you construct a successful plan.</p></details>
+<details><summary>Hint 2: return both resulting parents together</summary><p>Work on the copied parents: subtract each full payment and assign the same cooldown deadline to both. Construct one immature child with sorted parent IDs and first eligibility on the next tick, then return it together with both resulting parents and the new allocator value. The resolver will install that complete result.</p></details>
+<details><summary>Prediction answer</summary><p>The three requests describe one unordered pair, so the ordinary fixture produces one child. Both parents finish at seven with cooldown deadlines of four. Reducing one parent's reserve below the payment rejects the birth without charging either parent, and a deadline overflow likewise produces an error before any plan is installed.</p></details>
+<p>Prepare the isolated file with the commands below, then replace <code>plan_birth</code>. The surrounding resolver already collects pairs, looks up current components, commits successful plans and queues children. That lets this edit concentrate on defining a complete accepted outcome, while the supplied schedule makes its effects testable.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare births --dest work/births-practice
+python3 learning/scripts/labs.py check births --file work/births-practice/births.rs</code></pre>
+<p>The starter's <code>todo!</code> is the intended first failure. Once you implement the planner, all eight named tests should pass. If a rejected pair changes a reserve, look for a world write outside the successful-plan branch. If a child acts on its birth tick, compare the stored first-eligible tick with the action system's check; being spawned successfully doesn't settle that separate permission.</p>
+<details><summary>Complete starter file: births.rs</summary><pre><code class="language-rust" data-starter="births">use bevy_ecs::{
+    prelude::*,
+    schedule::{ApplyDeferred, ExecutorKind},
+};
+use std::collections::{BTreeMap, BTreeSet};
+
+const PARENT_COST: u32 = 3;
+const CHILD_RESERVE: u32 = 4;
+const COOLDOWN_TICKS: u64 = 3;
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+struct Animal {
+    id: u64,
+    reserve: u32,
+    adult: bool,
+    cooldown_until: u64,
+    first_eligible_tick: u64,
+    parents: Option&lt;[u64; 2]&gt;,
+    actions: u32,
+}
+
+fn adult(id: u64, reserve: u32) -&gt; Animal {
+    Animal {
+        id,
+        reserve,
+        adult: true,
+        cooldown_until: 0,
+        first_eligible_tick: 1,
+        parents: None,
+        actions: 0,
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Rejected {
+    SameParent,
+    Ineligible,
+    Unaffordable,
+    InvalidChildId,
+    CounterOverflow,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct BirthPlan {
+    a: Animal,
+    b: Animal,
+    child: Animal,
+    next_id: u64,
+}
+
+fn plan_birth(
+    mut a: Animal,
+    mut b: Animal,
+    tick: u64,
+    child_id: u64,
+) -&gt; Result&lt;BirthPlan, Rejected&gt; {
+    let _ = (a, b, tick, child_id);
+    todo!("validate both parents and return one complete birth plan")
+}
+
+#[derive(Resource, Default)]
+struct Tick(u64);
+#[derive(Resource)]
+struct NextId(u64);
+#[derive(Resource, Default)]
+struct Requests(Vec&lt;(u64, u64)&gt;);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Birth {
+    tick: u64,
+    child: u64,
+    parents: [u64; 2],
+}
+#[derive(Resource, Default)]
+struct LastBirths(Vec&lt;Birth&gt;);
+
+fn begin_tick(mut tick: ResMut&lt;Tick&gt;) {
+    tick.0 = tick.0.checked_add(1).expect("tick counter overflow");
+}
+
+fn resolve_births(
+    mut commands: Commands,
+    tick: Res&lt;Tick&gt;,
+    mut next: ResMut&lt;NextId&gt;,
+    mut requests: ResMut&lt;Requests&gt;,
+    mut births: ResMut&lt;LastBirths&gt;,
+    mut animals: Query&lt;(Entity, &amp;mut Animal)&gt;,
+) {
+    births.0.clear();
+    let ids: BTreeMap&lt;_, _&gt; = animals
+        .iter()
+        .map(|(entity, animal)| (animal.id, entity))
+        .collect();
+    let pairs: BTreeSet&lt;_&gt; = std::mem::take(&amp;mut requests.0)
+        .into_iter()
+        .map(|(a, b)| (a.min(b), a.max(b)))
+        .collect();
+    for (a, b) in pairs {
+        let (Some(&amp;a_entity), Some(&amp;b_entity)) = (ids.get(&amp;a), ids.get(&amp;b)) else {
+            continue;
+        };
+        if ids.contains_key(&amp;next.0) {
+            continue;
+        }
+        let Ok([(_, mut left), (_, mut right)]) = animals.get_many_mut([a_entity, b_entity]) else {
+            continue;
+        };
+        let Ok(plan) = plan_birth(*left, *right, tick.0, next.0) else {
+            continue;
+        };
+        *left = plan.a;
+        *right = plan.b;
+        next.0 = plan.next_id;
+        commands.spawn(plan.child);
+        births.0.push(Birth {
+            tick: tick.0,
+            child: plan.child.id,
+            parents: plan.child.parents.expect("a planned child has parentage"),
+        });
+    }
+}
+
+fn act(tick: Res&lt;Tick&gt;, mut animals: Query&lt;&amp;mut Animal&gt;) {
+    for mut animal in &amp;mut animals {
+        if tick.0 &gt;= animal.first_eligible_tick {
+            animal.actions = animal
+                .actions
+                .checked_add(1)
+                .expect("action counter overflow");
+        }
+    }
+}
+
+fn schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems((begin_tick, resolve_births, ApplyDeferred, act).chain());
+    schedule
+}
+
+fn fixture(requests: Vec&lt;(u64, u64)&gt;) -&gt; World {
+    let mut world = World::new();
+    world.init_resource::&lt;Tick&gt;();
+    world.insert_resource(NextId(100));
+    world.insert_resource(Requests(requests));
+    world.init_resource::&lt;LastBirths&gt;();
+    world.spawn(adult(1, 10));
+    world.spawn(adult(2, 10));
+    world
+}
+
+fn readings(world: &amp;mut World) -&gt; Vec&lt;Animal&gt; {
+    let mut rows: Vec&lt;_&gt; = world.query::&lt;&amp;Animal&gt;().iter(world).copied().collect();
+    rows.sort_by_key(|animal| animal.id);
+    rows
+}
+
+fn main() {
+    let mut world = fixture(vec![(2, 1), (1, 2)]);
+    let mut schedule = schedule();
+    for _ in 0..2 {
+        schedule.run(&amp;mut world);
+        println!(
+            "tick={} births={}",
+            world.resource::&lt;Tick&gt;().0,
+            world.resource::&lt;LastBirths&gt;().0.len()
+        );
+        for animal in readings(&amp;mut world) {
+            println!(
+                "  #{} reserve={} cooldown={} eligible={} actions={} parents={:?}",
+                animal.id,
+                animal.reserve,
+                animal.cooldown_until,
+                animal.first_eligible_tick,
+                animal.actions,
+                animal.parents
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn both_parents_pay_and_receive_the_same_deadline() {
+        let exact = plan_birth(adult(1, PARENT_COST), adult(2, PARENT_COST), 1, 100).unwrap();
+        assert_eq!((exact.a.reserve, exact.b.reserve), (0, 0));
+        let plan = plan_birth(adult(2, 10), adult(1, 8), 1, 100).unwrap();
+        assert_eq!((plan.a.reserve, plan.b.reserve), (7, 5));
+        assert_eq!((plan.a.cooldown_until, plan.b.cooldown_until), (4, 4));
+        assert_eq!(plan.child.parents, Some([1, 2]));
+        assert_eq!(
+            (
+                plan.child.reserve,
+                plan.child.first_eligible_tick,
+                plan.next_id
+            ),
+            (4, 2, 101)
+        );
+    }
+
+    #[test]
+    fn rejected_pair_cannot_partly_change_the_callers() {
+        let a = adult(1, 10);
+        let b = adult(2, 2);
+        assert_eq!(plan_birth(a, b, 1, 100), Err(Rejected::Unaffordable));
+        assert_eq!(
+            (a.reserve, b.reserve, a.cooldown_until, b.cooldown_until),
+            (10, 2, 0, 0)
+        );
+        let mut world = fixture(vec![(1, 2)]);
+        world
+            .query::&lt;&amp;mut Animal&gt;()
+            .iter_mut(&amp;mut world)
+            .find(|a| a.id == 2)
+            .unwrap()
+            .reserve = 2;
+        schedule().run(&amp;mut world);
+        let rows = readings(&amp;mut world);
+        assert_eq!(rows.len(), 2);
+        assert_eq!((rows[0].reserve, rows[1].reserve), (10, 2));
+        assert_eq!(world.resource::&lt;NextId&gt;().0, 100);
+        assert!(world.resource::&lt;LastBirths&gt;().0.is_empty());
+    }
+
+    #[test]
+    fn cooldown_boundary_is_inclusive_and_immature_parents_are_rejected() {
+        let later = Animal {
+            first_eligible_tick: 5,
+            ..adult(1, 10)
+        };
+        assert_eq!(
+            plan_birth(later, adult(2, 10), 4, 100),
+            Err(Rejected::Ineligible)
+        );
+        assert!(plan_birth(later, adult(2, 10), 5, 100).is_ok());
+        let first = plan_birth(adult(1, 10), adult(2, 10), 1, 100).unwrap();
+        assert_eq!(
+            plan_birth(first.a, first.b, 3, 101),
+            Err(Rejected::Ineligible)
+        );
+        assert!(plan_birth(first.a, first.b, 4, 101).is_ok());
+        assert_eq!(
+            plan_birth(first.a, first.child, 4, 101),
+            Err(Rejected::Ineligible)
+        );
+    }
+
+    #[test]
+    fn invalid_identity_and_counter_limits_reject_without_a_plan() {
+        let a = adult(1, 10);
+        let b = adult(2, 10);
+        assert_eq!(plan_birth(a, a, 1, 100), Err(Rejected::SameParent));
+        for id in [0, 1, 2] {
+            assert_eq!(plan_birth(a, b, 1, id), Err(Rejected::InvalidChildId));
+        }
+        assert_eq!(
+            plan_birth(a, b, u64::MAX - 1, 100),
+            Err(Rejected::CounterOverflow)
+        );
+        assert_eq!(
+            plan_birth(a, b, 1, u64::MAX),
+            Err(Rejected::CounterOverflow)
+        );
+    }
+
+    #[test]
+    fn duplicate_unordered_requests_produce_one_child_and_one_charge() {
+        let mut world = fixture(vec![(2, 1), (1, 2), (2, 1)]);
+        schedule().run(&amp;mut world);
+        let rows = readings(&amp;mut world);
+        assert_eq!(rows.len(), 3);
+        assert_eq!((rows[0].reserve, rows[1].reserve), (7, 7));
+        assert_eq!(
+            world.resource::&lt;LastBirths&gt;().0,
+            vec![Birth {
+                tick: 1,
+                child: 100,
+                parents: [1, 2]
+            }]
+        );
+        assert_eq!(world.resource::&lt;NextId&gt;().0, 101);
+    }
+
+    #[test]
+    fn flushed_newborn_is_present_but_cannot_act_until_the_next_tick() {
+        let mut world = fixture(vec![(1, 2)]);
+        let mut schedule = schedule();
+        schedule.run(&amp;mut world);
+        let child = readings(&amp;mut world)
+            .into_iter()
+            .find(|a| a.id == 100)
+            .unwrap();
+        assert_eq!((child.first_eligible_tick, child.actions), (2, 0));
+        schedule.run(&amp;mut world);
+        let child = readings(&amp;mut world)
+            .into_iter()
+            .find(|a| a.id == 100)
+            .unwrap();
+        assert_eq!(child.actions, 1);
+        assert_eq!(child.parents, Some([1, 2]));
+    }
+
+    #[test]
+    fn shared_parent_is_claimed_in_canonical_pair_order() {
+        let mut world = fixture(vec![(3, 1), (2, 1)]);
+        world.spawn(adult(3, 10));
+        schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;LastBirths&gt;().0[0].parents, [1, 2]);
+        let rows = readings(&amp;mut world);
+        assert_eq!(rows.iter().find(|a| a.id == 3).unwrap().reserve, 10);
+        assert_eq!(rows.len(), 4);
+    }
+
+    #[test]
+    fn missing_parent_or_colliding_child_id_leaves_reserves_unchanged() {
+        for (requests, next_id) in [(vec![(1, 99)], 100), (vec![(1, 2)], 2)] {
+            let mut world = fixture(requests);
+            world.resource_mut::&lt;NextId&gt;().0 = next_id;
+            schedule().run(&amp;mut world);
+            let rows = readings(&amp;mut world);
+            assert_eq!(rows.len(), 2);
+            assert_eq!((rows[0].reserve, rows[1].reserve), (10, 10));
+            assert!(world.resource::&lt;LastBirths&gt;().0.is_empty());
+        }
+    }
+}
+</code></pre></details>
+<details><summary>Complete worked answer: births.rs</summary><pre><code class="language-rust" data-runnable="births">use bevy_ecs::{
+    prelude::*,
+    schedule::{ApplyDeferred, ExecutorKind},
+};
+use std::collections::{BTreeMap, BTreeSet};
+
+const PARENT_COST: u32 = 3;
+const CHILD_RESERVE: u32 = 4;
+const COOLDOWN_TICKS: u64 = 3;
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+struct Animal {
+    id: u64,
+    reserve: u32,
+    adult: bool,
+    cooldown_until: u64,
+    first_eligible_tick: u64,
+    parents: Option&lt;[u64; 2]&gt;,
+    actions: u32,
+}
+
+fn adult(id: u64, reserve: u32) -&gt; Animal {
+    Animal {
+        id,
+        reserve,
+        adult: true,
+        cooldown_until: 0,
+        first_eligible_tick: 1,
+        parents: None,
+        actions: 0,
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Rejected {
+    SameParent,
+    Ineligible,
+    Unaffordable,
+    InvalidChildId,
+    CounterOverflow,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct BirthPlan {
+    a: Animal,
+    b: Animal,
+    child: Animal,
+    next_id: u64,
+}
+
+fn plan_birth(
+    mut a: Animal,
+    mut b: Animal,
+    tick: u64,
+    child_id: u64,
+) -&gt; Result&lt;BirthPlan, Rejected&gt; {
+    if a.id == b.id {
+        return Err(Rejected::SameParent);
+    }
+    if !a.adult
+        || !b.adult
+        || a.first_eligible_tick &gt; tick
+        || b.first_eligible_tick &gt; tick
+        || a.cooldown_until &gt; tick
+        || b.cooldown_until &gt; tick
+    {
+        return Err(Rejected::Ineligible);
+    }
+    if a.reserve &lt; PARENT_COST || b.reserve &lt; PARENT_COST {
+        return Err(Rejected::Unaffordable);
+    }
+    if child_id == 0 || child_id == a.id || child_id == b.id {
+        return Err(Rejected::InvalidChildId);
+    }
+    let cooldown_until = tick
+        .checked_add(COOLDOWN_TICKS)
+        .ok_or(Rejected::CounterOverflow)?;
+    let first_eligible_tick = tick.checked_add(1).ok_or(Rejected::CounterOverflow)?;
+    let next_id = child_id.checked_add(1).ok_or(Rejected::CounterOverflow)?;
+    a.reserve -= PARENT_COST;
+    b.reserve -= PARENT_COST;
+    a.cooldown_until = cooldown_until;
+    b.cooldown_until = cooldown_until;
+    let child = Animal {
+        id: child_id,
+        reserve: CHILD_RESERVE,
+        adult: false,
+        cooldown_until: 0,
+        first_eligible_tick,
+        parents: Some([a.id.min(b.id), a.id.max(b.id)]),
+        actions: 0,
+    };
+    Ok(BirthPlan {
+        a,
+        b,
+        child,
+        next_id,
+    })
+}
+
+#[derive(Resource, Default)]
+struct Tick(u64);
+#[derive(Resource)]
+struct NextId(u64);
+#[derive(Resource, Default)]
+struct Requests(Vec&lt;(u64, u64)&gt;);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Birth {
+    tick: u64,
+    child: u64,
+    parents: [u64; 2],
+}
+#[derive(Resource, Default)]
+struct LastBirths(Vec&lt;Birth&gt;);
+
+fn begin_tick(mut tick: ResMut&lt;Tick&gt;) {
+    tick.0 = tick.0.checked_add(1).expect("tick counter overflow");
+}
+
+fn resolve_births(
+    mut commands: Commands,
+    tick: Res&lt;Tick&gt;,
+    mut next: ResMut&lt;NextId&gt;,
+    mut requests: ResMut&lt;Requests&gt;,
+    mut births: ResMut&lt;LastBirths&gt;,
+    mut animals: Query&lt;(Entity, &amp;mut Animal)&gt;,
+) {
+    births.0.clear();
+    let ids: BTreeMap&lt;_, _&gt; = animals
+        .iter()
+        .map(|(entity, animal)| (animal.id, entity))
+        .collect();
+    let pairs: BTreeSet&lt;_&gt; = std::mem::take(&amp;mut requests.0)
+        .into_iter()
+        .map(|(a, b)| (a.min(b), a.max(b)))
+        .collect();
+    for (a, b) in pairs {
+        let (Some(&amp;a_entity), Some(&amp;b_entity)) = (ids.get(&amp;a), ids.get(&amp;b)) else {
+            continue;
+        };
+        if ids.contains_key(&amp;next.0) {
+            continue;
+        }
+        let Ok([(_, mut left), (_, mut right)]) = animals.get_many_mut([a_entity, b_entity]) else {
+            continue;
+        };
+        let Ok(plan) = plan_birth(*left, *right, tick.0, next.0) else {
+            continue;
+        };
+        *left = plan.a;
+        *right = plan.b;
+        next.0 = plan.next_id;
+        commands.spawn(plan.child);
+        births.0.push(Birth {
+            tick: tick.0,
+            child: plan.child.id,
+            parents: plan.child.parents.expect("a planned child has parentage"),
+        });
+    }
+}
+
+fn act(tick: Res&lt;Tick&gt;, mut animals: Query&lt;&amp;mut Animal&gt;) {
+    for mut animal in &amp;mut animals {
+        if tick.0 &gt;= animal.first_eligible_tick {
+            animal.actions = animal
+                .actions
+                .checked_add(1)
+                .expect("action counter overflow");
+        }
+    }
+}
+
+fn schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems((begin_tick, resolve_births, ApplyDeferred, act).chain());
+    schedule
+}
+
+fn fixture(requests: Vec&lt;(u64, u64)&gt;) -&gt; World {
+    let mut world = World::new();
+    world.init_resource::&lt;Tick&gt;();
+    world.insert_resource(NextId(100));
+    world.insert_resource(Requests(requests));
+    world.init_resource::&lt;LastBirths&gt;();
+    world.spawn(adult(1, 10));
+    world.spawn(adult(2, 10));
+    world
+}
+
+fn readings(world: &amp;mut World) -&gt; Vec&lt;Animal&gt; {
+    let mut rows: Vec&lt;_&gt; = world.query::&lt;&amp;Animal&gt;().iter(world).copied().collect();
+    rows.sort_by_key(|animal| animal.id);
+    rows
+}
+
+fn main() {
+    let mut world = fixture(vec![(2, 1), (1, 2)]);
+    let mut schedule = schedule();
+    for _ in 0..2 {
+        schedule.run(&amp;mut world);
+        println!(
+            "tick={} births={}",
+            world.resource::&lt;Tick&gt;().0,
+            world.resource::&lt;LastBirths&gt;().0.len()
+        );
+        for animal in readings(&amp;mut world) {
+            println!(
+                "  #{} reserve={} cooldown={} eligible={} actions={} parents={:?}",
+                animal.id,
+                animal.reserve,
+                animal.cooldown_until,
+                animal.first_eligible_tick,
+                animal.actions,
+                animal.parents
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn both_parents_pay_and_receive_the_same_deadline() {
+        let exact = plan_birth(adult(1, PARENT_COST), adult(2, PARENT_COST), 1, 100).unwrap();
+        assert_eq!((exact.a.reserve, exact.b.reserve), (0, 0));
+        let plan = plan_birth(adult(2, 10), adult(1, 8), 1, 100).unwrap();
+        assert_eq!((plan.a.reserve, plan.b.reserve), (7, 5));
+        assert_eq!((plan.a.cooldown_until, plan.b.cooldown_until), (4, 4));
+        assert_eq!(plan.child.parents, Some([1, 2]));
+        assert_eq!(
+            (
+                plan.child.reserve,
+                plan.child.first_eligible_tick,
+                plan.next_id
+            ),
+            (4, 2, 101)
+        );
+    }
+
+    #[test]
+    fn rejected_pair_cannot_partly_change_the_callers() {
+        let a = adult(1, 10);
+        let b = adult(2, 2);
+        assert_eq!(plan_birth(a, b, 1, 100), Err(Rejected::Unaffordable));
+        assert_eq!(
+            (a.reserve, b.reserve, a.cooldown_until, b.cooldown_until),
+            (10, 2, 0, 0)
+        );
+        let mut world = fixture(vec![(1, 2)]);
+        world
+            .query::&lt;&amp;mut Animal&gt;()
+            .iter_mut(&amp;mut world)
+            .find(|a| a.id == 2)
+            .unwrap()
+            .reserve = 2;
+        schedule().run(&amp;mut world);
+        let rows = readings(&amp;mut world);
+        assert_eq!(rows.len(), 2);
+        assert_eq!((rows[0].reserve, rows[1].reserve), (10, 2));
+        assert_eq!(world.resource::&lt;NextId&gt;().0, 100);
+        assert!(world.resource::&lt;LastBirths&gt;().0.is_empty());
+    }
+
+    #[test]
+    fn cooldown_boundary_is_inclusive_and_immature_parents_are_rejected() {
+        let later = Animal {
+            first_eligible_tick: 5,
+            ..adult(1, 10)
+        };
+        assert_eq!(
+            plan_birth(later, adult(2, 10), 4, 100),
+            Err(Rejected::Ineligible)
+        );
+        assert!(plan_birth(later, adult(2, 10), 5, 100).is_ok());
+        let first = plan_birth(adult(1, 10), adult(2, 10), 1, 100).unwrap();
+        assert_eq!(
+            plan_birth(first.a, first.b, 3, 101),
+            Err(Rejected::Ineligible)
+        );
+        assert!(plan_birth(first.a, first.b, 4, 101).is_ok());
+        assert_eq!(
+            plan_birth(first.a, first.child, 4, 101),
+            Err(Rejected::Ineligible)
+        );
+    }
+
+    #[test]
+    fn invalid_identity_and_counter_limits_reject_without_a_plan() {
+        let a = adult(1, 10);
+        let b = adult(2, 10);
+        assert_eq!(plan_birth(a, a, 1, 100), Err(Rejected::SameParent));
+        for id in [0, 1, 2] {
+            assert_eq!(plan_birth(a, b, 1, id), Err(Rejected::InvalidChildId));
+        }
+        assert_eq!(
+            plan_birth(a, b, u64::MAX - 1, 100),
+            Err(Rejected::CounterOverflow)
+        );
+        assert_eq!(
+            plan_birth(a, b, 1, u64::MAX),
+            Err(Rejected::CounterOverflow)
+        );
+    }
+
+    #[test]
+    fn duplicate_unordered_requests_produce_one_child_and_one_charge() {
+        let mut world = fixture(vec![(2, 1), (1, 2), (2, 1)]);
+        schedule().run(&amp;mut world);
+        let rows = readings(&amp;mut world);
+        assert_eq!(rows.len(), 3);
+        assert_eq!((rows[0].reserve, rows[1].reserve), (7, 7));
+        assert_eq!(
+            world.resource::&lt;LastBirths&gt;().0,
+            vec![Birth {
+                tick: 1,
+                child: 100,
+                parents: [1, 2]
+            }]
+        );
+        assert_eq!(world.resource::&lt;NextId&gt;().0, 101);
+    }
+
+    #[test]
+    fn flushed_newborn_is_present_but_cannot_act_until_the_next_tick() {
+        let mut world = fixture(vec![(1, 2)]);
+        let mut schedule = schedule();
+        schedule.run(&amp;mut world);
+        let child = readings(&amp;mut world)
+            .into_iter()
+            .find(|a| a.id == 100)
+            .unwrap();
+        assert_eq!((child.first_eligible_tick, child.actions), (2, 0));
+        schedule.run(&amp;mut world);
+        let child = readings(&amp;mut world)
+            .into_iter()
+            .find(|a| a.id == 100)
+            .unwrap();
+        assert_eq!(child.actions, 1);
+        assert_eq!(child.parents, Some([1, 2]));
+    }
+
+    #[test]
+    fn shared_parent_is_claimed_in_canonical_pair_order() {
+        let mut world = fixture(vec![(3, 1), (2, 1)]);
+        world.spawn(adult(3, 10));
+        schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;LastBirths&gt;().0[0].parents, [1, 2]);
+        let rows = readings(&amp;mut world);
+        assert_eq!(rows.iter().find(|a| a.id == 3).unwrap().reserve, 10);
+        assert_eq!(rows.len(), 4);
+    }
+
+    #[test]
+    fn missing_parent_or_colliding_child_id_leaves_reserves_unchanged() {
+        for (requests, next_id) in [(vec![(1, 99)], 100), (vec![(1, 2)], 2)] {
+            let mut world = fixture(requests);
+            world.resource_mut::&lt;NextId&gt;().0 = next_id;
+            schedule().run(&amp;mut world);
+            let rows = readings(&amp;mut world);
+            assert_eq!(rows.len(), 2);
+            assert_eq!((rows[0].reserve, rows[1].reserve), (10, 10));
+            assert!(world.resource::&lt;LastBirths&gt;().0.is_empty());
+        }
+    }
+}
+</code></pre></details>
+<p>The worked answer is an isolated <code>src/main.rs</code> for the locked Bevy ECS 0.18.1 lab. Keep <code>--file</code> in the check command when testing your implementation; <code>python3 learning/scripts/labs.py check births</code> instead checks the printed reference. Running the reference produces this console output:</p>
+<pre><code class="language-text">tick=1 births=1
+  #1 reserve=7 cooldown=4 eligible=1 actions=1 parents=None
+  #2 reserve=7 cooldown=4 eligible=1 actions=1 parents=None
+  #100 reserve=4 cooldown=0 eligible=2 actions=0 parents=Some([1, 2])
+tick=2 births=0
+  #1 reserve=7 cooldown=4 eligible=1 actions=2 parents=None
+  #2 reserve=7 cooldown=4 eligible=1 actions=2 parents=None
+  #100 reserve=4 cooldown=0 eligible=2 actions=1 parents=Some([1, 2])
+</code></pre>
+
+<section class="lesson-summary" aria-labelledby="chapter-takeaway" id="keep-correctness-and-balance-separate">
+<h2 id="chapter-takeaway">One birth coordinates several kinds of change</h2>
+<p>The opening failure is prevented while the planner is still working with proposed values: either it supplies the complete outcome or neither parent pays. An accepted result then coordinates immediate parent changes with deferred child creation, while the child's first turn remains separate from its maturity. Use those distinctions to explain what each phase contributes before reading the recall answer.</p>
+<p>The tests follow the proposal all the way into the installed schedule. They check both payments, the cooldown boundary, repeated requests, shared-parent competition and allocation or counter failures. The newborn test also finds the actual entity after commands are applied before asserting that it hasn't acted. That matters: an absent child with no actions would satisfy the number while missing the behavior we meant to prove.</p>
+<p>A correct transaction is a foundation for population behavior, not a reason to expect a sustainable population from this fixture. These adults have no upkeep, partner search or spatial eligibility, so repeated valid requests could keep producing children without the pressures found in the continuing meadow. The <a href="population.html">continuing population guide</a> brings those rules together to investigate reproduction and food supply. Here we've established what each individual accepted birth must guarantee.</p>
+<details><summary>Recall answer</summary><p>Parent payments and cooldown take effect immediately so another pair can't reuse those resources or permissions. The child entity appears when commands are applied, but its stable identity and first-eligible tick already belong to the accepted plan. Reaching that tick permits an action; reaching maturity permits reproduction. They answer different questions about the same child.</p></details>
+<p>In <a href="23-inheritance.html">inherited traits and their origins</a>, we'll examine one calculation inside a birth: how a child gets a bounded trait and what record lets us explain it later. The complete birth transaction remains the boundary around that additional choice.</p>
+</section>

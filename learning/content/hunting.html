@@ -1,0 +1,238 @@
+<p class="lede">Two hunters arrive beside the same grazer. Each has seen a possible meal, but there is only one animal to consume. A successful capture has to feed one hunter, disappoint the other, and prevent the grazer from taking its next action.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Carry one capture through the rest of the tick</h2>
+<p>You'll design the full capture transaction and its ECS adapter in the continuing project, bringing two mutable bodies together only after the proposed outcome has passed its checks. We'll use a small contention scene to test both acceptance and the lost actions afterward, then compare rest policies with and without hunters in the meadow. By the end, you should be able to follow a capture from earlier local observation through immediate eligibility changes, later meals and births, and the budget shared by both kinds of animal.</p>
+</section>
+<aside class="callout"><p><strong>Continuing course project:</strong> the complete tests and native traces below have been verified against the frozen hunting checkpoint. Its biological policy is an authored model, not a calibrated account of predation, and it does not activate hunting in live Moss.</p></aside>
+
+<h2 id="continue-one-authoritative-world">Give the hunter a consequence in the existing world</h2>
+<p>In <a href="resting.html#interrupt-the-same-journey">the previous guide</a>, fatigue interrupted a grazer's journey and delayed its next meal. The grazer remained in the world, so it could recover and try again. Capture introduces a different interruption: this individual will never return to its destination. Its reserve will support another animal, but it will no longer deplete a patch or contribute to a birth. Those missing actions change the opportunities available to the survivors, which is why hunting belongs in the same world as movement, meals, and births.</p>
+<p>Continue your saved <code>work/fieldwork</code> project and retain its earlier tests. Your main task is to design the whole capture transaction and the ECS system that applies it. We'll first work through a small encounter where every unit is easy to account for, then decide how to represent its participants and obtain the two mutable borrows. Once that encounter is tested, the longer meadow run will show how the same rule changes population outcomes.</p>
+<details><summary>Working files and complete answers</summary><p><a href="reference/hunting/changes.patch">The review-only change map</a> shows the extension from resting, and <a href="downloads/hunting-reference.zip">the complete hunting checkpoint</a> provides all worked files. Open them beside your own project when you want to compare an implementation. The diff is a map for deliberate edits, not a promise that it will apply over your changes; replacing your saved directory would also discard the investigations you have accumulated.</p></details>
+
+<h2 id="specify-the-entire-capture">Follow one capture before implementing it</h2>
+<p>For the small encounter, put grazers one and two beside a patch containing ten biomass units, with hunters 100 and 101 on that same cell. Each grazer starts with five reserve units and each hunter with four. Everybody pays one upkeep unit before hunting, so the capture phase begins with four in each grazer and three in each hunter. Both hunters choose grazer one; stable-ID order gives hunter 100 the first attempt. We will use these same participants when we write the integration test.</p>
+<p>Our capture rule transfers the prey's current reserve. Hunter 100 must first afford its one-unit attack cost, leaving two units, and then have room for all four prey units. Its capacity is eight, so the accepted result is six in the hunter and zero in grazer one. The combined stores have fallen by exactly the attack cost. Moving the four units from one animal to the other didn't create energy or spend it; the attack did.</p>
+<p>Now change only hunter 100's capacity to five. After the proposed payment it would hold two, but adding all four prey units would take it to six. We could invent a rule for partially consuming an animal, but that would introduce a new question about what remains alive or where the excess goes. For this checkpoint, the whole attempt is rejected. Hunter 100 therefore keeps its three units, grazer one keeps four, and hunter 101 can still make its own attempt.</p>
+<p>The word <em>proposed</em> matters here. If the function subtracts the attack cost before discovering the capacity failure, rejection has already changed the hunter. Work out affordability, the complete gain, and the final values before writing either body. The same reasoning applies to fatigue: when rest is enabled, the accepted attack effort must fit the hunter's remaining fatigue capacity. A rejected capture spends neither attack reserve nor effort, although any travel completed earlier in the tick has already been paid for.</p>
+<p>Write this acceptance contract in your own words before opening the hints. Include what must be true about the participants as well as their budgets: a living, active hunter must target a distinct living grazer, both must be eligible this tick, the target must come from the current tick’s observation, and their current cells must match. The amount transferred comes from that current grazer, because the reserve recorded in an earlier observation may have changed during travel.</p>
+<details><summary>Planning hint: separate proposed values from committed values</summary><p>First check that the hunter can pay. Then calculate its reserve after payment, check that the entire prey reserve fits, and calculate the accepted final reserve. Check fatigue capacity and every counter addition before applying those values, including the eviction counter if recording the event will displace an old entry. A full bounded journal evicts its oldest event; fullness alone must not reject a capture. You can keep these results in a small plan or local variables; the important boundary is that rejection occurs before mutation.</p></details>
+<details><summary>Planning hint: a future meal cannot fund this attack</summary><p>A hunter holding zero cannot pay a one-unit attack cost even when its prey holds twenty. Adding the prey's reserve before testing affordability would let the hunter borrow from an outcome that hasn't been accepted. Check the starting reserve first, just as paid travel could not borrow against the patch at its destination.</p></details>
+<p>Using reserve as the edible amount keeps this first model small: there is no second animal biomass store to maintain. It also has a deliberate consequence. A grazer at zero reserve supplies no modeled food, so hunters ignore it even though a later patch meal might still rescue it. This is a rule of the game we're constructing, not a claim about an animal's physical mass.</p>
+
+<h2 id="share-a-body-not-another-world">Give both participants one authoritative body</h2>
+<p>The calculation uses the same kinds of values on both sides: reserve, capacity, life, and action eligibility. Those values currently live inside the private grazer component alongside its meal request and patch contact. A hunter needs the first group but has no use for the second. This is a concrete reason to split the component now; before hunters existed, the extra separation would have had much less work to do.</p>
+<p>A private <code>Body</code> component can own the shared state while a smaller grazer component retains feeding settings. A hunter gets that same kind of body plus its attack settings, all attached to one entity. Upkeep can then operate on bodies, whereas patch feeding still requires the grazer role. There is only one reserve for each animal: the capture, maintenance, and feeding systems all borrow that value instead of synchronizing copies in separate animal tables.</p>
+<p>Before editing, follow the old reserve field through the code and decide which queries need body access and which also need a role. Reproduction needs two adult grazers with eligible bodies; having enough reserve alone doesn't make a hunter a parent. The old public seeds and readings can stay as they are, with their reserve fields projecting the body and their meal fields projecting the grazer component. Keeping those adapters stable lets your earlier tests continue to describe the same behavior while the private representation changes.</p>
+<details><summary>Representation hint: make the terminal cause unambiguous</summary><p>The reference body has a terminal enum with alive, starved, and captured states; capture carries the hunter's stable ID. This gives later systems one place to check eligibility and prevents a combination such as “captured and starved.” The public grazer reading can still project its existing alive/dead value while the interaction history retains the more specific cause.</p></details>
+<details><summary>Complete body and projection answer</summary><p>Compare <a href="reference/hunting/src/model.rs">the component definitions</a> with <a href="reference/hunting/src/simulation.rs">the world and public projections</a>. Then follow the same body through <a href="reference/hunting/src/lifecycle.rs">upkeep and starvation</a>, <a href="reference/hunting/src/feeding.rs">patch feeding</a>, and <a href="reference/hunting/src/reproduction.rs">birth payment</a>. These files show the whole refactor, including the queries that preserve role-specific behavior.</p></details>
+<p>With the representation chosen, hunters can enter through authored configuration, just as grazers did. <code>MobileScenario::with_hunters(HuntConfig::new(seeds))</code> supplies their identities, budgets, upkeep, positions, motion, attack payment, and attack effort. Validate the complete specification before replacing a world, especially IDs shared across animals and patches. The child allocator must also see hunter IDs so a later birth cannot reuse one.</p>
+<details><summary>Configuration, reset, and disabled-mode answer</summary><p><a href="reference/hunting/src/hunting/config.rs">The configuration module</a> rejects duplicate IDs, invalid bounds or budgets, and invalid attack settings before installation. A failed reset preserves both the current world and the specification used by a later ordinary reset. <code>hunt_snapshot()</code> returns <code>None</code> when hunting is disabled; an enabled report with no living hunters still retains its configuration and lifetime evidence. An empty living table therefore does not imply disabled rules.</p></details>
+
+<h2 id="observe-prey-without-tracking-it-secretly">Carry an observation as far as it can legitimately go</h2>
+<p>Our same-cell encounter makes contact easy to see, but the meadow's animals move. A hunter may observe a grazer at one cell and arrive there after the grazer has left. To preserve that distinction, collect local prey readings before any animal travels, then let the selector work with those owned readings. It receives the identity, cell, and reserve that were visible at that moment; it doesn't keep a reference that silently turns into current global information.</p>
+<p>The selection policy follows your patch selector: continue toward the current prey while it remains eligible in the new local view, otherwise choose the nearest eligible grazer with stable ID breaking a distance tie. Positive reserve and current life are part of observation eligibility. The resulting target records an observed cell and tick, which gives travel a specific destination without promising that a capture will succeed there.</p>
+<p>At the capture phase, first require the target’s observed tick to match the current tick. An old retained target cannot regain permission merely because the animals happen to meet again. Current positions then answer a narrower question: are these two animals actually together? If the prey moved away, that answer is no. Looking up its new cell may be convenient for the programmer, but using it as a replacement destination would give the hunter information it never observed. It must wait for a later observation and choice, just as a grazer whose selected patch was emptied couldn't consume from another patch inside the same meal attempt.</p>
+<details><summary>Prediction: what should a failed pursuit cost?</summary><p>The completed route still costs its accepted travel reserve and effort. The failed capture costs no attack reserve and adds no capture effort, because those belong to an accepted action that never occurred. The next executed observation phase can reveal where the prey went.</p></details>
+<details><summary>Complete perception and movement answer</summary><p><a href="reference/hunting/src/hunting/perception.rs">Local prey observation and choice</a> produce the owned view, and <a href="reference/hunting/src/hunting/movement.rs">hunter movement</a> follows its observed destination. Compare them with <a href="mobile.html#choose-without-reserving">your existing target policy</a>: the opportunity is now an animal, but the boundary between an intention and a permitted action remains useful.</p></details>
+<p>Rest supplies another reason a pursuit can end. A resting hunter cancels its target and cannot travel or attack, while a resting grazer remains possible prey. We're keeping the existing commitment and recovery rules rather than adding a hunger override. Hunters can die of starvation under those rules; in this checkpoint they are authored, nonreproducing individuals, and grazers have no fleeing behavior.</p>
+
+<h2 id="borrow-two-bodies-and-commit-once">Turn the plan into an ECS operation</h2>
+<p>We now know what information the capture needs and which values it changes. The adapter has to bring the two bodies together without confusing stable identity with storage location. Build an ID-to-entity lookup from the current query, visit hunters in stable-ID order, and resolve each hunter's selected prey through that lookup. The entity handles are useful for these component accesses; the event you retain afterward should use the application IDs and run identity that remain meaningful after cleanup.</p>
+<p>There are two borrowing moments in each attempt. During planning, shared access is enough to inspect life, roles, cells, and budgets and calculate the proposed result. During commitment, both bodies need mutable access because the hunter receives reserve while the prey loses it. Copying the small calculated values into locals lets the planning borrows end before requesting those two writable query items. You aren't moving the bodies out of the world or constructing replacements; you are changing the same values that later systems will read.</p>
+<p>The reference uses one query containing bodies, positions, mobile actor state, and optional role components. Its <code>get</code> calls provide shared views while it plans; <code>get_many_mut([hunter_entity, prey_entity])</code> then obtains the two distinct items together. The <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Query.html#method.get_many_mut">Bevy ECS 0.18.1 documentation</a> explains that missing entities, duplicate entities, or mismatched components return an error. Passing that access check doesn't establish contact or affordability, so the biological checks still belong in your plan.</p>
+<p>Implement the whole adapter now, including its system parameters, ordering, rejection paths, and commit. If you're listening, this is a useful place to pause narration and work with the code; the disclosures below contain hints and complete files that audio skips. Start with the first hunter's accepted path, then trace what the second hunter will read after it.</p>
+<details><summary>Adapter hint: what can be collected in advance?</summary><p>You can collect the stable order and entity lookup before resolving claims. Do not treat copied initial reserves or eligibility as authority for every claim, though: the first accepted capture changes those values. Each later attempt needs the current bodies. Likewise, two separate mutable queries need genuinely disjoint access filters; different role names alone do not prove an entity cannot contain both components.</p></details>
+<details><summary>Adapter hint: a rejected first attempt is still an opportunity for the second hunter</summary><p>In the capacity-five variant, hunter 100 is first but cannot fit the whole transfer. Leave both bodies and attack accounting unchanged, then let hunter 101 inspect the same current prey. Stable ordering determines who tries first, not who must win.</p></details>
+<details><summary>Complete transaction and adapter answer</summary><p><a href="reference/hunting/src/hunting/capture.rs">The capture module</a> contains planning and commitment. Its supporting <a href="reference/hunting/src/hunting.rs">state and report module</a> and <a href="reference/hunting/src/hunting/history.rs">bounded history</a> show how arithmetic is checked before biological mutation, including the count of evicted history entries. The bounded journal may discard an old entry to retain a new one; it is arithmetic overflow, not a full journal, that must prevent a partially recorded transaction. Compare the whole path rather than only the final addition and subtraction.</p></details>
+
+<h2 id="death-changes-permission-before-structure">Let the capture change the rest of the tick</h2>
+<p>A captured grazer is more than a food store. Earlier in the tick it may have travelled toward a patch, and later it would normally eat there or contribute to a birth. Removing it at the end of the tick is therefore too late to decide which of those actions are still allowed. The capture needs to change its body's eligibility at the same moment that reserve changes hands, so the second hunter and the later grazer systems all encounter the same result.</p>
+<p>That is the sequence shown below. Both hunters observe the prey, but only the first accepted claim transfers its reserve and marks it captured. The second hunter then encounters a terminal body, as do the later meal and birth systems. Cleanup eventually removes the entity, but permission to use it has already changed. An inspector could still find its components between commitment and cleanup without that presence making another action legitimate.</p>
+<figure><svg viewBox="0 0 410 520" role="img" aria-labelledby="hunt-commit-title hunt-commit-description" style="display:block;width:min(100%,410px);height:auto;margin:auto"><title id="hunt-commit-title">One capture closes every later use of the prey</title><desc id="hunt-commit-description">Two hunters observe one prey. The first accepted transaction pays its attack cost, transfers the prey reserve, and immediately marks the prey captured. The second hunter receives no reward. Later feeding and birth resolution reject the captured prey before deferred cleanup removes it.</desc><g fill="#edf2e6" stroke="#526b48" stroke-width="2"><rect x="15" y="10" width="380" height="70" rx="8"/><rect x="15" y="110" width="380" height="90" rx="8"/><rect x="15" y="230" width="380" height="70" rx="8"/><rect x="15" y="330" width="380" height="70" rx="8"/><rect x="15" y="430" width="380" height="65" rx="8"/></g><g fill="#243e2b" font-family="sans-serif" text-anchor="middle"><text x="205" y="40" font-size="18">Observe one available prey</text><text x="205" y="65" font-size="15">Two intentions · no reservation</text><text x="205" y="141" font-size="18">Commit one funded capture</text><text x="205" y="166" font-size="15">Cost paid · reserve transferred</text><text x="205" y="188" font-size="15">Prey immediately terminal</text><text x="205" y="260" font-size="18">Second hunter: claim rejected</text><text x="205" y="285" font-size="15">No second gain · no attack payment</text><text x="205" y="360" font-size="18">Captured prey: later actions rejected</text><text x="205" y="385" font-size="15">No patch meal · no funded birth</text><text x="205" y="470" font-size="18">Deferred structural cleanup</text></g><g fill="none" stroke="#526b48" stroke-width="2"><path d="M205 83v24m-6-6 6 6 6-6M205 203v24m-6-6 6 6 6-6M205 303v24m-6-6 6 6 6-6M205 403v24m-6-6 6 6 6-6"/></g></svg><figcaption>The terminal state is part of the accepted transaction. Despawning later is cleanup, not the exclusivity mechanism.</figcaption></figure>
+<p>A queued despawn cannot supply this guarantee by itself because commands may not yet have been applied when the next claimant runs. Queuing a dead marker leaves the same timing problem if that marker is the only authority. Write the terminal state immediately, as in <a href="20-predation.html#presence-is-not-permission">the isolated predation lesson</a>, and make every later action respect it. Starvation must do so too: setting a captured body's reserve to zero must not give the same death a second cause.</p>
+<p>The schedule makes these consequences visible by placing hunting after travel and rest, but before grazer meals, starvation, and births. Completed travel remains part of the tick even if the traveller is subsequently captured; a later meal does not. Births still occur after hunting and give each child first eligibility on the following tick. The body refactor must preserve that timing while initializing the child's funded reserve and inherited upkeep separately from its empty target, fresh fatigue, and absent action markers.</p>
+<p>There is one more guard on the hunter itself: stamp a successful capture with its executed tick. Immediate prey death prevents other hunters from consuming that prey, while the hunter's stamp prevents a repeated invocation from awarding it another capture against a different prey in the same tick. A failed claim does not set that stamp because no action has been accepted.</p>
+
+<h2 id="make-the-lost-opportunity-testable">Build a test where the forbidden action could happen</h2>
+<p>The small encounter gives us a way to check all of these effects through the public world. Add <code>tests/hunt_investigation.rs</code> to your continuing project and build the fixture described at the start. Grazer two is there for a reason: without hunters, the two grazers can both eat and then fund a birth. If we used only one grazer, a zero birth count after capture would tell us nothing about terminal eligibility, because a two-parent birth was impossible from the beginning.</p>
+<p>Run that no-hunter control first and require the birth to happen. Then run the same grazer and patch setup with the two hunters. Both choose grazer one, hunter 100 finishes with six reserve, and hunter 101 remains at three. Grazer two eats two units and finishes with six, leaving eight in the patch, while no birth occurs. The survivor's meal matters as much as the missing prey meal: disabling all feeding whenever a hunt occurs would otherwise produce a misleadingly quiet result.</p>
+<p>Write your assertions before opening the full file. Think about which plausible wrong implementation each one excludes. Two credited hunters reveal stale eligibility; a missing survivor meal reveals an overbroad exclusion; a birth after capture reveals that parental validation used state that was no longer current. The second test changes the first hunter's capacity to five, so a rejection must leave the prey available for hunter 101.</p>
+<details><summary>Investigation hint: check the participants as well as the totals</summary><p>Require one capture record naming hunter 100 and prey one in the first case. Check both hunter reserves, the surviving grazer ID and reserve, the patch store, and the actual attack and transfer amounts. The total reserve could be right even if it was credited to the wrong actor. Check starvation separately so capture cannot be counted as a second terminal cause.</p></details>
+<details><summary>Complete investigation file: tests/hunt_investigation.rs</summary><p>This full integration file belongs in your continuing project beside its earlier tests. It requires <code>moss_course_ecosystem</code> and exercises the public installed schedule. The second case gives the first hunter too little capacity and verifies that a rejected claim leaves the opportunity for its competitor.</p><pre><code class="language-rust" data-hunt-test="contested-capture">use moss_course_ecosystem::{
+    Cell, CourseWorld, Daylight, EventKind, FounderTrait, GrazerPlacement,
+    GrazerSeed, GridBounds, HuntConfig, HuntEventKind, HunterSeed,
+    MobileScenario, Motion, PatchPlacement, PatchSeed, PopulationConfig,
+    RestPolicy, Scenario, SimId, SpatialConfig, UpkeepTrait,
+};
+
+fn fixture(with_hunters: bool, first_hunter_capacity: u32) -&gt; MobileScenario {
+    let cell = Cell { x: 0, y: 0 };
+    let motion = Motion {
+        sensing_radius: 0, max_cells_per_tick: 0, travel_units_per_cell: 1,
+    };
+    let scenario = Scenario {
+        daylight: Daylight::new(1, 0).unwrap(),
+        grazers: [2, 1].into_iter().map(|id| GrazerSeed {
+            id: SimId(id), reserve_units: 5, capacity_units: 8,
+            maintenance_units_per_tick: 1, meal_units_per_tick: 2,
+            feeding_site: None,
+        }).collect(),
+        patches: vec![PatchSeed {
+            id: SimId(1000), biomass_units: 10, capacity_units: 10,
+            growth_units_per_lit_tick: 0,
+        }],
+        history_limit: 128,
+    };
+    let population = PopulationConfig {
+        founders: [2, 1].into_iter().map(|id| FounderTrait {
+            id: SimId(id), upkeep: UpkeepTrait::new(1).unwrap(),
+        }).collect(),
+        maturation_ticks: 2, cooldown_ticks: 3,
+        contribution_units_per_parent: 2, birth_cost_units_per_parent: 1,
+        child_capacity_units: 8, child_meal_units_per_tick: 2,
+        max_living: 8, mutation_cycle: vec![0], history_limit: 128,
+    };
+    let space = SpatialConfig {
+        bounds: GridBounds { width_cells: 1, height_cells: 1 },
+        grazers: [2, 1].into_iter().map(|id| GrazerPlacement {
+            id: SimId(id), cell, motion,
+        }).collect(),
+        patches: vec![PatchPlacement { id: SimId(1000), cell }],
+        newborn_motion: motion,
+    };
+    let rest = RestPolicy {
+        maximum_fatigue_points: 10, effort_points_per_cell: 2,
+        enter_at_points: 6, exit_at_points: 2,
+        minimum_rest_ticks: 2, recovery_points_per_tick: 2, history_limit: 128,
+    };
+    let initial = MobileScenario::new(scenario, population, space).with_rest(rest);
+    if !with_hunters { return initial; }
+    initial.with_hunters(HuntConfig::new([101, 100].into_iter().map(|id| HunterSeed {
+        id: SimId(id), reserve_units: 4,
+        capacity_units: if id == 100 { first_hunter_capacity } else { 8 },
+        maintenance_units_per_tick: 1, attack_units: 1,
+        attack_effort_points: 2, cell, motion,
+    }).collect()))
+}
+
+#[test]
+fn one_capture_cancels_the_preys_later_opportunities() {
+    let mut control = CourseWorld::new_mobile(fixture(false, 8)).unwrap();
+    control.step();
+    let control_report = control.mobile_snapshot().unwrap();
+    assert_eq!(control_report.population.totals.births, 1);
+    assert_eq!(control_report.base.grazers.len(), 3);
+    assert_eq!(control_report.base.ledger.eaten_units, 4);
+    assert_eq!(control_report.base.patches[0].biomass_units, 6);
+
+    let mut world = CourseWorld::new_mobile(fixture(true, 8)).unwrap();
+    world.step();
+    let mobile = world.mobile_snapshot().unwrap();
+    let hunt = world.hunt_snapshot().unwrap();
+    assert_eq!((mobile.run, mobile.tick), (hunt.run, hunt.tick));
+    assert_eq!(hunt.tick, 1);
+    assert_eq!((hunt.initial_hunters, hunt.living_hunters), (2, 2));
+    assert_eq!(hunt.hunters.iter().map(|h| (h.id, h.reserve_units)).collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![(SimId(100), 6), (SimId(101), 3)]);
+    assert_eq!(hunt.hunters.iter().map(|h| h.fatigue_points).collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![Some(2), Some(0)]);
+    assert_eq!(mobile.base.grazers.iter().map(|g| (g.id, g.reserve_units)).collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![(SimId(2), 6)]);
+    assert_eq!(mobile.base.patches[0].biomass_units, 8);
+    assert_eq!((mobile.base.ledger.eaten_units, mobile.population.totals.births), (2, 0));
+    assert_eq!(mobile.population.totals.starvations, 0);
+    assert_eq!((hunt.totals.captures, hunt.totals.hunter_starvations), (1, 0));
+    assert_eq!((hunt.ledger.attack_units, hunt.ledger.transferred_units), (1, 4));
+    let choices: Vec&lt;_&gt; = hunt.history.events.iter().filter_map(|e| match e.kind {
+        HuntEventKind::TargetChanged { hunter, to: Some(prey), .. } =&gt; Some((hunter, prey)),
+        _ =&gt; None,
+    }).collect();
+    assert_eq!(choices, vec![(SimId(100), SimId(1)), (SimId(101), SimId(1))]);
+    let captures: Vec&lt;_&gt; = hunt.history.events.iter().filter_map(|e| match e.kind {
+        HuntEventKind::Captured { hunter, prey, cell, transferred_units, attack_units, effort_points } =&gt;
+            Some((e.run, e.tick, hunter, prey, cell, transferred_units, attack_units, effort_points)),
+        _ =&gt; None,
+    }).collect();
+    assert_eq!(captures, vec![(hunt.run, 1, SimId(100), SimId(1), Cell { x: 0, y: 0 }, 4, 1, 2)]);
+    let meals: Vec&lt;_&gt; = mobile.base.history.events.iter().filter_map(|e| match e.kind {
+        EventKind::Meal { grazer, units, .. } =&gt; Some((grazer, units)),
+        _ =&gt; None,
+    }).collect();
+    assert_eq!(meals, vec![(SimId(2), 2)]);
+    assert_eq!(hunt.history.captures_between(1, 1), Some(1));
+    let ending_stores: u64 = mobile.base.grazers.iter().map(|g| u64::from(g.reserve_units)).sum::&lt;u64&gt;()
+        + mobile.base.patches.iter().map(|p| u64::from(p.biomass_units)).sum::&lt;u64&gt;()
+        + hunt.hunters.iter().map(|h| u64::from(h.reserve_units)).sum::&lt;u64&gt;();
+    assert_eq!(ending_stores, 23);
+    assert_eq!(ending_stores + mobile.base.ledger.maintenance_units
+        + hunt.ledger.maintenance_units + mobile.ledger.travel_units
+        + hunt.ledger.travel_units + hunt.ledger.attack_units
+        + mobile.population.ledger.dissipated_units, 28 + mobile.base.ledger.added_units);
+    assert_eq!(world.hunt_snapshot().unwrap(), hunt);
+    assert_eq!(world.mobile_snapshot().unwrap(), mobile);
+}
+
+#[test]
+fn a_rejected_whole_transfer_leaves_the_prey_for_the_next_hunter() {
+    let mut world = CourseWorld::new_mobile(fixture(true, 5)).unwrap();
+    world.step();
+    let hunt = world.hunt_snapshot().unwrap();
+    assert_eq!(hunt.hunters.iter().map(|h| (h.id, h.reserve_units)).collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![(SimId(100), 3), (SimId(101), 6)]);
+    assert_eq!(hunt.hunters.iter().map(|h| h.fatigue_points).collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![Some(0), Some(2)]);
+    assert_eq!((hunt.ledger.captures, hunt.ledger.attack_units, hunt.ledger.transferred_units), (1, 1, 4));
+    let winners: Vec&lt;_&gt; = hunt.history.events.iter().filter_map(|e| match e.kind {
+        HuntEventKind::Captured { hunter, prey, .. } =&gt; Some((hunter, prey)),
+        _ =&gt; None,
+    }).collect();
+    assert_eq!(winners, vec![(SimId(101), SimId(1))]);
+    let mobile = world.mobile_snapshot().unwrap();
+    assert_eq!(mobile.base.grazers.iter().map(|g| g.id).collect::&lt;Vec&lt;_&gt;&gt;(), vec![SimId(2)]);
+    assert_eq!(mobile.base.patches[0].biomass_units, 8);
+    assert_eq!(mobile.population.totals.births, 0);
+}</code></pre></details>
+<pre><code class="language-sh">cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test hunt_investigation</code></pre>
+<p>Both exact tests in that answer have passed against the native checkpoint. When you run your version, pause narration and read the first failing assertion together with its fixture values. If the lower-capacity hunter lost an attack unit, look for a debit before the capacity check; if both hunters gained, follow the second lookup back to the current body. Return to the answer when you need to compare the complete path, then keep your investigation beside the earlier tests.</p>
+<p>These public tests observe completed ticks, which is enough to check the final stores and lost opportunities. The reference also has <a href="reference/hunting/src/simulation/hunting_tests.rs">internal boundary probes</a> that inspect the captured body while it is still present and invoke later actions before cleanup. Those probes establish the immediate timing directly, rather than inferring it solely from the end-of-tick report.</p>
+
+<h2 id="account-for-the-whole-world">Close the budget around both kinds of animal</h2>
+<p>The capture test identifies who receives the meal; a whole-world budget checks where every unit went. Start with the hunting fixture's twenty-eight stored units: ten in grazers, ten in the patch, and eight in hunters. It ends with twenty-three. Four upkeep units and one attack unit explain the difference; the four prey units transferred to the hunter are already included in the ending stores. Counting that transfer as another loss would make a correct capture appear to destroy energy.</p>
+<p>The same argument gives us the full tick equation below. Travel and birth add their own costs, and growth adds only the biomass actually accepted by the patches. Each quantity comes from an actual flow, because limited reserve can reduce upkeep payment, an affordable prefix can shorten travel, and a full patch can reject growth. Configured rates describe requests or limits; they are not automatically the amounts that occurred.</p>
+<pre><code>ending animal reserves + ending patch biomass
++ grazer upkeep + hunter upkeep + all travel cost
++ attack cost + birth dissipation
+= starting animal reserves + starting patch biomass + accepted growth</code></pre>
+<p>The earlier reports still describe their original roles, so combine them deliberately when checking that equation. Grazer upkeep belongs to the base ledger, while hunter upkeep and attack costs belong to the hunting report. A capture is a grazer exit but not a grazer starvation. The table keeps those responsibilities visible without requiring you to guess whether a familiar total now includes a new animal.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Responsibilities of the combined reports"><table><caption>Combine reports without counting a flow twice</caption><thead><tr><th scope="col">Report</th><th scope="col">Relevant responsibility</th></tr></thead><tbody><tr><td>Base snapshot and ledger</td><td>Grazer reserves, patch biomass, grazer upkeep, growth, meals, and grazer starvation.</td></tr><tr><td>Population report</td><td>Grazer stages, births, funding, birth dissipation, and lifetime grazer starvations.</td></tr><tr><td>Mobile and rest reports</td><td>Grazer positions, travel payment, fatigue, and rest outcomes.</td></tr><tr><td>Hunting report</td><td>Hunter reserves, upkeep, travel, activity, fatigue, capture payments and transfers, and hunter starvation.</td></tr></tbody></table></div>
+<p>Population counts need the same care. Living grazers plus lifetime grazer starvations plus captures must equal founders plus births. For hunters, living individuals plus hunter starvations equals the authored count because this policy has no hunter reproduction. Recording one capture as both a hunting success and a grazer exit is useful; adding those two descriptions together as separate deaths is not.</p>
+<h3 id="keep-the-limits-of-a-story-visible">Keep enough evidence to explain the count</h3>
+<p>A count tells us how many captures occurred, but an individual story also needs the interaction records. Those records link hunter and prey through stable IDs and a run identity, while each bounded journal exposes the interval it can still describe completely. To connect travel, rest, feeding, birth, and capture, use the intersection of the relevant coverage intervals. A lifetime counter can remain known after early events have been evicted; it cannot reconstruct their order or participants.</p>
+
+<h2 id="compare-rest-with-and-without-hunters">Return to the meadow with a question</h2>
+<p>The same-cell test has isolated the transaction, so now we can let it interact with movement, supply, and rest. Use four runs of 120 executed ticks: minimum rest commitments two and three, each without hunters and with the declared pair. Before seeing the results, make an ordinary note predicting where earlier waking could matter. It might provide a meal sooner, but it could also spend reserve sooner or put a grazer in contact with a hunter before its next rest window.</p>
+<p>Within each rest pair, keep the grazer and patch inputs, daylight, recovery thresholds, inheritance, IDs, and horizon fixed. Adding hunters is a different intervention: each arrives with sixteen reserve units, so those runs begin with thirty-two additional stored units. We can still compare predator presence, but we cannot describe all four runs as having equal starting energy. Check each run's budget against its own initial stores.</p>
+<p>The larger patch IDs are also unchanged across all four configurations. They keep the first child-ID cursor the same when hunters are removed, so that comparison does not accidentally change an identity-dependent decision. Reversing insertion order can check reproducibility, but repeated copies of one deterministic run are not independent statistical samples.</p>
+<p>The <a href="reference/hunting/examples/hunting.rs">complete native example</a> runs the small contention fixture and this matrix using <a href="reference/hunting/src/mobile/scenarios.rs">the declared meadow</a> and <a href="reference/hunting/src/hunting/config.rs">authored hunter pair</a>. Save it as <code>examples/hunting.rs</code> in your project to reproduce the observed results:</p>
+<pre><code class="language-sh">cargo +1.93.1 run --offline --locked --manifest-path work/fieldwork/Cargo.toml --example hunting</code></pre>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Observed native population outcomes at tick 120"><table><caption>Observed native outcomes at tick 120; dashes mark the disabled hunter role</caption><thead><tr><th scope="col">Rest minimum</th><th scope="col">Authored hunters</th><th scope="col">Living grazers / hunters</th><th scope="col">Grazer births</th><th scope="col">Grazer starvations</th><th scope="col">Captures</th><th scope="col">Hunter starvations</th></tr></thead><tbody><tr><td>2</td><td>None</td><td>0 / —</td><td>7</td><td>11</td><td>—</td><td>—</td></tr><tr><td>3</td><td>None</td><td>1 / —</td><td>10</td><td>13</td><td>—</td><td>—</td></tr><tr><td>2</td><td>Two</td><td>0 / 0</td><td>3</td><td>4</td><td>3</td><td>2</td></tr><tr><td>3</td><td>Two</td><td>0 / 0</td><td>3</td><td>3</td><td>4</td><td>2</td></tr></tbody></table></div>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Observed native energy accounting through tick 120"><table><caption>Accumulated actual units through tick 120; ending stores include every living animal and patch</caption><thead><tr><th scope="col">Rest minimum</th><th scope="col">Hunters</th><th scope="col">Growth</th><th scope="col">Grazer / hunter upkeep</th><th scope="col">Grazer / hunter travel cost</th><th scope="col">Attack cost</th><th scope="col">Birth cost</th><th scope="col">Ending stores</th></tr></thead><tbody><tr><td>2</td><td>None</td><td>98</td><td>108 / —</td><td>36 / —</td><td>—</td><td>14</td><td>36</td></tr><tr><td>3</td><td>None</td><td>308</td><td>258 / —</td><td>71 / —</td><td>—</td><td>20</td><td>55</td></tr><tr><td>2</td><td>Two</td><td>60</td><td>53 / 62</td><td>15 / 13</td><td>3</td><td>6</td><td>36</td></tr><tr><td>3</td><td>Two</td><td>74</td><td>59 / 72</td><td>14 / 11</td><td>4</td><td>6</td><td>36</td></tr></tbody></table></div>
+<p>The no-hunter runs begin with ninety-six stored units and the hunting runs with 128. In the hunting run with minimum two, 128 plus sixty accepted growth units equals thirty-six ending units plus the listed costs. Its forty-six prey units changed owners through captures, so they do not appear as another loss. Minimum three transfers fifty-five prey units; the same accounting principle applies even though the amounts and subsequent outcomes differ.</p>
+<p>Both runs with hunters end with no living animals, yet the causes differ: minimum three produces four captures instead of three and one fewer grazer starvation. Without hunters, that longer rest commitment had left a surviving grazer; here it does not. The result gives us a specific interaction to investigate in the retained history, rather than a general claim that one rest policy is better. It also says nothing about a self-renewing predator population, since these hunters never reproduce.</p>
+
+<p>The retained evidence also differs across the four runs. Both hunting runs retain complete ticks one through 120 in all five journals, with no evictions. Without hunters, minimum two supports the combined story only from tick three, and minimum three only from tick sixty-nine. The example prints the individual boundaries. Equal event limits have produced different coverage because the runs generated different histories.</p>
+
+<h2 id="check-and-observe-your-hunting-build">Inspect the version you actually built</h2>
+<p>Once your investigation passes, run the hunting stage against the same saved project so the new behavior is checked alongside the earlier course and learner tests. Then compile that project's source for the browser. This keeps the world you inspect connected to the implementation you have been changing:</p>
+<pre><code class="language-sh">python3 learning/scripts/fieldwork.py check --project work/fieldwork --stage hunting
+python3 learning/scripts/fieldwork_preview.py --project work/fieldwork --hunting
+python3 learning/scripts/build.py</code></pre>
+<section class="experiment" data-hunting-preview aria-label="Cumulative course hunting"></section>
+<p>Step through the contention scene and compare the two hunters' current reserves with their earlier prey observations. The unsuccessful hunter may still have seen a real opportunity; what changed was the prey's availability before its claim resolved. Follow the survivor's meal and the absent birth to see how that one accepted capture affected the rest of the tick. Selecting an animal or rereading a report should leave the executed tick unchanged.</p>
+<details><summary>What each check establishes</summary><p>Native tests establish the tested Rust schedule outcomes. Building WebAssembly establishes that the saved source and adapter compile for that target, while browser observation checks the actual controls and presentation. Neither a successful build nor a correct native trace alone proves what a browser displayed. Record those forms of evidence separately when investigating your changes.</p></details>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">A capture changes both the stores and the remaining opportunities</h2>
+<p>The first hunter's gain now belongs to a larger, explainable event: reserve changed hands, the prey immediately became unavailable, and later systems encountered that committed result. Keep the capacity variant and the lost-birth control when you change the policy. They preserve the two questions most likely to get blurred: whether an attempt was accepted at all, and what the rest of the world was allowed to do afterward.</p>
+<p>That gives you a useful foundation for the <a href="refuge.html">independent refuge capstone</a>. Imagine that the hunter sees a grazer outside shelter, but the grazer enters shelter before capture. Contact and funding can still be correct while the action is no longer permitted. You'll decide how to represent that new condition, write the complete system that keeps it current, and test your own claim about where shelter changes the meadow. Continue in this project so the capture checks you have just written remain part of the evidence.</p>
+</section>

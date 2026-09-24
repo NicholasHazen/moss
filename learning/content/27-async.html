@@ -1,0 +1,507 @@
+<p class="lesson-lead">You request one settings import, then replace it with another. The newer result arrives first, but the older worker is still running; meanwhile, a reset could make both answers belong to a previous world. Each worker may parse its input correctly and use memory safely while still delivering an answer the application must refuse.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Let delayed work finish without accepting a stale result</h2>
+<p>You'll implement <code>receive</code>, the boundary that checks a completion's run and request identity before staging its settings. We'll use controlled native workers to deliver results out of order, then follow an accepted result to the explicit tick that applies it. Replacement, cancellation and reset will each give us a way to withdraw permission before that commit.</p>
+<p>Alongside the receiver, a small real future will help distinguish creating async work from driving it. You should finish able to explain which guarantees belong to Rust's transfer rules, which belong to application identity, and why neither a completed worker nor a valid staged value changes the world between ticks.</p>
+</section>
+<aside class="scope-note"><p><strong>Isolated concurrency and async lab.</strong> Native worker threads parse owned strings into two toy settings. No network or file I/O is implemented, no biological rule runs, and no import is installed in live Moss. Controlled messages determine completion order without sleeps.</p></aside>
+
+<h2 id="put-three-boundaries-in-the-design">Put three boundaries in the design</h2>
+<p>Begin by separating the worker's job from the application's decision. The worker can say, “I finished parsing this request.” Only the application knows whether that request is still current. If it is, the application stages an accepted input for the next executed tick, where the authoritative settings change together. This gives us three moments to follow: completion produces data, acceptance grants permission to use it, and the tick commits it.</p>
+<p>Use two small settings so a partial update will be easy to see. The cost must be positive and no greater than capacity, while capacity may be at most one hundred. We begin with cost two and capacity ten, and each successful import replaces the pair as one value. These are illustrative configuration values for the lab. Their relationship gives validation something meaningful to protect without adding a balance rule to Moss.</p>
+<p>The worker owns the string it parses and sends back a <code>Completion</code> containing the request's run/request key and a <code>Result</code>. It never borrows the authoritative world. Consequently, finishing a parse cannot mutate the world on its own. The receiver can inspect the owned message and discard it if its key has become stale, even when its parsed settings are otherwise valid.</p>
+
+<h2 id="concurrency-is-not-a-future-shaped-thread">Separate concurrency, threads, and futures</h2>
+<p>Before implementing acceptance, clarify how delayed work gets to that boundary. Threads and futures can both appear in such a design, but they don't start or drive work in the same way. Our two imports can be in progress during overlapping periods, which is concurrency. Whether their parsing actually executes at the same instant is a separate question about parallelism. The lab uses native operating-system threads, but its correctness will depend on the messages we receive and accept, not on proving that the two processors were doing work simultaneously.</p>
+<p>A Rust future is another way to represent work whose result may come later. Calling an <code>async</code> function returns that future; it does not start a thread by itself. As the <a href="https://doc.rust-lang.org/std/future/trait.Future.html">Future reference</a> describes, polling either produces the ready result or reports that the work is pending. A runtime normally arranges later polling after the task is woken, allowing other work to proceed while a result is unavailable.</p>
+<p>We can inspect the language mechanism without introducing an I/O library. <code>parse_ready</code> has no suspension point or I/O, so its body can finish during its first poll. Constructing that future still does not execute the parse. One test uses an async block with a visible flag: the flag stays unchanged when the future is created and changes when the test polls it. This makes the distinction between creating work and driving it observable.</p>
+<p>The supplied <code>poll_ready</code> probe pins the future and polls it once using <a href="https://doc.rust-lang.org/std/task/struct.Waker.html#method.noop">a no-op waker</a>. It is deliberately limited to our immediately ready example and panics if the result is pending. There is no mechanism here to arrange another poll after a socket or timer becomes ready, so this probe is not an executor for asynchronous I/O.</p>
+<p>The native worker is what moves this parsing work away from the caller. Merely writing <code>async</code> around an expensive synchronous parse would not make the calculation yield: once polled, it would keep executing until it returned or reached a real suspension point. A larger import should choose its worker or runtime arrangement according to the I/O and CPU work involved. The acceptance rule we are about to write remains necessary whichever arrangement delivers the result.</p>
+
+<h2 id="send-and-sync-answer-access-questions">Read Send and Sync as access constraints</h2>
+<p>Moving owned messages between native threads also asks Rust to check their transfer capabilities. <code>Send</code> permits transferring ownership of a value between threads, while <code>Sync</code> permits transferring a shared reference to it. The <a href="https://doc.rust-lang.org/book/ch16-04-extensible-concurrency-sync-and-send.html">Rust Book's concurrency chapter</a> explains these marker traits and how their automatic implementations depend on the constituent types.</p>
+<p>Our completion contains owned, transferable data, and a compile-time assertion checks that it implements both traits. The worker closure moves its input string and channel sender into the new thread, so neither depends on a borrow of the caller's world. We need no unsafe implementations to establish that ownership relationship.</p>
+<p>Those guarantees answer whether the data may cross a thread boundary safely. They cannot answer whether the user still wants request one after choosing request two. A correctly transferred old message could still overwrite the newer choice unless the receiver rejects it. Conversely, a future that is always driven on one thread may not need <code>Send</code> at all. Choose the transfer bounds for the execution platform and the identity checks for the application's meaning.</p>
+
+<h2 id="two-identities-prevent-two-stale-results">Use two identities to reject two kinds of staleness</h2>
+<p>Give each request a key containing both run identity and request number. Within one run, a new request supersedes the previous request and clears any result already staged for it. Reset starts a new run, where the numbering can begin again. Comparing only request one with request one would then confuse two different operations, so the run identity has to travel with the completion too.</p>
+<p>The receiver first asks whether there is a current request. It then checks that the completion belongs to the authoritative run, matches the current request's whole key, and has not already been processed. If any check fails, the message is ignored. Once the checks succeed, <code>receive</code> marks the request completed before examining success or failure, ensuring that a duplicate message cannot later replace the first accepted outcome.</p>
+<p>Now the contents of a current message can matter. Revalidate a successful settings value before storing it as <code>AcceptedInput</code>; receiving a typed value does not excuse the boundary from protecting the settings relationship. A current error becomes interface error state and leaves the world's settings unchanged. A stale error never reaches that stage, so it cannot erase a newer staged success or tell the user that their replacement request failed.</p>
+<p>Cancellation follows the same idea by clearing the current request and any staged result. It does not have to terminate the operating-system thread to prevent a stale commit. The worker may still finish and send its owned message, but the receiver will find no current permission to accept it. Cooperative cancellation could avoid wasted work in a larger implementation; checking acceptance is still necessary when a completion races with cancellation.</p>
+
+<h2 id="keep-the-tick-synchronous">Keep the authoritative tick synchronous</h2>
+<p>Even an accepted completion waits before changing the world. At the next tick, the application takes the staged input, checks its identity again, and assigns the settings pair before updating the completed-tick counter. The tick does not receive from a channel, block for a worker, or <code>await</code> a future. That keeps the state transition synchronous and lets an unfinished import remain separate from simulation advancement.</p>
+<p>This choice also explains what pausing means. A valid result can be ready and staged while the world is paused, but it will not apply between ticks. If the user replaces or cancels the request before stepping, the staged result is cleared instead. Another application could choose an immediate application boundary; ours gives the pending change a named moment whose behavior we can test.</p>
+<p>The same boundary matters for <a href="24-experiments.html">reproducible experiments</a>. Wall-clock arrival time alone cannot tell a replay what the world accepted. A replay would need the accepted typed settings and the tick on which they were applied. This lab establishes that distinction without implementing an input journal or persistence.</p>
+
+<h2 id="control-completion-with-messages">Control completion order with messages</h2>
+<p>To test replacement reliably, make the newer completion arrive first on purpose. A <a href="https://doc.rust-lang.org/std/sync/mpsc/">standard channel</a> carries the completions, and each worker waits on its own start gate. The driver releases the newer worker and receives its answer before releasing the older one. This gives the test an explicit sequence instead of asking a sleep duration to predict which thread will finish first.</p>
+<p>The driver can block while coordinating this native test because it operates outside the authoritative tick. It also joins both workers before returning, making their completion and cleanup part of the fixture. A browser event loop would need an appropriate nonblocking integration; the blocking driver exists to control this test's order, not to prescribe that interface.</p>
+<table><caption>Two requests in run one</caption><thead><tr><th scope="col">Event</th><th scope="col">Application result</th></tr></thead><tbody><tr><td>Request one asks for cost three, capacity thirty.</td><td>It becomes current temporarily.</td></tr><tr><td>Request two asks for cost four, capacity forty.</td><td>It replaces request one.</td></tr><tr><td>Request two completes first.</td><td>The new settings are staged; the world still has two and ten.</td></tr><tr><td>Request one completes later.</td><td>Its result is ignored.</td></tr><tr><td>One tick executes.</td><td>The world commits four and forty, then reports tick one.</td></tr></tbody></table>
+
+<h2 id="predict-the-acceptance">Predict the acceptance before editing</h2>
+<p>Follow three cases before editing the receiver. First, stage a valid result, then start a replacement request before the tick. Next, reset and create request one again before delivering the old run's request one. Finally, try a payload with cost three and a malformed capacity. In each case, separate what the worker produced from what the receiver may stage and what the tick may commit.</p>
+<details><summary>Hint 1: replacement invalidates completed work too</summary><p>The latest-request rule applies to permission to commit, not merely work still in progress. Starting the new request clears the old staged input.</p></details>
+<details><summary>Hint 2: compare the entire identity and validate the entire value</summary><p>A repeated request number belongs to a different run after reset. A malformed second field must reject the whole settings value rather than committing its valid first field.</p></details>
+<details><summary>Prediction answer</summary><p>The replaced staged input never commits. The old run's request is ignored despite the reused number. The malformed payload produces a current error, and both authoritative settings retain their previous values.</p></details>
+<p>Your edit is only <code>receive</code>, where those acceptance decisions meet. Prepare a separate practice file; the request lifecycle, worker gates, and synchronous tick are already supplied. That leaves the body responsible for rejecting stale or duplicate messages and staging only a valid current outcome.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare async --dest work/async-practice
+python3 learning/scripts/labs.py check async --file work/async-practice/async.rs</code></pre>
+<p>The starter compiles and reaches its intentional <code>todo!</code> when reception runs. After the repair, nine tests should pass. If a late completion changes the settings, trace its complete key and check when staged input is cleared. A lock could serialize access, but it would not decide that an obsolete request has lost permission to commit.</p>
+<details><summary>Complete starter: async.rs</summary><pre><code class="language-rust" data-starter="async">use std::future::Future;
+use std::sync::mpsc::{self, Sender};
+use std::task::{Context, Poll, Waker};
+use std::thread::{self, JoinHandle};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Key { run: u64, request: u64 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Settings { cost: u32, capacity: u32 }
+impl Settings {
+    fn valid(self) -&gt; bool { self.cost &gt; 0 &amp;&amp; self.cost &lt;= self.capacity &amp;&amp; self.capacity &lt;= 100 }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ImportError { Malformed, InvalidSettings }
+#[derive(Debug)]
+struct Completion { key: Key, result: Result&lt;Settings, ImportError&gt; }
+#[derive(Clone, Copy)]
+struct AcceptedInput { key: Key, settings: Settings }
+#[derive(Clone, Copy)]
+struct Request { key: Key, completed: bool }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct World { run: u64, tick: u64, settings: Settings }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Reception { Staged, Failed, Ignored }
+struct App {
+    world: World,
+    next_request: u64,
+    current: Option&lt;Request&gt;,
+    staged: Option&lt;AcceptedInput&gt;,
+    error: Option&lt;ImportError&gt;,
+}
+impl App {
+    fn new() -&gt; Self {
+        Self { world: World { run: 1, tick: 0, settings: Settings { cost: 2, capacity: 10 } },
+            next_request: 0, current: None, staged: None, error: None }
+    }
+    fn request(&amp;mut self) -&gt; Key {
+        self.next_request = self.next_request.checked_add(1).expect(&quot;request identity exhausted&quot;);
+        let key = Key { run: self.world.run, request: self.next_request };
+        self.current = Some(Request { key, completed: false });
+        self.staged = None;
+        self.error = None;
+        key
+    }
+    fn receive(&amp;mut self, completion: Completion) -&gt; Reception {
+        let _ = completion;
+        todo!(&quot;accept only the current uncompleted request and stage one validated value&quot;)
+    }
+
+    fn tick(&amp;mut self) {
+        let next_tick = self.world.tick.checked_add(1).expect(&quot;tick exhausted&quot;);
+        if let Some(input) = self.staged.take() {
+            if input.key.run == self.world.run &amp;&amp; self.current.map(|request| request.key) == Some(input.key) {
+                self.world.settings = input.settings;
+                self.current = None;
+            }
+        }
+        self.world.tick = next_tick;
+    }
+    fn cancel(&amp;mut self) { self.current = None; self.staged = None; self.error = None; }
+    fn reset(&amp;mut self) {
+        let run = self.world.run.checked_add(1).expect(&quot;run identity exhausted&quot;);
+        self.cancel();
+        self.next_request = 0;
+        self.world = World { run, tick: 0, settings: Settings { cost: 2, capacity: 10 } };
+    }
+}
+async fn parse_ready(payload: String) -&gt; Result&lt;Settings, ImportError&gt; {
+    let (cost, capacity) = payload.split_once(&#x27;,&#x27;).ok_or(ImportError::Malformed)?;
+    let settings = Settings { cost: cost.parse().map_err(|_| ImportError::Malformed)?,
+        capacity: capacity.parse().map_err(|_| ImportError::Malformed)? };
+    if settings.valid() { Ok(settings) } else { Err(ImportError::InvalidSettings) }
+}
+// One poll of a known-ready lab future. This is not an I/O executor.
+fn poll_ready&lt;F: Future&gt;(future: F) -&gt; F::Output {
+    let mut future = std::pin::pin!(future);
+    let mut context = Context::from_waker(Waker::noop());
+    match future.as_mut().poll(&amp;mut context) {
+        Poll::Ready(value) =&gt; value,
+        Poll::Pending =&gt; panic!(&quot;this probe accepts only immediately ready futures&quot;),
+    }
+}
+fn worker(key: Key, payload: String, output: Sender&lt;Completion&gt;) -&gt; (Sender&lt;()&gt;, JoinHandle&lt;()&gt;) {
+    let (start, gate) = mpsc::channel();
+    let handle = thread::spawn(move || {
+        gate.recv().unwrap();
+        let result = poll_ready(parse_ready(payload));
+        output.send(Completion { key, result }).unwrap();
+    });
+    (start, handle)
+}
+fn newer_first(old: Key, new: Key) -&gt; [Completion; 2] {
+    let (send, receive) = mpsc::channel();
+    let (old_gate, old_handle) = worker(old, &quot;3,30&quot;.to_owned(), send.clone());
+    let (new_gate, new_handle) = worker(new, &quot;4,40&quot;.to_owned(), send);
+    new_gate.send(()).unwrap();
+    let newer = receive.recv().unwrap();
+    old_gate.send(()).unwrap();
+    let older = receive.recv().unwrap();
+    new_handle.join().unwrap(); old_handle.join().unwrap();
+    [newer, older]
+}
+fn completion(key: Key, cost: u32, capacity: u32) -&gt; Completion {
+    Completion { key, result: Ok(Settings { cost, capacity }) }
+}
+fn main() {
+    let mut app = App::new();
+    let old = app.request(); let new = app.request();
+    let [newer, older] = newer_first(old, new);
+    println!(&quot;received new={:?} old={:?}&quot;, app.receive(newer), app.receive(older));
+    println!(&quot;before tick={} cost={} capacity={}&quot;, app.world.tick, app.world.settings.cost, app.world.settings.capacity);
+    app.tick();
+    println!(&quot;after tick={} cost={} capacity={}&quot;, app.world.tick, app.world.settings.cost, app.world.settings.capacity);
+    app.reset();
+    println!(&quot;after reset stale={:?} run={}&quot;, app.receive(completion(new, 4, 40)), app.world.run);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn controlled_threads_complete_newer_first_and_only_newer_is_committed() {
+        let mut app = App::new();
+        let old = app.request(); let new = app.request();
+        let [newer, older] = newer_first(old, new);
+        assert_eq!((newer.key, older.key), (new, old));
+        assert_eq!(app.receive(newer), Reception::Staged);
+        assert_eq!(app.receive(older), Reception::Ignored);
+        app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 4, capacity: 40 });
+    }
+    #[test]
+    fn arrival_does_not_change_authoritative_state_until_an_executed_tick() {
+        let mut app = App::new(); let before = app.world;
+        let key = app.request();
+        assert_eq!(app.receive(completion(key, 3, 30)), Reception::Staged);
+        assert_eq!(app.world, before);
+        app.tick();
+        assert_eq!((app.world.tick, app.world.settings), (1, Settings { cost: 3, capacity: 30 }));
+    }
+    #[test]
+    fn replacing_a_request_also_discards_its_already_staged_input() {
+        let mut app = App::new(); let old = app.request();
+        app.receive(completion(old, 3, 30));
+        let new = app.request(); app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 2, capacity: 10 });
+        app.receive(completion(new, 4, 40)); app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 4, capacity: 40 });
+    }
+    #[test]
+    fn cancellation_ignores_late_completion_and_discards_staged_work() {
+        let mut app = App::new(); let key = app.request();
+        app.receive(completion(key, 3, 30)); app.cancel();
+        assert_eq!(app.receive(completion(key, 4, 40)), Reception::Ignored);
+        app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 2, capacity: 10 });
+    }
+    #[test]
+    fn reset_rejects_old_run_even_when_request_number_is_reused() {
+        let mut app = App::new(); let old = app.request();
+        app.reset(); let new = app.request();
+        assert_eq!(old.request, new.request); assert_ne!(old.run, new.run);
+        assert_eq!(app.receive(completion(old, 3, 30)), Reception::Ignored);
+        assert_eq!(app.receive(completion(new, 4, 40)), Reception::Staged);
+        app.tick();
+        assert_eq!((app.world.run, app.world.settings), (2, Settings { cost: 4, capacity: 40 }));
+    }
+    #[test]
+    fn malformed_and_invalid_results_never_partially_commit_settings() {
+        let mut app = App::new(); let before = app.world.settings;
+        for payload in [&quot;3,nope&quot;, &quot;3,101&quot;, &quot;20,10&quot;] {
+            let key = app.request();
+            let result = poll_ready(parse_ready(payload.to_owned()));
+            assert!(result.is_err());
+            assert_eq!(app.receive(Completion { key, result }), Reception::Failed);
+            app.tick(); assert_eq!(app.world.settings, before);
+        }
+        let key = app.request();
+        assert_eq!(app.receive(completion(key, 0, 10)), Reception::Failed);
+        app.tick(); assert_eq!(app.world.settings, before);
+    }
+    #[test]
+    fn duplicate_completion_cannot_replace_the_first_accepted_result() {
+        let mut app = App::new(); let key = app.request();
+        assert_eq!(app.receive(completion(key, 3, 30)), Reception::Staged);
+        assert_eq!(app.receive(completion(key, 4, 40)), Reception::Ignored);
+        app.tick();
+        assert_eq!(app.receive(completion(key, 4, 40)), Reception::Ignored);
+        assert_eq!(app.world.settings, Settings { cost: 3, capacity: 30 });
+    }
+    #[test]
+    fn stale_error_does_not_erase_a_newer_success_or_display_an_error() {
+        let mut app = App::new(); let old = app.request(); let new = app.request();
+        app.receive(completion(new, 4, 40));
+        assert_eq!(app.receive(Completion { key: old, result: Err(ImportError::Malformed) }), Reception::Ignored);
+        assert_eq!(app.error, None);
+        app.tick(); assert_eq!(app.world.settings, Settings { cost: 4, capacity: 40 });
+    }
+    #[test]
+    fn async_body_waits_for_poll_and_owned_messages_are_send_and_sync() {
+        fn assert_send_sync&lt;T: Send + Sync&gt;() {}
+        assert_send_sync::&lt;Completion&gt;();
+        let called = std::cell::Cell::new(false);
+        let future = async { called.set(true); 7 };
+        assert!(!called.get());
+        assert_eq!(poll_ready(future), 7);
+        assert!(called.get());
+        assert_eq!(poll_ready(parse_ready(&quot;3,30&quot;.to_owned())), Ok(Settings { cost: 3, capacity: 30 }));
+    }
+}
+</code></pre></details>
+
+<h2 id="the-complete-acceptance-boundary">The complete acceptance boundary</h2>
+<p>The complete answer uses only the standard library. Read <code>receive</code> beside <code>request</code>, <code>cancel</code>, <code>reset</code>, and <code>tick</code> to follow how permission begins, ends, and becomes an applied value. Parsing and thread orchestration deliver a message to that state machine; no completed message directly assigns the world's settings.</p>
+<details><summary>Complete worked answer: async.rs</summary><pre><code class="language-rust" data-runnable="async">use std::future::Future;
+use std::sync::mpsc::{self, Sender};
+use std::task::{Context, Poll, Waker};
+use std::thread::{self, JoinHandle};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Key { run: u64, request: u64 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Settings { cost: u32, capacity: u32 }
+impl Settings {
+    fn valid(self) -&gt; bool { self.cost &gt; 0 &amp;&amp; self.cost &lt;= self.capacity &amp;&amp; self.capacity &lt;= 100 }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ImportError { Malformed, InvalidSettings }
+#[derive(Debug)]
+struct Completion { key: Key, result: Result&lt;Settings, ImportError&gt; }
+#[derive(Clone, Copy)]
+struct AcceptedInput { key: Key, settings: Settings }
+#[derive(Clone, Copy)]
+struct Request { key: Key, completed: bool }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct World { run: u64, tick: u64, settings: Settings }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Reception { Staged, Failed, Ignored }
+struct App {
+    world: World,
+    next_request: u64,
+    current: Option&lt;Request&gt;,
+    staged: Option&lt;AcceptedInput&gt;,
+    error: Option&lt;ImportError&gt;,
+}
+impl App {
+    fn new() -&gt; Self {
+        Self { world: World { run: 1, tick: 0, settings: Settings { cost: 2, capacity: 10 } },
+            next_request: 0, current: None, staged: None, error: None }
+    }
+    fn request(&amp;mut self) -&gt; Key {
+        self.next_request = self.next_request.checked_add(1).expect(&quot;request identity exhausted&quot;);
+        let key = Key { run: self.world.run, request: self.next_request };
+        self.current = Some(Request { key, completed: false });
+        self.staged = None;
+        self.error = None;
+        key
+    }
+    fn receive(&amp;mut self, completion: Completion) -&gt; Reception {
+        let Some(request) = self.current.as_mut() else { return Reception::Ignored; };
+        if completion.key.run != self.world.run || completion.key != request.key || request.completed {
+            return Reception::Ignored;
+        }
+        request.completed = true;
+        let result = completion.result.and_then(|settings| {
+            if settings.valid() { Ok(settings) } else { Err(ImportError::InvalidSettings) }
+        });
+        match result {
+            Ok(settings) =&gt; {
+                self.staged = Some(AcceptedInput { key: completion.key, settings });
+                self.error = None;
+                Reception::Staged
+            }
+            Err(error) =&gt; {
+                self.staged = None;
+                self.error = Some(error);
+                Reception::Failed
+            }
+        }
+    }
+    fn tick(&amp;mut self) {
+        let next_tick = self.world.tick.checked_add(1).expect(&quot;tick exhausted&quot;);
+        if let Some(input) = self.staged.take() {
+            if input.key.run == self.world.run &amp;&amp; self.current.map(|request| request.key) == Some(input.key) {
+                self.world.settings = input.settings;
+                self.current = None;
+            }
+        }
+        self.world.tick = next_tick;
+    }
+    fn cancel(&amp;mut self) { self.current = None; self.staged = None; self.error = None; }
+    fn reset(&amp;mut self) {
+        let run = self.world.run.checked_add(1).expect(&quot;run identity exhausted&quot;);
+        self.cancel();
+        self.next_request = 0;
+        self.world = World { run, tick: 0, settings: Settings { cost: 2, capacity: 10 } };
+    }
+}
+async fn parse_ready(payload: String) -&gt; Result&lt;Settings, ImportError&gt; {
+    let (cost, capacity) = payload.split_once(&#x27;,&#x27;).ok_or(ImportError::Malformed)?;
+    let settings = Settings { cost: cost.parse().map_err(|_| ImportError::Malformed)?,
+        capacity: capacity.parse().map_err(|_| ImportError::Malformed)? };
+    if settings.valid() { Ok(settings) } else { Err(ImportError::InvalidSettings) }
+}
+// One poll of a known-ready lab future. This is not an I/O executor.
+fn poll_ready&lt;F: Future&gt;(future: F) -&gt; F::Output {
+    let mut future = std::pin::pin!(future);
+    let mut context = Context::from_waker(Waker::noop());
+    match future.as_mut().poll(&amp;mut context) {
+        Poll::Ready(value) =&gt; value,
+        Poll::Pending =&gt; panic!(&quot;this probe accepts only immediately ready futures&quot;),
+    }
+}
+fn worker(key: Key, payload: String, output: Sender&lt;Completion&gt;) -&gt; (Sender&lt;()&gt;, JoinHandle&lt;()&gt;) {
+    let (start, gate) = mpsc::channel();
+    let handle = thread::spawn(move || {
+        gate.recv().unwrap();
+        let result = poll_ready(parse_ready(payload));
+        output.send(Completion { key, result }).unwrap();
+    });
+    (start, handle)
+}
+fn newer_first(old: Key, new: Key) -&gt; [Completion; 2] {
+    let (send, receive) = mpsc::channel();
+    let (old_gate, old_handle) = worker(old, &quot;3,30&quot;.to_owned(), send.clone());
+    let (new_gate, new_handle) = worker(new, &quot;4,40&quot;.to_owned(), send);
+    new_gate.send(()).unwrap();
+    let newer = receive.recv().unwrap();
+    old_gate.send(()).unwrap();
+    let older = receive.recv().unwrap();
+    new_handle.join().unwrap(); old_handle.join().unwrap();
+    [newer, older]
+}
+fn completion(key: Key, cost: u32, capacity: u32) -&gt; Completion {
+    Completion { key, result: Ok(Settings { cost, capacity }) }
+}
+fn main() {
+    let mut app = App::new();
+    let old = app.request(); let new = app.request();
+    let [newer, older] = newer_first(old, new);
+    println!(&quot;received new={:?} old={:?}&quot;, app.receive(newer), app.receive(older));
+    println!(&quot;before tick={} cost={} capacity={}&quot;, app.world.tick, app.world.settings.cost, app.world.settings.capacity);
+    app.tick();
+    println!(&quot;after tick={} cost={} capacity={}&quot;, app.world.tick, app.world.settings.cost, app.world.settings.capacity);
+    app.reset();
+    println!(&quot;after reset stale={:?} run={}&quot;, app.receive(completion(new, 4, 40)), app.world.run);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn controlled_threads_complete_newer_first_and_only_newer_is_committed() {
+        let mut app = App::new();
+        let old = app.request(); let new = app.request();
+        let [newer, older] = newer_first(old, new);
+        assert_eq!((newer.key, older.key), (new, old));
+        assert_eq!(app.receive(newer), Reception::Staged);
+        assert_eq!(app.receive(older), Reception::Ignored);
+        app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 4, capacity: 40 });
+    }
+    #[test]
+    fn arrival_does_not_change_authoritative_state_until_an_executed_tick() {
+        let mut app = App::new(); let before = app.world;
+        let key = app.request();
+        assert_eq!(app.receive(completion(key, 3, 30)), Reception::Staged);
+        assert_eq!(app.world, before);
+        app.tick();
+        assert_eq!((app.world.tick, app.world.settings), (1, Settings { cost: 3, capacity: 30 }));
+    }
+    #[test]
+    fn replacing_a_request_also_discards_its_already_staged_input() {
+        let mut app = App::new(); let old = app.request();
+        app.receive(completion(old, 3, 30));
+        let new = app.request(); app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 2, capacity: 10 });
+        app.receive(completion(new, 4, 40)); app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 4, capacity: 40 });
+    }
+    #[test]
+    fn cancellation_ignores_late_completion_and_discards_staged_work() {
+        let mut app = App::new(); let key = app.request();
+        app.receive(completion(key, 3, 30)); app.cancel();
+        assert_eq!(app.receive(completion(key, 4, 40)), Reception::Ignored);
+        app.tick();
+        assert_eq!(app.world.settings, Settings { cost: 2, capacity: 10 });
+    }
+    #[test]
+    fn reset_rejects_old_run_even_when_request_number_is_reused() {
+        let mut app = App::new(); let old = app.request();
+        app.reset(); let new = app.request();
+        assert_eq!(old.request, new.request); assert_ne!(old.run, new.run);
+        assert_eq!(app.receive(completion(old, 3, 30)), Reception::Ignored);
+        assert_eq!(app.receive(completion(new, 4, 40)), Reception::Staged);
+        app.tick();
+        assert_eq!((app.world.run, app.world.settings), (2, Settings { cost: 4, capacity: 40 }));
+    }
+    #[test]
+    fn malformed_and_invalid_results_never_partially_commit_settings() {
+        let mut app = App::new(); let before = app.world.settings;
+        for payload in [&quot;3,nope&quot;, &quot;3,101&quot;, &quot;20,10&quot;] {
+            let key = app.request();
+            let result = poll_ready(parse_ready(payload.to_owned()));
+            assert!(result.is_err());
+            assert_eq!(app.receive(Completion { key, result }), Reception::Failed);
+            app.tick(); assert_eq!(app.world.settings, before);
+        }
+        let key = app.request();
+        assert_eq!(app.receive(completion(key, 0, 10)), Reception::Failed);
+        app.tick(); assert_eq!(app.world.settings, before);
+    }
+    #[test]
+    fn duplicate_completion_cannot_replace_the_first_accepted_result() {
+        let mut app = App::new(); let key = app.request();
+        assert_eq!(app.receive(completion(key, 3, 30)), Reception::Staged);
+        assert_eq!(app.receive(completion(key, 4, 40)), Reception::Ignored);
+        app.tick();
+        assert_eq!(app.receive(completion(key, 4, 40)), Reception::Ignored);
+        assert_eq!(app.world.settings, Settings { cost: 3, capacity: 30 });
+    }
+    #[test]
+    fn stale_error_does_not_erase_a_newer_success_or_display_an_error() {
+        let mut app = App::new(); let old = app.request(); let new = app.request();
+        app.receive(completion(new, 4, 40));
+        assert_eq!(app.receive(Completion { key: old, result: Err(ImportError::Malformed) }), Reception::Ignored);
+        assert_eq!(app.error, None);
+        app.tick(); assert_eq!(app.world.settings, Settings { cost: 4, capacity: 40 });
+    }
+    #[test]
+    fn async_body_waits_for_poll_and_owned_messages_are_send_and_sync() {
+        fn assert_send_sync&lt;T: Send + Sync&gt;() {}
+        assert_send_sync::&lt;Completion&gt;();
+        let called = std::cell::Cell::new(false);
+        let future = async { called.set(true); 7 };
+        assert!(!called.get());
+        assert_eq!(poll_ready(future), 7);
+        assert!(called.get());
+        assert_eq!(poll_ready(parse_ready(&quot;3,30&quot;.to_owned())), Ok(Settings { cost: 3, capacity: 30 }));
+    }
+}
+</code></pre></details>
+<p>Check the printed reference separately:</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py check async</code></pre>
+<p>The literal output is:</p>
+<pre><code class="language-text">received new=Staged old=Ignored
+before tick=0 cost=2 capacity=10
+after tick=1 cost=4 capacity=40
+after reset stale=Ignored run=2</code></pre>
+
+<section class="lesson-summary" aria-labelledby="chapter-takeaway" id="recall-and-evidence">
+<h2 id="chapter-takeaway">Completion leaves the acceptance decision open</h2>
+<p>The old import can finish without overwriting the newer choice because its run/request key no longer grants acceptance. Owned messages make it safe to deliver and discard results; identity checks decide whether to stage them; the synchronous tick decides when accepted settings take effect. Cancellation can therefore prevent a commit even while the worker continues. Check that you can explain both limits: why transfer safety doesn't authorize an old result, and why the single-poll probe wouldn't drive a future that needs to wait for I/O.</p>
+<details><summary>Recall answers</summary><p>Transfer safety says nothing about request identity. Cancellation removes acceptance permission even if work continues. A pending I/O future needs wakeup and further scheduling, which the known-ready probe intentionally does not provide.</p></details>
+<p>The native tests follow actual worker threads in a controlled completion order and poll a real async future. They also check reset, replacement, cancellation, duplicate and stale errors, whole-value validation, and application at an executed tick. These results concern the native lab. A browser integration would still need platform and UI checks, including what it displays while a valid result waits for the user to step.</p>
+<p>In <a href="28-macros.html">reading a macro's generated work</a>, we'll follow another less visible operation: a concise assertion whose expansion could accidentally evaluate the same expression twice.</p>
+</section>

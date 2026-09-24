@@ -20,8 +20,8 @@ instructions are in [AGENTS.md](../../AGENTS.md), the active task in
 
 ## Tutorial checks
 
-[Current guide verification](../tutorial/authoring/verification.md) summarizes
-the active lesson; [path verification](../tutorial/path/verification.md) keeps
+[Archived guide verification](https://github.com/NicholasHazen/moss/blob/015ecdbf76a4c5253df8e1b182c0bee84c0cca9e/docs/tutorial/authoring/verification.md) summarizes
+the active lesson; [path verification](https://github.com/NicholasHazen/moss/blob/015ecdbf76a4c5253df8e1b182c0bee84c0cca9e/docs/tutorial/path/verification.md) keeps
 the future references' tested scope. Detailed commands and outcomes live here:
 
 - [September 23, visual check](tutorial/2026-09-23.md): future foraging inputs and inspector values across two ticks.

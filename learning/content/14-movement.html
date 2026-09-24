@@ -1,0 +1,107 @@
+<p class="lesson-lead">Fern has a destination and enough reserve to begin the journey. Before changing her position, though, the movement helper must decide whether the next cell is valid and whether she can pay for it. Preparing a proposal without yet changing the caller gives us room to reject a step that fails either check.</p>
+<aside class="scope-note"><p><strong>This is the active movement assignment.</strong> Your single active edit remains <code>move_one_cell</code> in <code>crates/moss-sim/src/lessons.rs</code>, as selected by <code>NOW.md</code>. This chapter contains the instructions and complete worked replacement. Completing the helper brings it to review; movement stays unscheduled until the prepared system is deliberately activated.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Bring one paid step to the review checkpoint</h2>
+<p>This chapter connects the Rust and ECS tools you've practiced to the canonical one-cell movement assignment. We'll trace a proposed step through bounds and affordability checks, then follow how its prepared adapter resolves a target and fits into the intended schedule. Your current destination is a helper whose focused test passes and whose behavior you can explain for review. The later journey remains conditional on that reviewed activation.</p>
+</section>
+
+<h2 id="open-the-one-assignment">Open the one assignment</h2>
+<p>Open <code>crates/moss-sim/src/lessons.rs</code> in your working checkout and find <code>move_one_cell</code>. This is the one edit selected by <code>NOW.md</code>: replace the unfinished body while leaving the rest of the file and the installed schedule alone. You can begin here without finishing the preceding thirteen Fieldnotes. The explanation, exact test command and complete answer below provide the route from the unfinished helper to review.</p>
+<p>Before changing the helper, run its focused test. At this checkpoint, it should reach the deliberate <code>todo!</code> in the function you will implement. Seeing that expected failure establishes that the runner can compile the program and reach your edit, giving you a useful starting point for the repair.</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test movement movement_charges_only_an_affordable_actual_step -- --exact</code></pre>
+<p>Check the test name and selected-test count in that result. An empty selection has not reached the unfinished function, and a compilation diagnostic has not reached an assertion. <a href="13-evidence.html">The evidence lesson</a> explains those distinctions so you can fix the stage that actually failed before reasoning about movement.</p>
+
+<h2 id="a-proposal-is-not-a-move">A proposal is not yet a move</h2>
+<p>Begin with a small case you can follow by hand: current cell (2, 2), target (4, 4), reserve 59, and a price of two energy units per cell. The selected rule moves along x before y and allows at most one cardinal step per call. Its candidate next position is therefore (3, 2), one cell away at a cost of two. We can work out that proposal before deciding to accept it.</p>
+<p>The function receives <code>&amp;mut Position</code>, which gives it access to the caller's actual position. Writing through that reference changes the world immediately. Instead, copy the small <code>Position</code> value into a local <code>next</code> and calculate the proposed step there. The local value can change while the caller stays at (2, 2). If validation fails, discarding that copy is enough; if it succeeds, a later write through the reference commits the proposal.</p>
+<p>Now lower the starting reserve to one. The same proposed step costs two, so the accepted distance must be zero and both position and reserve must remain unchanged. If you moved the caller first, returning zero would only report a rejection after the move had already happened. Keeping the proposal separate gives rejection the behavior the return value promises.</p>
+<table><caption>The same proposed cell under different starting conditions</caption><thead><tr><th scope="col">Before the call</th><th scope="col">Accepted result</th><th scope="col">What the case reveals</th></tr></thead><tbody>
+<tr><td>(2, 2), reserve 59, target (4, 4), rate 2</td><td>(3, 2), reserve 57, distance 1</td><td>A paid x step.</td></tr>
+<tr><td>(2, 2), reserve 1, target (4, 4), rate 2</td><td>(2, 2), reserve 1, distance 0</td><td>Rejection without partial mutation.</td></tr>
+<tr><td>(2, 2), reserve 2, target (4, 4), rate 2</td><td>(3, 2), reserve 0, distance 1</td><td>Exact affordability is accepted.</td></tr>
+<tr><td>(2, 2), reserve 59, target (2, 2), rate 2</td><td>(2, 2), reserve 59, distance 0</td><td>Having a target does not imply travel.</td></tr>
+</tbody></table>
+<p>The earlier distinction between <a href="04-units.html">requested and actual payment</a> matters here. Maintenance spends what the reserve can supply and saturates at zero. Movement accepts a step only when the whole price can be paid. A saturating subtraction would still produce a valid number for the one-unit animal, but it would let that animal travel without funding the step. The selected rule tells us which arithmetic operation is appropriate.</p>
+
+<h2 id="bounds-before-commit">Validate the coordinates before committing</h2>
+<p>Affordability is only one reason to reject the proposal. Before committing a paid step, we also need to establish that the coordinates describe a valid move within this world. In a world of width 32, x may be zero through 31; a negative x or x equal to 32 is outside the world. Check both the current position and the target before changing either mutable value. A valid destination cannot make an invalid starting position a sound basis for movement, which is why the canonical answer validates before committing.</p>
+<p>We can also use the guarantees already established by construction. <code>WorldConfig</code> limits dimensions to 8 through 256, so converting those dimensions to signed coordinates is safe. The helper then uses checked arithmetic for distance and cost. Under this one-cell policy, the distance is zero or one; calculating it explicitly still makes the units and the assumptions behind payment visible.</p>
+<p>A call represents one opportunity to take a cardinal step. The rule does not include diagonals, obstacles, pathfinding, or several cells of travel at once. That small unit of work is deliberate: the ECS adapter calls the helper for eligible animals, and later ticks provide later opportunities. Adding a loop here would change what one call means and what its tests are meant to establish.</p>
+<details><summary>Prediction: what should happen when only y differs?</summary><p>If the start is (4, 2) and the target is (4, 4), x already agrees. The next proposal is (4, 3). With exactly two reserve units and a rate of two, it commits that position and leaves zero. The <code>else if</code> in the canonical answer chooses one axis, so a call cannot move diagonally.</p></details>
+
+<h2 id="complete-worked-replacement">Write one affordable step</h2>
+<p>You now have the order of the decision: reject invalid coordinates, propose one cell in a local copy, calculate its price, and commit only if the reserve can pay. Try writing the body in that order, or open the complete answer and trace it with reserve 59 and then 1. One call attempts one step; the adapter and later ticks provide subsequent opportunities.</p>
+<details><summary>Complete worked replacement for move_one_cell</summary>
+<p>Replace only <code>move_one_cell</code> in <code>crates/moss-sim/src/lessons.rs</code> with this function, or retain its matching signature and replace the body. The file already imports <code>Energy</code>, <code>Position</code> and <code>WorldConfig</code>. Remove the placeholder's <code>let _ = (...)</code> and <code>todo!(...)</code> lines; don't add a second function with the same name.</p>
+<pre><code class="language-rust" data-movement-reference="move_one_cell">pub fn move_one_cell(
+    position: &amp;mut Position,
+    energy: &amp;mut Energy,
+    target: Position,
+    units_per_cell: u32,
+    config: WorldConfig,
+) -&gt; u32 {
+    let in_bounds = |p: Position| {
+        (0..config.width() as i32).contains(&amp;p.x) &amp;&amp; (0..config.height() as i32).contains(&amp;p.y)
+    };
+    if !in_bounds(*position) || !in_bounds(target) {
+        return 0;
+    }
+
+    let mut next = *position;
+    if next.x != target.x {
+        next.x += if next.x &lt; target.x { 1 } else { -1 };
+    } else if next.y != target.y {
+        next.y += if next.y &lt; target.y { 1 } else { -1 };
+    }
+
+    let distance = position
+        .x
+        .abs_diff(next.x)
+        .checked_add(position.y.abs_diff(next.y))
+        .expect("step distance overflow");
+    let cost = distance
+        .checked_mul(units_per_cell)
+        .expect("movement cost overflow");
+    if energy.reserve &lt; cost {
+        return 0;
+    }
+
+    *position = next;
+    energy.reserve -= cost;
+    distance
+}</code></pre>
+<p>The local <code>in_bounds</code> closure accepts a position and returns whether both coordinates fit. Signed coordinates allow a negative position to be represented and rejected. The exclusive upper bound means width 32 accepts x through 31; the validated dimensions make the conversions to <code>i32</code> safe.</p>
+<p>The <code>if</code> expression produces either 1 or −1 to approach the target. Its <code>else if</code> lets y change only after x agrees, so a single call cannot move diagonally. The two <code>abs_diff</code> values measure the proposed distance; checked addition and multiplication detect unexpected arithmetic overflow. Affordability then answers a separate question: can this animal pay that representable price?</p>
+<p>Only the final two writes change the caller's values. The final <code>distance</code> has no semicolon because it supplies the return value. An early <code>return 0;</code> rejects a proposal; neither rejection path needs to undo a mutation.</p>
+</details>
+
+<h2 id="lookup-happens-now">The adapter resolves the target now</h2>
+<p>The helper knows a destination position, but the ECS adapter has to find a currently eligible destination first. Fern carries Meadow's stable ID in her authored target. The prepared <code>move_to_food</code> system resolves that ID against current patches and requires positive biomass before calling the helper. If the patch is missing or empty, no movement call occurs and no travel is charged.</p>
+<p>The target ID can remain stored even if Meadow changes, just as <a href="05-options.html">the snapshot lookup lesson</a> retained a report about an earlier world. That earlier report may be accurate for its observation time while no longer answering whether Fern may act now. The adapter performs the current lookup at the action boundary because neither a remembered target nor a displayed row supplies that fact.</p>
+<p>The query also decides which animals are eligible to attempt movement. It requires <code>FoodTarget</code>, mutable <code>Position</code>, mutable <code>Energy</code>, and the <code>Creature</code> marker. Flint has position and energy but no authored food target, so the system does not visit him. That difference comes from his component set; the system does not branch on his nickname or fox species.</p>
+<p>To read a patch position while mutating an animal position, the queries must describe disjoint access. The patch query excludes creatures, and the mutable query requires them, following the same reasoning as <a href="10-borrows.html">the preview lesson</a>. The adapter copies Meadow's small position into the helper, then borrows Fern's position and energy for the possible change. The copy supplies the destination without creating another authoritative world.</p>
+
+<h2 id="a-green-helper-is-one-checkpoint">A green helper is one checkpoint</h2>
+<p>After replacing the function body, rerun the exact focused test and read its assertions together. Returned distance, final position, and final reserve describe different consequences of one decision. They must agree: reporting a traveled cell without moving should fail, and the low-energy and invalid-coordinate cases must preserve both mutable values. This is the helper's contract before any system is installed.</p>
+<p>A passing helper is the point to request the review specified in <code>NOW.md</code>. That review checks the selected rule and deliberately connects the prepared adapter to the installed schedule. Until this transition is performed in your working checkout, the correct helper remains available code rather than active movement. Send this short handoff when the named test passes:</p>
+<blockquote><p>The movement helper test passes. Review the bounds, borrowing and mutation order, then activate the prepared system and verify Fern's journey with me.</p></blockquote>
+<p>If the same <code>todo!</code> panic remains, check that you saved the replacement in the selected function. A diagnostic such as <code>expected u32, found ()</code> can come from adding a semicolon to its final expression. If only low-energy position assertions fail, look for a write through <code>position</code> before affordability is checked. Follow the fixture's current values: its low-energy case starts at (3, 2) after a successful step, rather than resetting to (2, 2).</p>
+<p>The intended schedule runs maintenance, then movement, then tick completion. Consider an animal starting a tick with reserve two: maintenance spends one, leaving too little for a two-unit step. Movement must therefore reject it. Reversing the first two systems would allow a different outcome, even if both bodies were individually correct. <a href="11-schedules.html">Explicit ordering</a> makes this chosen meaning part of the installed program.</p>
+<p>Two prepared installed-world tests are ignored at the current checkpoint. During reviewed activation, they become checks of target resolution, affordability after maintenance, the journey, and reset. Those tests reach relationships the helper cannot see, including whether its adapter was installed at all. The course's <a href="terrarium.html">Rust terrarium</a> currently shows the maintenance-only checkpoint, where Fern remains stationary despite the prepared movement code.</p>
+
+<h2 id="account-for-the-journey">Account for the expected journey</h2>
+<p>Once activation has been reviewed and performed, use the route from (10, 10) to (16, 13) to predict a complete journey. The rule takes six x steps, followed by three y steps. The table is an <strong>expectation after reviewed activation</strong>, so compare it with the rebuilt browser at that stage rather than treating it as movement already present in the current preview.</p>
+<table><caption>Expected installed behavior after movement activation</caption><thead><tr><th scope="col">Completed ticks</th><th scope="col">Fern</th><th scope="col">Other evidence</th></tr></thead><tbody>
+<tr><td>0</td><td>(10, 10), reserve 60</td><td>Flint 60; Meadow biomass 80.</td></tr>
+<tr><td>1</td><td>(11, 10), reserve 57</td><td>One maintenance unit and two travel units paid.</td></tr>
+<tr><td>9</td><td>(16, 13), reserve 33</td><td>Flint 51; Meadow still 80.</td></tr>
+<tr><td>10</td><td>(16, 13), reserve 32</td><td>No new travel; Flint 50; Meadow still 80.</td></tr>
+</tbody></table>
+<p>Across the first nine ticks, Fern pays nine maintenance units and nine steps at two units each, leaving 60 − 9 − 18 = 33. On tick ten she is already at the target, so only maintenance is charged. Arriving on a patch does not yet consume its food: eating is a separate proposed rule. Unchanged biomass is therefore consistent with this completed movement journey.</p>
+<details><summary>Debug the tenth tick: why might the reserve fall to 30 instead?</summary><p>A three-unit decrease would suggest that two travel units were charged despite zero actual distance, assuming maintenance remains one. Inspect the helper's returned distance and the location of payment before changing the UI. A retained target tells you the intended destination; it does not prove a cell was traveled.</p></details>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Bring a complete one-cell decision to review</h2>
+<p>The helper's result now has a contract you can check: a rejected proposal leaves position and reserve alone; an accepted step changes both and reports the distance actually traveled. For now, implement the canonical helper, pass its focused test, and request the specified review. That is the current checkpoint, even though you've also traced where the helper will fit in the world.</p>
+<p>After reviewed activation, the installed adapter must resolve current eligibility in the chosen order, and the rebuilt browser must show the expected nine-step journey. Those additional checks connect the helper's decision to the behavior a viewer sees. Next, the same proposal, validation, and commit pattern will help us account for <a href="15-meals.html">a finite meal that changes two owners at once</a>: a reserve gain needs a matching loss somewhere else.</p>
+</section>
