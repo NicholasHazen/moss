@@ -2,6 +2,8 @@
   "use strict";
   const KEY = "moss-fieldnotes-v1";
   const page = document.body.dataset.page;
+  const courseBrowser = document.querySelector(".course-browser");
+  if (courseBrowser && window.matchMedia("(max-width: 760px)").matches) courseBrowser.open = false;
   const { empty, validate, mergeImported, reconcile } = window.MossRecords;
   let record = empty();
   let baseRecord = empty();
@@ -221,7 +223,7 @@
   else {
     listen.addEventListener("click", () => {
       stopReading(); const session = generation;
-      const blocks = [...document.querySelectorAll("article h1,article h2,article h3,article p,article li,article figcaption,article table")].filter(node => !node.closest(".experiment,.narration-player,pre") && !node.classList.contains("eyebrow") && !node.querySelector("p") && node.getClientRects().length && !node.closest("details:not([open])"));
+      const blocks = [...document.querySelectorAll("article h1,article h2,article h3,article p,article li,article figcaption,article table")].filter(node => !node.closest(".experiment,.narration-player,.chapter-contents,pre") && !node.classList.contains("eyebrow") && !node.querySelector("p") && node.getClientRects().length && !node.closest("details:not([open])"));
       let i = 0; listen.disabled = true; pause.hidden = false; stop.hidden = false;
       function next() {
         if (session !== generation) return;
