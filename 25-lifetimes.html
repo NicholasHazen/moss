@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Relate a journal view to its actual owner without tying it to a temporary search term."><meta name="color-scheme" content="light"><meta name="theme-color" content="#164f50">
+<title>Let a view borrow exactly what it needs · Moss Fieldnotes</title><link rel="icon" href="assets/identity/atlas-mark-v1.png" type="image/png"><link rel="stylesheet" href="assets/fieldnotes.css?v=1351a94cba7f">
+<script src="assets/records.js?v=1351a94cba7f" defer></script><script src="assets/models.js?v=1351a94cba7f" defer></script><script src="assets/terrarium.js?v=1351a94cba7f" defer></script><script src="assets/evidence.js?v=1351a94cba7f" defer></script><script src="assets/ecosystem.js?v=1351a94cba7f" defer></script><script src="assets/population.js?v=1351a94cba7f" defer></script><script src="assets/mobile.js?v=1351a94cba7f" defer></script><script src="assets/fieldnotes.js?v=1351a94cba7f" defer></script></head>
+<body data-page="25-lifetimes"><a class="skip-link" href="#reading">Skip to reading</a>
+<header class="masthead"><div class="masthead-inner"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">Moss · Fieldnotes 0.4</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></div></header>
+<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><a class="introduction-link" href="introduction.html">Start here · Meet Moss</a><ol><li class="nav-group"><details><summary>Start with evidence</summary><ol><li><a href="01-observe.html"><span class="number">01</span><span>A tick is a promise<small>25 min · values</small></span><span class="progress-dot" data-progress-for="01-observe" aria-hidden="true"></span></a></li><li><a href="02-ownership.html"><span class="number">02</span><span>Who owns the next change?<small>35 min · ownership</small></span><span class="progress-dot" data-progress-for="02-ownership" aria-hidden="true"></span></a></li><li><a href="03-queries.html"><span class="number">03</span><span>Ask the world a typed question<small>35 min · components</small></span><span class="progress-dot" data-progress-for="03-queries" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Everyday Rust</summary><ol><li><a href="04-units.html"><span class="number">04</span><span>Give the number a unit<small>30 min · newtypes</small></span><span class="progress-dot" data-progress-for="04-units" aria-hidden="true"></span></a></li><li><a href="05-options.html"><span class="number">05</span><span>Missing is a different state<small>30 min · enums</small></span><span class="progress-dot" data-progress-for="05-options" aria-hidden="true"></span></a></li><li><a href="06-results.html"><span class="number">06</span><span>A rejected request has a reason<small>35 min · Result</small></span><span class="progress-dot" data-progress-for="06-results" aria-hidden="true"></span></a></li><li><a href="07-modules.html"><span class="number">07</span><span>Put the boundary in the code<small>30 min · modules</small></span><span class="progress-dot" data-progress-for="07-modules" aria-hidden="true"></span></a></li><li><a href="08-collections.html"><span class="number">08</span><span>Collect a report, release the world<small>35 min · Vec</small></span><span class="progress-dot" data-progress-for="08-collections" aria-hidden="true"></span></a></li><li><a href="09-traits.html"><span class="number">09</span><span>A trait is a promise you can use<small>35 min · traits</small></span><span class="progress-dot" data-progress-for="09-traits" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>The ECS contract</summary><ol><li><a href="10-borrows.html"><span class="number">10</span><span>Prove that the borrows cannot meet<small>35 min · disjoint queries</small></span><span class="progress-dot" data-progress-for="10-borrows" aria-hidden="true"></span></a></li><li><a href="11-schedules.html"><span class="number">11</span><span>Give the observations an order<small>35 min · schedules</small></span><span class="progress-dot" data-progress-for="11-schedules" aria-hidden="true"></span></a></li><li><a href="12-commands.html"><span class="number">12</span><span>Change structure at a known boundary<small>40 min · Commands</small></span><span class="progress-dot" data-progress-for="12-commands" aria-hidden="true"></span></a></li><li><a href="13-evidence.html"><span class="number">13</span><span>Make a test disagree with a plausible mistake<small>40 min · testing</small></span><span class="progress-dot" data-progress-for="13-evidence" aria-hidden="true"></span></a></li><li><a href="14-movement.html"><span class="number">14</span><span>Connect one affordable action to the world<small>35 min · movement bridge</small></span><span class="progress-dot" data-progress-for="14-movement" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Ecosystem depth</summary><ol><li><a href="15-meals.html"><span class="number">15</span><span>A finite meal has two sides<small>40 min · finite transfers</small></span><span class="progress-dot" data-progress-for="15-meals" aria-hidden="true"></span></a></li><li><a href="16-targets.html"><span class="number">16</span><span>Choose, then revalidate a target<small>40 min · local observations</small></span><span class="progress-dot" data-progress-for="16-targets" aria-hidden="true"></span></a></li><li><a href="17-variation.html"><span class="number">17</span><span>Compare individuals fairly<small>40 min · authored populations</small></span><span class="progress-dot" data-progress-for="17-variation" aria-hidden="true"></span></a></li><li><a href="18-growth.html"><span class="number">18</span><span>Let environmental input change supply<small>45 min · bounded growth</small></span><span class="progress-dot" data-progress-for="18-growth" aria-hidden="true"></span></a></li><li><a href="19-history.html"><span class="number">19</span><span>Keep a disappearance explainable<small>45 min · lifecycle</small></span><span class="progress-dot" data-progress-for="19-history" aria-hidden="true"></span></a></li><li><a href="20-predation.html"><span class="number">20</span><span>Consume once, even before removal<small>45 min · predation</small></span><span class="progress-dot" data-progress-for="20-predation" aria-hidden="true"></span></a></li><li><a href="21-rest.html"><span class="number">21</span><span>Make rest a commitment you can inspect<small>40 min · state machines</small></span><span class="progress-dot" data-progress-for="21-rest" aria-hidden="true"></span></a></li><li><a href="22-births.html"><span class="number">22</span><span>Commit both parents before creating a child<small>45 min · paired transactions</small></span><span class="progress-dot" data-progress-for="22-births" aria-hidden="true"></span></a></li><li><a href="23-inheritance.html"><span class="number">23</span><span>Keep inheritance distinct from selection<small>45 min · inheritance</small></span><span class="progress-dot" data-progress-for="23-inheritance" aria-hidden="true"></span></a></li><li><a href="24-experiments.html"><span class="number">24</span><span>Make a comparison explain its denominator<small>45 min · controlled comparisons</small></span><span class="progress-dot" data-progress-for="24-experiments" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details open><summary>A selective Rust survey</summary><ol><li><a href="25-lifetimes.html" aria-current="page"><span class="number">25</span><span>Let a view borrow exactly what it needs<small>40 min · lifetimes</small></span><span class="progress-dot" data-progress-for="25-lifetimes" aria-hidden="true"></span></a></li><li><a href="26-indirection.html"><span class="number">26</span><span>Choose the owner before the abstraction<small>45 min · Box</small></span><span class="progress-dot" data-progress-for="26-indirection" aria-hidden="true"></span></a></li><li><a href="27-async.html"><span class="number">27</span><span>Accept asynchronous results at a tick boundary<small>45 min · concurrency</small></span><span class="progress-dot" data-progress-for="27-async" aria-hidden="true"></span></a></li><li><a href="28-macros.html"><span class="number">28</span><span>Read the code a macro asks Rust to check<small>40 min · macro_rules</small></span><span class="progress-dot" data-progress-for="28-macros" aria-hidden="true"></span></a></li></ol></details></li></ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+</details></aside>
+<main id="reading" tabindex="-1"><details class="reading-options" hidden><summary>Reading options</summary><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span><span id="reading-status" role="status"></span></div></details>
+<article><p class="eyebrow">A selective Rust survey · 40 minutes</p><h1 data-narration="0">Let a view borrow exactly what it needs</h1><p class="lesson-lead" data-narration="1">The inspector wants to show a sentence from Fern's journal: “ate 1 unit.” An export wants to keep the same sentence after the journal has been cleared. The text is identical, but its destinations ask different things of our code.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview" data-narration="2">Let a borrowed view depend on the right owner</h2>
+<p data-narration="3">You'll complete <code>latest_with_kind</code>, a search whose returned view borrows from the journal independently of the temporary search string. We'll compare that view with an owned snapshot, then use small compiler experiments to test what happens when text belongs to a local variable, a journal is cleared, or a borrow reaches its last use.</p>
+<p data-narration="4">The aim is to read a lifetime annotation as a relationship between a result and its actual source. By the end, you should be able to choose borrowing for a temporary inspection, copying for a retained export, and an appropriate correction when a reference would outlast the data it needs.</p>
+</section><details class="chapter-contents"><summary>In this chapter <span>6 sections</span></summary><nav aria-label="In this chapter"><ol><li><a href="#one-observation-two-destinations">One observation, two destinations</a></li><li><a href="#name-the-relationship">Name the relationship the caller needs</a></li><li><a href="#complete-the-borrowed-search">Complete the borrowed search</a></li><li><a href="#make-the-compiler-experiment-small">Make the compiler experiment small</a></li><li><a href="#end-a-view-before-changing-its-owner">End a view before changing its owner</a></li><li><a href="#chapter-takeaway">Let the destination decide whether the text is borrowed</a></li></ol></nav></details>
+<aside class="scope-note"><p data-narration="5">This optional Rust supplement revisits <a href="02-ownership.html">ownership</a>, <a href="08-collections.html">owned reports</a> and <a href="19-history.html">retained history</a>. It uses a small journal fixture with Rust 1.93.1, edition 2024, and changes no ecological rule or active Moss assignment. The fixture gives us a manageable place to explore references before carrying the reasoning into a larger report API.</p></aside>
+<h2 id="one-observation-two-destinations" data-narration="6">One observation, two destinations</h2>
+<p data-narration="7">Our journal contains four records in append order. Actor 7 has meals at ticks two and five, with an observation between them; actor 8 has a meal at tick six. To find actor 7's latest meal, we need to match both actor and kind, returning tick five. Taking the first meal would give an old result, while taking the newest record without checking its actor would describe somebody else. This gives the search a clear job before lifetimes enter the picture.</p>
+<p data-narration="8">Each <code>Record</code> owns its kind and note as strings, and the journal owns the vector containing those records. For a temporary inspector, a <code>View</code> can copy the small actor, tick and optional reserve fields while borrowing the note as <code>&amp;str</code>. That avoids allocating the same sentence again, but it also connects the view to its source: every use of the borrowed text must occur while that text remains available.</p>
+<p data-narration="9">The export has a different need, so <code>Snapshot</code> gives its note an owned <code>String</code>. Calling <code>snapshot()</code> explicitly copies the text, paying for the independence we asked for. The export can then survive an amendment, eviction or the loss of the original journal altogether. It keeps the sentence as it was copied, rather than following later changes to the source.</p>
+<p data-narration="10">The choice therefore starts with the result's intended use. A brief inspection can borrow, while a retained report needs to cross an ownership boundary. Neither design is universally cheaper or better: borrowing couples use to the source, and copying creates storage the result must own. Lifetimes let the borrowed design state that coupling precisely.</p>
+<h2 id="name-the-relationship" data-narration="11">Name the relationship the caller needs</h2>
+<p data-narration="12">Our search borrows two inputs: the journal and a kind string such as “meal.” Only one of them supplies text to the result. The kind is a search condition that we can forget once comparison finishes; the returned note comes from the journal. Look for that distinction in the signature below, which is also used in the complete file.</p>
+<pre><code class="language-rust">fn latest_with_kind&lt;'a&gt;(
+    journal: &amp;'a Journal,
+    actor: u64,
+    kind: &amp;str,
+) -&gt; Option&lt;View&lt;'a&gt;&gt;</code></pre>
+<p data-narration="13">The name <code>'a</code> connects the journal borrow to the reference stored inside the returned view. It describes a relationship that Rust must check, rather than choosing how many seconds or simulation ticks an allocation will live. The caller must keep the source valid for the uses of the view that the signature permits, and the function body must actually return references consistent with that promise.</p>
+<p data-narration="14">Giving <code>kind</code> the same named lifetime would unnecessarily tie the result to the search string as well. The example in <code>main</code> makes the difference visible: it creates an owned search string inside a short inner block, performs the search and uses the resulting view after that block ends. This works because the view borrows no part of the query. A dedicated test keeps that freedom in the API as the implementation changes.</p>
+<p data-narration="15">With only one borrowed input, Rust can often express the relationship without a name. The smaller helper writes <code>fn last_note(journal: &amp;Journal) -&gt; Option&lt;&amp;str&gt;</code>, and lifetime elision connects its output to that sole input. A method's <code>&amp;self</code> or <code>&amp;mut self</code> receiver supplies the usual relationship for a returned reference. These are defined signature rules, explained in <a href="https://doc.rust-lang.org/reference/lifetime-elision.html">the Rust Reference</a>; the compiler isn't guessing which input you intended by reading the function body.</p>
+<p data-narration="16">The <code>View&lt;'a&gt;</code> type still needs a lifetime parameter because its fields retain a reference. Its implementation can use <code>impl View&lt;'_&gt;</code>, since <code>snapshot</code> doesn't need to name a relationship between that borrow and its owned output. <code>Snapshot</code> needs no lifetime parameter at all. This is another way the ownership decision shows up in the API: the borrowed type describes its connection to a source, while the owned result carries its own data.</p>
+<h2 id="complete-the-borrowed-search" data-narration="17">Complete the borrowed search</h2>
+<p data-narration="18">Put the lifetime relationship to work by returning a view of the latest matching journal record. Prepare the practice file from the repository root and run its initial check. Only <code>latest_with_kind</code> is unfinished, so the starter should compile and then fail when the relevant tests reach its <code>todo!</code>. Keep the surrounding functions and tests while filling in that search body.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare lifetimes --dest work/lifetimes-practice
+python3 learning/scripts/labs.py check lifetimes --file work/lifetimes-practice/lifetimes.rs</code></pre>
+<p data-narration="19">Here “latest” means the last matching record in append order. The fixture appends chronologically, but the helper itself doesn't sort records or search for the greatest tick. Its <code>None</code> also has a precise meaning: no matching record is retained in the supplied journal. That answer doesn't tell us whether an event once happened and was evicted, or whether the actor is currently present in the world.</p>
+<details><summary>Hint 1: search backward with both conditions</summary><p>Borrow the record collection with <code>iter()</code>, reverse the iterator and use <code>find</code> to require both the actor and kind. Searching from the end makes the first match the latest retained one without rearranging the journal or moving its strings.</p></details>
+<details><summary>Hint 2: borrow the note and copy the small fields</summary><p>Map the optional matching record into a <code>View</code>. Borrow its note with <code>&amp;record.note</code>, which Rust can coerce to <code>&amp;str</code>, and copy the actor, tick and <code>Option&lt;u32&gt;</code>. In particular, copying the option preserves the difference between an absent measurement and a measured zero.</p></details>
+<details><summary>Complete starter file: lifetimes.rs</summary><pre><code class="language-rust" data-starter="lifetimes">#[derive(Clone, Debug, PartialEq, Eq)]
+struct Record {
+    tick: u64,
+    actor: u64,
+    kind: String,
+    note: String,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+#[derive(Debug, Default)]
+struct Journal {
+    records: Vec&lt;Record&gt;,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct View&lt;&#x27;a&gt; {
+    tick: u64,
+    actor: u64,
+    note: &amp;&#x27;a str,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Snapshot {
+    tick: u64,
+    actor: u64,
+    note: String,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+impl View&lt;&#x27;_&gt; {
+    fn snapshot(&amp;self) -&gt; Snapshot {
+        Snapshot {
+            tick: self.tick,
+            actor: self.actor,
+            note: self.note.to_owned(),
+            reserve_units: self.reserve_units,
+        }
+    }
+}
+
+fn latest_with_kind&lt;&#x27;a&gt;(journal: &amp;&#x27;a Journal, actor: u64, kind: &amp;str) -&gt; Option&lt;View&lt;&#x27;a&gt;&gt; {
+    let _ = (journal, actor, kind);
+    todo!(&quot;borrow the last retained record matching actor and kind&quot;)
+}
+
+fn last_note(journal: &amp;Journal) -&gt; Option&lt;&amp;str&gt; {
+    journal.records.last().map(|record| record.note.as_str())
+}
+
+fn fixture() -&gt; Journal {
+    Journal {
+        records: vec![
+            Record {
+                tick: 2,
+                actor: 7,
+                kind: &quot;meal&quot;.into(),
+                note: &quot;ate 2 units&quot;.into(),
+                reserve_units: Some(9),
+            },
+            Record {
+                tick: 4,
+                actor: 7,
+                kind: &quot;observation&quot;.into(),
+                note: &quot;reserve uncollected&quot;.into(),
+                reserve_units: None,
+            },
+            Record {
+                tick: 5,
+                actor: 7,
+                kind: &quot;meal&quot;.into(),
+                note: &quot;ate 1 unit&quot;.into(),
+                reserve_units: Some(10),
+            },
+            Record {
+                tick: 6,
+                actor: 8,
+                kind: &quot;meal&quot;.into(),
+                note: &quot;ate 3 units&quot;.into(),
+                reserve_units: Some(12),
+            },
+        ],
+    }
+}
+
+fn main() {
+    let mut journal = fixture();
+    let view = {
+        let search = String::from(&quot;meal&quot;);
+        latest_with_kind(&amp;journal, 7, &amp;search).unwrap()
+    };
+    println!(
+        &quot;view: actor={} tick={} note={}&quot;,
+        view.actor, view.tick, view.note
+    );
+    let snapshot = view.snapshot();
+    journal.records.clear();
+    println!(&quot;retained rows: {}&quot;, journal.records.len());
+    println!(
+        &quot;export: actor={} tick={} note={} reserve={:?}&quot;,
+        snapshot.actor, snapshot.tick, snapshot.note, snapshot.reserve_units
+    );
+    assert_eq!(last_note(&amp;journal), None);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_latest_matching_actor_and_kind_in_append_order() {
+        let journal = fixture();
+        let view = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap();
+        assert_eq!((view.tick, view.actor, view.note), (5, 7, &quot;ate 1 unit&quot;));
+        assert_eq!(view.reserve_units, Some(10));
+    }
+
+    #[test]
+    fn append_order_is_not_replaced_by_a_greatest_tick_search() {
+        let mut journal = fixture();
+        journal.records.push(Record {
+            tick: 1,
+            actor: 7,
+            kind: &quot;meal&quot;.into(),
+            note: &quot;late archival copy&quot;.into(),
+            reserve_units: None,
+        });
+        let view = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap();
+        assert_eq!((view.tick, view.note), (1, &quot;late archival copy&quot;));
+    }
+
+    #[test]
+    fn empty_or_absent_match_is_none() {
+        assert_eq!(latest_with_kind(&amp;Journal::default(), 7, &quot;meal&quot;), None);
+        let journal = fixture();
+        assert_eq!(latest_with_kind(&amp;journal, 99, &quot;meal&quot;), None);
+        assert_eq!(latest_with_kind(&amp;journal, 7, &quot;birth&quot;), None);
+    }
+
+    #[test]
+    fn view_borrows_the_original_note_allocation() {
+        let journal = fixture();
+        let view = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap();
+        assert!(std::ptr::eq(view.note, journal.records[2].note.as_str()));
+    }
+
+    #[test]
+    fn query_need_not_live_as_long_as_the_returned_view() {
+        let journal = fixture();
+        let view = {
+            let query = String::from(&quot;meal&quot;);
+            latest_with_kind(&amp;journal, 7, &amp;query).unwrap()
+        };
+        assert_eq!(view.note, &quot;ate 1 unit&quot;);
+    }
+
+    #[test]
+    fn snapshot_survives_mutation_eviction_and_owner_drop() {
+        let snapshot = {
+            let mut journal = fixture();
+            let snapshot = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap().snapshot();
+            journal.records[2].note.push_str(&quot;; amended&quot;);
+            journal.records.clear();
+            snapshot
+        };
+        assert_eq!(snapshot.note, &quot;ate 1 unit&quot;);
+        assert_eq!((snapshot.tick, snapshot.actor), (5, 7));
+    }
+
+    #[test]
+    fn uncollected_reserve_and_measured_zero_stay_distinct() {
+        let mut journal = fixture();
+        let unknown = latest_with_kind(&amp;journal, 7, &quot;observation&quot;)
+            .unwrap()
+            .snapshot();
+        journal.records[1].reserve_units = Some(0);
+        let zero = latest_with_kind(&amp;journal, 7, &quot;observation&quot;)
+            .unwrap()
+            .snapshot();
+        assert_eq!(unknown.reserve_units, None);
+        assert_eq!(zero.reserve_units, Some(0));
+        assert_ne!(unknown, zero);
+    }
+
+    #[test]
+    fn unicode_note_is_borrowed_whole_and_single_input_elision_works() {
+        let mut journal = Journal::default();
+        journal.records.push(Record {
+            tick: 1,
+            actor: 7,
+            kind: &quot;observation&quot;.into(),
+            note: &quot;Fern — 水&quot;.into(),
+            reserve_units: None,
+        });
+        assert_eq!(last_note(&amp;journal), Some(&quot;Fern — 水&quot;));
+        assert_eq!(
+            latest_with_kind(&amp;journal, 7, &quot;observation&quot;).unwrap().note,
+            &quot;Fern — 水&quot;
+        );
+    }
+}
+</code></pre></details>
+<details><summary>Complete worked answer: lifetimes.rs</summary><pre><code class="language-rust" data-runnable="lifetimes">#[derive(Clone, Debug, PartialEq, Eq)]
+struct Record {
+    tick: u64,
+    actor: u64,
+    kind: String,
+    note: String,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+#[derive(Debug, Default)]
+struct Journal {
+    records: Vec&lt;Record&gt;,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct View&lt;&#x27;a&gt; {
+    tick: u64,
+    actor: u64,
+    note: &amp;&#x27;a str,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Snapshot {
+    tick: u64,
+    actor: u64,
+    note: String,
+    reserve_units: Option&lt;u32&gt;,
+}
+
+impl View&lt;&#x27;_&gt; {
+    fn snapshot(&amp;self) -&gt; Snapshot {
+        Snapshot {
+            tick: self.tick,
+            actor: self.actor,
+            note: self.note.to_owned(),
+            reserve_units: self.reserve_units,
+        }
+    }
+}
+
+fn latest_with_kind&lt;&#x27;a&gt;(journal: &amp;&#x27;a Journal, actor: u64, kind: &amp;str) -&gt; Option&lt;View&lt;&#x27;a&gt;&gt; {
+    journal
+        .records
+        .iter()
+        .rev()
+        .find(|record| record.actor == actor &amp;&amp; record.kind == kind)
+        .map(|record| View {
+            tick: record.tick,
+            actor: record.actor,
+            note: &amp;record.note,
+            reserve_units: record.reserve_units,
+        })
+}
+
+fn last_note(journal: &amp;Journal) -&gt; Option&lt;&amp;str&gt; {
+    journal.records.last().map(|record| record.note.as_str())
+}
+
+fn fixture() -&gt; Journal {
+    Journal {
+        records: vec![
+            Record {
+                tick: 2,
+                actor: 7,
+                kind: &quot;meal&quot;.into(),
+                note: &quot;ate 2 units&quot;.into(),
+                reserve_units: Some(9),
+            },
+            Record {
+                tick: 4,
+                actor: 7,
+                kind: &quot;observation&quot;.into(),
+                note: &quot;reserve uncollected&quot;.into(),
+                reserve_units: None,
+            },
+            Record {
+                tick: 5,
+                actor: 7,
+                kind: &quot;meal&quot;.into(),
+                note: &quot;ate 1 unit&quot;.into(),
+                reserve_units: Some(10),
+            },
+            Record {
+                tick: 6,
+                actor: 8,
+                kind: &quot;meal&quot;.into(),
+                note: &quot;ate 3 units&quot;.into(),
+                reserve_units: Some(12),
+            },
+        ],
+    }
+}
+
+fn main() {
+    let mut journal = fixture();
+    let view = {
+        let search = String::from(&quot;meal&quot;);
+        latest_with_kind(&amp;journal, 7, &amp;search).unwrap()
+    };
+    println!(
+        &quot;view: actor={} tick={} note={}&quot;,
+        view.actor, view.tick, view.note
+    );
+    let snapshot = view.snapshot();
+    journal.records.clear();
+    println!(&quot;retained rows: {}&quot;, journal.records.len());
+    println!(
+        &quot;export: actor={} tick={} note={} reserve={:?}&quot;,
+        snapshot.actor, snapshot.tick, snapshot.note, snapshot.reserve_units
+    );
+    assert_eq!(last_note(&amp;journal), None);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_latest_matching_actor_and_kind_in_append_order() {
+        let journal = fixture();
+        let view = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap();
+        assert_eq!((view.tick, view.actor, view.note), (5, 7, &quot;ate 1 unit&quot;));
+        assert_eq!(view.reserve_units, Some(10));
+    }
+
+    #[test]
+    fn append_order_is_not_replaced_by_a_greatest_tick_search() {
+        let mut journal = fixture();
+        journal.records.push(Record {
+            tick: 1,
+            actor: 7,
+            kind: &quot;meal&quot;.into(),
+            note: &quot;late archival copy&quot;.into(),
+            reserve_units: None,
+        });
+        let view = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap();
+        assert_eq!((view.tick, view.note), (1, &quot;late archival copy&quot;));
+    }
+
+    #[test]
+    fn empty_or_absent_match_is_none() {
+        assert_eq!(latest_with_kind(&amp;Journal::default(), 7, &quot;meal&quot;), None);
+        let journal = fixture();
+        assert_eq!(latest_with_kind(&amp;journal, 99, &quot;meal&quot;), None);
+        assert_eq!(latest_with_kind(&amp;journal, 7, &quot;birth&quot;), None);
+    }
+
+    #[test]
+    fn view_borrows_the_original_note_allocation() {
+        let journal = fixture();
+        let view = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap();
+        assert!(std::ptr::eq(view.note, journal.records[2].note.as_str()));
+    }
+
+    #[test]
+    fn query_need_not_live_as_long_as_the_returned_view() {
+        let journal = fixture();
+        let view = {
+            let query = String::from(&quot;meal&quot;);
+            latest_with_kind(&amp;journal, 7, &amp;query).unwrap()
+        };
+        assert_eq!(view.note, &quot;ate 1 unit&quot;);
+    }
+
+    #[test]
+    fn snapshot_survives_mutation_eviction_and_owner_drop() {
+        let snapshot = {
+            let mut journal = fixture();
+            let snapshot = latest_with_kind(&amp;journal, 7, &quot;meal&quot;).unwrap().snapshot();
+            journal.records[2].note.push_str(&quot;; amended&quot;);
+            journal.records.clear();
+            snapshot
+        };
+        assert_eq!(snapshot.note, &quot;ate 1 unit&quot;);
+        assert_eq!((snapshot.tick, snapshot.actor), (5, 7));
+    }
+
+    #[test]
+    fn uncollected_reserve_and_measured_zero_stay_distinct() {
+        let mut journal = fixture();
+        let unknown = latest_with_kind(&amp;journal, 7, &quot;observation&quot;)
+            .unwrap()
+            .snapshot();
+        journal.records[1].reserve_units = Some(0);
+        let zero = latest_with_kind(&amp;journal, 7, &quot;observation&quot;)
+            .unwrap()
+            .snapshot();
+        assert_eq!(unknown.reserve_units, None);
+        assert_eq!(zero.reserve_units, Some(0));
+        assert_ne!(unknown, zero);
+    }
+
+    #[test]
+    fn unicode_note_is_borrowed_whole_and_single_input_elision_works() {
+        let mut journal = Journal::default();
+        journal.records.push(Record {
+            tick: 1,
+            actor: 7,
+            kind: &quot;observation&quot;.into(),
+            note: &quot;Fern — 水&quot;.into(),
+            reserve_units: None,
+        });
+        assert_eq!(last_note(&amp;journal), Some(&quot;Fern — 水&quot;));
+        assert_eq!(
+            latest_with_kind(&amp;journal, 7, &quot;observation&quot;).unwrap().note,
+            &quot;Fern — 水&quot;
+        );
+    }
+}
+</code></pre></details>
+<p data-narration="20">Run the learner-file command again to check your edit. The reference command, <code>python3 learning/scripts/labs.py check lifetimes</code>, independently runs the printed program and its eight tests. The program produces:</p>
+<pre><code class="language-text">view: actor=7 tick=5 note=ate 1 unit
+retained rows: 0
+export: actor=7 tick=5 note=ate 1 unit reserve=Some(10)</code></pre>
+<p data-narration="21">Several tests go beyond comparing text. A pointer comparison checks that the view refers to the original note rather than an equal replacement, while the snapshot test changes the source and drops its owner before reading the saved result. Equal strings would satisfy the visible message in both cases; these additional checks distinguish the ownership behavior the two destinations need.</p>
+<h2 id="make-the-compiler-experiment-small" data-narration="22">Make the compiler experiment small</h2>
+<p data-narration="23">Now try a smaller function that can't keep its promise. It creates text locally and attempts to return a reference to that text. Save the complete probe as <code>work/lifetimes-practice/dangling.rs</code>, separately from the working lab, so its expected compilation failure is easy to inspect on its own.</p>
+<pre><code class="language-rust" id="dangling-probe">fn summary&lt;'a&gt;() -&gt; &amp;'a str {
+    let text = String::from("actor=7 tick=5");
+    &amp;text
+}
+fn main() {
+    println!("{}", summary());
+}</code></pre>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 work/lifetimes-practice/dangling.rs -o work/lifetimes-practice/dangling</code></pre>
+<p data-narration="24">Rust 1.93.1 rejects the probe with <code>E0515</code>, reporting that the reference points to a local variable. The string belongs to <code>summary</code> and will be dropped when that function returns, so the caller would have no valid storage left to read. Writing a longer lifetime—or <code>'static</code>—can't make the local owner survive. The annotation must describe a valid ownership relationship; it can't create one.</p>
+<details open><summary>Immediate correction: return the newly created value</summary><p>Replace the probe with this version, which returns the newly created string itself, and rerun the same compilation command. Running <code>work/lifetimes-practice/dangling</code> then prints <code>actor=7 tick=5</code>. Ownership moves to the caller, which can keep the result. If the text already belonged to the caller, returning a borrow of that caller-owned text could have been a different valid design.</p><pre><code class="language-rust" id="owned-probe">fn summary() -&gt; String {
+    String::from("actor=7 tick=5")
+}
+fn main() {
+    println!("{}", summary());
+}</code></pre></details>
+<p data-narration="25">The <a href="https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html">Rust Book's lifetime chapter</a> develops this distinction between describing a reference's relationship and controlling storage duration. Our probe removes the journal, iterator and optional result so the compiler's objection has one clear cause: the returned reference outlives the local data it would refer to.</p>
+<h2 id="end-a-view-before-changing-its-owner" data-narration="26">End a view before changing its owner</h2>
+<p data-narration="27">The local-string probe showed an owner disappearing at return. A journal can also invalidate borrowed text through mutation, so the order of uses now matters. Back in the working program, we read the view and make a snapshot before calling <code>journal.records.clear()</code>. Nothing uses the view afterward, so Rust can finish this ordinary borrow after its last use even though the enclosing block continues. Move a later <code>println!("{}", view.note)</code> below the clear and the situation changes: the program now asks to read text after an operation that may destroy it, producing <code>E0502</code>.</p>
+<p data-narration="28">You can resolve that conflict by printing the view before clearing, or by printing <code>snapshot.note</code> afterward. The right correction depends on whether you need current borrowed text or a retained copy. Clearing the vector requires exclusive access, and the diagnostic is protecting the particular note that a later use of the view still needs. Adding lifetime names elsewhere won't change that sequence of events.</p>
+<p data-narration="29">This also explains why an inspector usually shouldn't own a journal and keep an ordinary reference into that same journal as another field. Construct a view when a caller borrows the journal, or keep a stable actor ID and resolve it when needed. When the result must survive a reset, use an owned snapshot. Those designs meet our needs without introducing the extra constraints of a self-referential owning structure.</p>
+<p data-narration="30">To check the boundary, consider three changes: dropping the temporary search string, clearing the journal, and replacing a measured zero with an absent measurement. Predict which affects the borrowed view's validity and which changes the meaning of the observation. They're easy to conflate if every problem is described loosely as missing data.</p>
+<details><summary>Recall answer</summary><p>The query string can disappear because the view doesn't borrow it. Clearing the journal must wait until the view's last use, unless we first copy what needs to survive. <code>Some(0)</code> and <code>None</code> describe a measured zero and no measurement, respectively; that semantic distinction doesn't determine a reference's lifetime.</p></details>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway" data-narration="31">Let the destination decide whether the text is borrowed</h2>
+<p data-narration="32">The two destinations from the opening now have different, useful APIs. The inspector borrows its sentence from the journal, independently of the short-lived search string. The export owns a snapshot that survives clearing the journal. A lifetime annotation states the first relationship; copying creates the independence needed for the second. The native tests establish that small contract, leaving storage durability and wider retention policy to their own checks.</p>
+<p data-narration="33">Continue to <a href="26-indirection.html">ownership and formatting choices</a> to decide how several readers can use the retained report and call different formatters. Or return to <a href="24-experiments.html">the population investigation</a> to put owned results to work.</p>
+</section>
+</article><details class="reading-notes" hidden><summary>Reading notes</summary><section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
+      <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
+      <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
+      <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
+      <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section></details><nav class="chapter-nav" aria-label="Lesson navigation"><a href="24-experiments.html">← Make a comparison explain its denominator</a><a href="26-indirection.html">Choose the owner before the abstraction →</a></nav></main>
+</div>
+<footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
+<noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>
+</body></html>

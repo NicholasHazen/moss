@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>examples/refuges.rs · refuge · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../assets/source.css?v=1351a94cba7f">
+<script src="../../../assets/source.js?v=1351a94cba7f" defer></script></head>
+<body data-source-view="refuge"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">refuge checkpoint</p><h1>examples/refuges.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../refuge.html">← Give shelter a rule you can test</a>
+<a href="refuges.rs" download>Download raw file</a>
+<a href="../../../downloads/refuge-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="refuges.rs">//! Matched deterministic placements; protection is neither food nor a survival guarantee.
+
+use moss_course_ecosystem::{
+    Cell, CourseWorld, HuntConfig, MobileScenario, RefugeConfig, RefugeId, RefugeSeed, RestPolicy,
+};
+
+fn stores(world: &amp;CourseWorld) -&gt; u64 {
+    let s = world.snapshot();
+    s.grazers
+        .iter()
+        .map(|g| u64::from(g.reserve_units))
+        .sum::&lt;u64&gt;()
+        + s.patches
+            .iter()
+            .map(|p| u64::from(p.biomass_units))
+            .sum::&lt;u64&gt;()
+        + world
+            .hunt_snapshot()
+            .unwrap()
+            .hunters
+            .iter()
+            .map(|h| u64::from(h.reserve_units))
+            .sum::&lt;u64&gt;()
+}
+
+fn main() {
+    let common = MobileScenario::meadow()
+        .with_rest(RestPolicy::default())
+        .with_hunters(HuntConfig::meadow());
+    println!(
+        "Matched placements, horizon120, initial stores128 (grazer72 + biomass24 + hunter32). No random draws."
+    );
+    println!(
+        "Every actor, position, trait, supply, birth/rest/hunt rule and history limit is identical: {common:?}"
+    );
+    println!(
+        "Only refuge configuration changes; the selector neither seeks refuge nor flees. Transit protection applies at current cells, not every crossed cell."
+    );
+    for (label, cells) in [
+        ("disabled", None),
+        ("food-cell", Some(vec![Cell { x: 3, y: 2 }])),
+        ("transit-cell", Some(vec![Cell { x: 4, y: 2 }])),
+        (
+            "both-food-cells",
+            Some(vec![Cell { x: 3, y: 2 }, Cell { x: 7, y: 2 }]),
+        ),
+    ] {
+        let spec = match cells {
+            None =&gt; common.clone(),
+            Some(cells) =&gt; common.clone().with_refuges(RefugeConfig::new(
+                cells
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, cell)| RefugeSeed {
+                        id: RefugeId(i as u32 + 1),
+                        cell,
+                    })
+                    .collect(),
+            )),
+        };
+        println!("\n{label}: sites={:?}", spec.refuges());
+        let mut world = CourseWorld::new_mobile(spec).unwrap();
+        assert_eq!(stores(&amp;world), 128);
+        let (mut growth, mut upkeep, mut birth_transfer, mut birth_cost) = (0, 0, 0, 0);
+        for tick in 1..=120 {
+            let before = stores(&amp;world);
+            world.step();
+            let m = world.mobile_snapshot().unwrap();
+            let h = world.hunt_snapshot().unwrap();
+            growth += m.base.ledger.added_units;
+            upkeep += m.base.ledger.maintenance_units;
+            birth_transfer += m.population.ledger.transferred_units;
+            birth_cost += m.population.ledger.dissipated_units;
+            assert_eq!(
+                stores(&amp;world)
+                    + m.base.ledger.maintenance_units
+                    + m.ledger.travel_units
+                    + m.population.ledger.dissipated_units
+                    + h.ledger.maintenance_units
+                    + h.ledger.travel_units
+                    + h.ledger.attack_units,
+                before + m.base.ledger.added_units
+            );
+            assert_eq!(
+                m.population.living as u64 + m.population.totals.starvations + h.totals.captures,
+                4 + m.population.totals.births
+            );
+            if [1, 2, 4, 8, 12, 40, 80, 120].contains(&amp;tick) {
+                let protected = world
+                    .refuge_snapshot()
+                    .map(|r| r.grazers.iter().filter(|g| g.refuge.is_some()).count());
+                println!(
+                    "t{tick} living{} protected{protected:?} hunters{} births{} starvations{} captures{} hunter_starvations{} stores{}",
+                    m.population.living,
+                    h.living_hunters,
+                    m.population.totals.births,
+                    m.population.totals.starvations,
+                    h.totals.captures,
+                    h.totals.hunter_starvations,
+                    stores(&amp;world)
+                );
+            }
+        }
+        let m = world.mobile_snapshot().unwrap();
+        let h = world.hunt_snapshot().unwrap();
+        let r = world.rest_snapshot().unwrap();
+        println!(
+            "actual growth{growth} upkeep{upkeep} grazer_travel{} birth_transfer{birth_transfer} birth_cost{birth_cost} hunter_upkeep{} hunter_travel{} attack{} prey_transfer{} cap_pairs{} cap_ticks{}",
+            m.totals.travel_units,
+            h.totals.maintenance_units,
+            h.totals.travel_units,
+            h.totals.attack_units,
+            h.totals.transferred_units,
+            m.population.totals.capacity_blocked_pairs,
+            m.population.totals.capacity_blocked_ticks
+        );
+        println!(
+            "final grazers={:?}; patches={:?}; hunters={:?}; memberships={:?}",
+            m.base
+                .grazers
+                .iter()
+                .map(|g| (g.id, g.reserve_units))
+                .collect::&lt;Vec&lt;_&gt;&gt;(),
+            m.base
+                .patches
+                .iter()
+                .map(|p| (p.id, p.biomass_units))
+                .collect::&lt;Vec&lt;_&gt;&gt;(),
+            h.hunters
+                .iter()
+                .map(|h| (h.id, h.reserve_units))
+                .collect::&lt;Vec&lt;_&gt;&gt;(),
+            world.refuge_snapshot().map(|r| r.grazers)
+        );
+        println!(
+            "rest actions grazer{} hunter{}; complete histories (after,through,lost): base{:?} population{:?} mobile{:?} rest{:?} hunt{:?}; captures1..120={:?}; starvations1..120={:?}",
+            r.totals.rest_actions,
+            h.totals.rest_actions,
+            (
+                m.base.history.complete_after_tick,
+                m.base.history.collected_through_tick,
+                m.base.history.evicted_events
+            ),
+            (
+                m.population.history.complete_after_tick,
+                m.population.history.collected_through_tick,
+                m.population.history.evicted_events
+            ),
+            (
+                m.history.complete_after_tick,
+                m.history.collected_through_tick,
+                m.history.evicted_events
+            ),
+            (
+                r.history.complete_after_tick,
+                r.history.collected_through_tick,
+                r.history.evicted_events
+            ),
+            (
+                h.history.complete_after_tick,
+                h.history.collected_through_tick,
+                h.history.evicted_events
+            ),
+            h.history.captures_between(1, 120),
+            m.base.history.starvations_between(1, 120)
+        );
+    }
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

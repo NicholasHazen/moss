@@ -1,0 +1,199 @@
+//! One authoritative world, explicit tick phases, reset, and read-only projection.
+
+use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+
+use crate::history::{History, complete_tick};
+use crate::model::{
+    Clock, Daylight, Grazer, GrazerReading, Identity, Life, Patch, PatchReading, Scenario,
+    ScenarioError, Snapshot, TickLedger,
+};
+use crate::{feeding, lifecycle, supply};
+
+// This index stores entity handles only, never a second copy of biological state.
+#[derive(Resource)]
+struct Roster {
+    grazers: Vec<Entity>,
+    patches: Vec<Entity>,
+}
+
+pub struct CourseWorld {
+    world: World,
+    schedule: Schedule,
+    initial: Scenario,
+}
+
+impl CourseWorld {
+    /// Validate all authored inputs before creating any simulation state.
+    pub fn new(scenario: Scenario) -> Result<Self, ScenarioError> {
+        scenario.validate()?;
+        Ok(Self {
+            world: install(&scenario, 1),
+            schedule: tick_schedule(),
+            initial: scenario,
+        })
+    }
+
+    /// Execute exactly one complete tick. No wall clock or render frequency is read.
+    ///
+    /// Panics on exhausted u64 counters rather than wrapping history identities.
+    pub fn step(&mut self) {
+        self.schedule.run(&mut self.world);
+    }
+
+    /// Restore the selected scenario's population, supplies, clock, and empty history.
+    ///
+    /// Panics if the run identity is exhausted; the old world remains unchanged.
+    pub fn reset(&mut self) {
+        self.reset_with(self.initial.clone())
+            .expect("stored scenario was already validated");
+    }
+
+    /// Select a new scenario and start the next run. Invalid inputs leave the
+    /// current world and reset scenario unchanged. A later `reset` repeats this
+    /// newly selected scenario, with another run identity.
+    ///
+    /// Panics if the run identity is exhausted; the old world remains unchanged.
+    pub fn reset_with(&mut self, scenario: Scenario) -> Result<(), ScenarioError> {
+        scenario.validate()?;
+        let run = self
+            .world
+            .resource::<Clock>()
+            .run
+            .checked_add(1)
+            .expect("run identity exhausted");
+        self.world = install(&scenario, run);
+        // System parameter state belongs to the world for which it was initialized.
+        self.schedule = tick_schedule();
+        self.initial = scenario;
+        Ok(())
+    }
+
+    /// Return a sorted owned observation without executing a system or changing state.
+    pub fn snapshot(&self) -> Snapshot {
+        let roster = self.world.resource::<Roster>();
+        let mut grazers: Vec<_> = roster
+            .grazers
+            .iter()
+            .map(|entity| {
+                let id = self
+                    .world
+                    .get::<Identity>(*entity)
+                    .expect("rostered identity exists");
+                let grazer = self
+                    .world
+                    .get::<Grazer>(*entity)
+                    .expect("rostered grazer exists");
+                GrazerReading {
+                    id: id.0,
+                    reserve_units: grazer.reserve_units,
+                    capacity_units: grazer.capacity_units,
+                    maintenance_units_per_tick: grazer.maintenance_units_per_tick,
+                    meal_units_per_tick: grazer.meal_units_per_tick,
+                    feeding_site: grazer.feeding_site,
+                    life: grazer.life,
+                }
+            })
+            .collect();
+        grazers.sort_by_key(|grazer| grazer.id);
+        let mut patches: Vec<_> = roster
+            .patches
+            .iter()
+            .map(|entity| {
+                let id = self
+                    .world
+                    .get::<Identity>(*entity)
+                    .expect("rostered identity exists");
+                let patch = self
+                    .world
+                    .get::<Patch>(*entity)
+                    .expect("rostered patch exists");
+                PatchReading {
+                    id: id.0,
+                    biomass_units: patch.biomass_units,
+                    capacity_units: patch.capacity_units,
+                    growth_units_per_lit_tick: patch.growth_units_per_lit_tick,
+                }
+            })
+            .collect();
+        patches.sort_by_key(|patch| patch.id);
+        let clock = self.world.resource::<Clock>();
+        let daylight = *self.world.resource::<Daylight>();
+        Snapshot {
+            run: clock.run,
+            tick: clock.tick,
+            daylight,
+            lit: daylight.is_lit(clock.tick),
+            grazers,
+            patches,
+            ledger: *self.world.resource::<TickLedger>(),
+            history: self.world.resource::<History>().snapshot(),
+        }
+    }
+}
+
+fn tick_schedule() -> Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems(
+        (
+            begin_tick,
+            lifecycle::maintain,
+            supply::grow,
+            feeding::feed,
+            lifecycle::starve,
+            complete_tick,
+        )
+            .chain(),
+    );
+    schedule
+}
+
+fn install(scenario: &Scenario, run: u64) -> World {
+    let mut world = World::new();
+    world.insert_resource(Clock { run, tick: 0 });
+    world.insert_resource(scenario.daylight);
+    world.insert_resource(TickLedger::default());
+    world.insert_resource(History::new(scenario.history_limit));
+    let grazers = scenario
+        .grazers
+        .iter()
+        .map(|seed| {
+            world
+                .spawn((
+                    Identity(seed.id),
+                    Grazer {
+                        reserve_units: seed.reserve_units,
+                        capacity_units: seed.capacity_units,
+                        maintenance_units_per_tick: seed.maintenance_units_per_tick,
+                        meal_units_per_tick: seed.meal_units_per_tick,
+                        feeding_site: seed.feeding_site,
+                        life: Life::Alive,
+                    },
+                ))
+                .id()
+        })
+        .collect();
+    let patches = scenario
+        .patches
+        .iter()
+        .map(|seed| {
+            world
+                .spawn((
+                    Identity(seed.id),
+                    Patch {
+                        biomass_units: seed.biomass_units,
+                        capacity_units: seed.capacity_units,
+                        growth_units_per_lit_tick: seed.growth_units_per_lit_tick,
+                    },
+                ))
+                .id()
+        })
+        .collect();
+    world.insert_resource(Roster { grazers, patches });
+    world
+}
+
+fn begin_tick(mut clock: ResMut<Clock>, mut ledger: ResMut<TickLedger>) {
+    clock.tick = clock.tick.checked_add(1).expect("tick counter exhausted");
+    *ledger = TickLedger::default();
+}

@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Build a living ecosystem in Rust, and understand the rules that shape it."><meta name="color-scheme" content="light"><meta name="theme-color" content="#164f50">
+<title>Give shelter a rule you can test · Moss Fieldnotes</title><link rel="icon" href="assets/identity/atlas-mark-v1.png" type="image/png"><link rel="stylesheet" href="assets/fieldnotes.css?v=1351a94cba7f">
+<script src="assets/records.js?v=1351a94cba7f" defer></script><script src="assets/models.js?v=1351a94cba7f" defer></script><script src="assets/terrarium.js?v=1351a94cba7f" defer></script><script src="assets/evidence.js?v=1351a94cba7f" defer></script><script src="assets/ecosystem.js?v=1351a94cba7f" defer></script><script src="assets/population.js?v=1351a94cba7f" defer></script><script src="assets/mobile.js?v=1351a94cba7f" defer></script><script src="assets/fieldnotes.js?v=1351a94cba7f" defer></script></head>
+<body data-page="refuge"><a class="skip-link" href="#reading">Skip to reading</a>
+<header class="masthead"><div class="masthead-inner"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">Moss · Fieldnotes 0.4</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></div></header>
+<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><a class="introduction-link" href="introduction.html">Start here · Meet Moss</a><ol><li class="nav-group"><details open><summary>Start with evidence</summary><ol><li><a href="01-observe.html"><span class="number">01</span><span>A tick is a promise<small>25 min · values</small></span><span class="progress-dot" data-progress-for="01-observe" aria-hidden="true"></span></a></li><li><a href="02-ownership.html"><span class="number">02</span><span>Who owns the next change?<small>35 min · ownership</small></span><span class="progress-dot" data-progress-for="02-ownership" aria-hidden="true"></span></a></li><li><a href="03-queries.html"><span class="number">03</span><span>Ask the world a typed question<small>35 min · components</small></span><span class="progress-dot" data-progress-for="03-queries" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Everyday Rust</summary><ol><li><a href="04-units.html"><span class="number">04</span><span>Give the number a unit<small>30 min · newtypes</small></span><span class="progress-dot" data-progress-for="04-units" aria-hidden="true"></span></a></li><li><a href="05-options.html"><span class="number">05</span><span>Missing is a different state<small>30 min · enums</small></span><span class="progress-dot" data-progress-for="05-options" aria-hidden="true"></span></a></li><li><a href="06-results.html"><span class="number">06</span><span>A rejected request has a reason<small>35 min · Result</small></span><span class="progress-dot" data-progress-for="06-results" aria-hidden="true"></span></a></li><li><a href="07-modules.html"><span class="number">07</span><span>Put the boundary in the code<small>30 min · modules</small></span><span class="progress-dot" data-progress-for="07-modules" aria-hidden="true"></span></a></li><li><a href="08-collections.html"><span class="number">08</span><span>Collect a report, release the world<small>35 min · Vec</small></span><span class="progress-dot" data-progress-for="08-collections" aria-hidden="true"></span></a></li><li><a href="09-traits.html"><span class="number">09</span><span>A trait is a promise you can use<small>35 min · traits</small></span><span class="progress-dot" data-progress-for="09-traits" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>The ECS contract</summary><ol><li><a href="10-borrows.html"><span class="number">10</span><span>Prove that the borrows cannot meet<small>35 min · disjoint queries</small></span><span class="progress-dot" data-progress-for="10-borrows" aria-hidden="true"></span></a></li><li><a href="11-schedules.html"><span class="number">11</span><span>Give the observations an order<small>35 min · schedules</small></span><span class="progress-dot" data-progress-for="11-schedules" aria-hidden="true"></span></a></li><li><a href="12-commands.html"><span class="number">12</span><span>Change structure at a known boundary<small>40 min · Commands</small></span><span class="progress-dot" data-progress-for="12-commands" aria-hidden="true"></span></a></li><li><a href="13-evidence.html"><span class="number">13</span><span>Make a test disagree with a plausible mistake<small>40 min · testing</small></span><span class="progress-dot" data-progress-for="13-evidence" aria-hidden="true"></span></a></li><li><a href="14-movement.html"><span class="number">14</span><span>Connect one affordable action to the world<small>35 min · movement bridge</small></span><span class="progress-dot" data-progress-for="14-movement" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Ecosystem depth</summary><ol><li><a href="15-meals.html"><span class="number">15</span><span>A finite meal has two sides<small>40 min · finite transfers</small></span><span class="progress-dot" data-progress-for="15-meals" aria-hidden="true"></span></a></li><li><a href="16-targets.html"><span class="number">16</span><span>Choose, then revalidate a target<small>40 min · local observations</small></span><span class="progress-dot" data-progress-for="16-targets" aria-hidden="true"></span></a></li><li><a href="17-variation.html"><span class="number">17</span><span>Compare individuals fairly<small>40 min · authored populations</small></span><span class="progress-dot" data-progress-for="17-variation" aria-hidden="true"></span></a></li><li><a href="18-growth.html"><span class="number">18</span><span>Let environmental input change supply<small>45 min · bounded growth</small></span><span class="progress-dot" data-progress-for="18-growth" aria-hidden="true"></span></a></li><li><a href="19-history.html"><span class="number">19</span><span>Keep a disappearance explainable<small>45 min · lifecycle</small></span><span class="progress-dot" data-progress-for="19-history" aria-hidden="true"></span></a></li><li><a href="20-predation.html"><span class="number">20</span><span>Consume once, even before removal<small>45 min · predation</small></span><span class="progress-dot" data-progress-for="20-predation" aria-hidden="true"></span></a></li><li><a href="21-rest.html"><span class="number">21</span><span>Make rest a commitment you can inspect<small>40 min · state machines</small></span><span class="progress-dot" data-progress-for="21-rest" aria-hidden="true"></span></a></li><li><a href="22-births.html"><span class="number">22</span><span>Commit both parents before creating a child<small>45 min · paired transactions</small></span><span class="progress-dot" data-progress-for="22-births" aria-hidden="true"></span></a></li><li><a href="23-inheritance.html"><span class="number">23</span><span>Keep inheritance distinct from selection<small>45 min · inheritance</small></span><span class="progress-dot" data-progress-for="23-inheritance" aria-hidden="true"></span></a></li><li><a href="24-experiments.html"><span class="number">24</span><span>Make a comparison explain its denominator<small>45 min · controlled comparisons</small></span><span class="progress-dot" data-progress-for="24-experiments" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>A selective Rust survey</summary><ol><li><a href="25-lifetimes.html"><span class="number">25</span><span>Let a view borrow exactly what it needs<small>40 min · lifetimes</small></span><span class="progress-dot" data-progress-for="25-lifetimes" aria-hidden="true"></span></a></li><li><a href="26-indirection.html"><span class="number">26</span><span>Choose the owner before the abstraction<small>45 min · Box</small></span><span class="progress-dot" data-progress-for="26-indirection" aria-hidden="true"></span></a></li><li><a href="27-async.html"><span class="number">27</span><span>Accept asynchronous results at a tick boundary<small>45 min · concurrency</small></span><span class="progress-dot" data-progress-for="27-async" aria-hidden="true"></span></a></li><li><a href="28-macros.html"><span class="number">28</span><span>Read the code a macro asks Rust to check<small>40 min · macro_rules</small></span><span class="progress-dot" data-progress-for="28-macros" aria-hidden="true"></span></a></li></ol></details></li></ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+</details></aside>
+<main id="reading" tabindex="-1"><details class="reading-options" hidden><summary>Reading options</summary><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span><span id="reading-status" role="status"></span></div></details>
+<article><p class="eyebrow">A living world. An inspectable program.</p><h1 data-narration="0">Give shelter a rule you can test</h1><p class="lesson-lead" data-narration="1">A hunter sees a grazer outside shelter. By the time the hunt resolves, the grazer has moved into a refuge in the hunter's own cell. The earlier observation was valid, and contact is real, but this capture should now fail.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview" data-narration="2">Build shelter, then challenge your explanation of its effect</h2>
+<p data-narration="3">This capstone asks you to choose both a representation and a claim to investigate in your saved world. You'll write the whole membership system, connect its current answer to perception and capture, and design tests where contact or funding cannot conceal a broken protection rule. Then compare refuge placements with matched inputs in a native experiment. The outcome should be an implemented policy, evidence that distinguishes plausible mistakes, and a conclusion you can defend within the report's coverage limits—even if the meadow contradicts your prediction.</p>
+</section><details class="chapter-contents"><summary>In this chapter <span>10 sections</span></summary><nav aria-label="In this chapter"><ol><li><a href="#begin-with-a-claim">Begin with a claim you could be wrong about</a></li><li><a href="#state-the-refuge-rule">Decide exactly what shelter promises</a></li><li><a href="#choose-data-before-code">Choose the data before the system</a></li><li><a href="#write-the-whole-membership-system">Write the whole membership system</a></li><li><a href="#refresh-where-the-answer-changes">Refresh where the answer can change</a></li><li><a href="#design-your-own-investigation">Choose a test that exposes the mistake</a></li><li><a href="#compare-placements-with-matched-inputs">Compare placements with matched inputs</a></li><li><a href="#read-only-what-the-record-keeps">Read only what the record keeps</a></li><li><a href="#keep-your-project-and-show-the-evidence">Keep the project and show the evidence</a></li><li><a href="#chapter-takeaway">Keep the implementation and the claim open to inspection</a></li></ol></nav></details>
+<aside class="scope-note"><p data-narration="4"><strong>Independent capstone, native extension.</strong> Continue the same saved project from <a href="hunting.html">the hunting guide</a>, preserving your earlier systems and tests. Refuge is an authored game rule, separate from live Moss and <code>NOW.md</code>. The worked scenarios and exact investigation have been checked both in the reference and in a continuing saved project. Run your own tests and comparison to establish what your implementation does.</p></aside>
+
+<h2 id="begin-with-a-claim" data-narration="5">Begin with a claim you could be wrong about</h2>
+<p data-narration="6">So far, each continuing guide has given you a new interaction and a fairly specific question to pursue. This time you'll choose how to represent the feature and what you want to learn from it. Keep those jobs separate. First make a refuge obey an explicit contract in the existing world. Then decide whether a particular placement produces the outcome you predicted. A correct implementation may give an unwelcome experimental result, and that result can still teach you something.</p>
+<p data-narration="7">Before opening a module answer, write a short claim in your field note. For example: “Protecting the feeding patch will leave more grazers alive at tick 120 than protecting a cell away from food.” Explain the mechanism you expect, name an observation that would contradict it, and choose which individuals or events you would follow if the ending surprised you. You can choose another claim, but make it specific enough that the comparison can disagree with you.</p>
+<p data-narration="8">Keep the existing initial population, reserves, and comparison horizon the same across your treatments. A refuge introduces permission to avoid capture, not another energy store. If a protected run starts with more reserve, you would have changed two causes at once. You will also need more than the survivor count: protected grazers can still starve, compete for finite food, produce children, and encounter the living cap.</p>
+<details><summary>A possible hypothesis and what would challenge it</summary><p>Protection at a feeding patch could preserve grazers that already reach food. It could also leave more consumers sharing that food, change births, or allow hunters to starve earlier. An equal or smaller final grazer census would contradict the predicts-more claim, but would not identify its cause. Retain capture and starvation totals, accepted food input, births, and at least one individual trace so those alternatives can be examined.</p></details>
+
+<h2 id="state-the-refuge-rule" data-narration="9">Decide exactly what shelter promises</h2>
+<p data-narration="10">For the worked extension, a refuge is a static authored cell. A grazer occupying that cell is protected: hunters omit it from their local prey observations and cannot capture it while it remains there. Hunters can enter the same cell, patches remain visible, and grazing can still occur. This is a change to observation and capture eligibility, rather than a wall or a new pathfinding problem. Protection is assessed at the current cell; crossing a refuge between assessment points does not protect a later capture at an unprotected destination.</p>
+<p data-narration="11">Protection leaves the other accounts alone. A sheltered animal still pays upkeep; resting still prevents meals and births under the rule you already implemented; travel still costs reserve. The feature supplies no recovery, food, or special destination preference. An animal reaches shelter only if its existing movement brings it there, which makes placement part of the experiment instead of quietly giving the grazer a new fleeing strategy.</p>
+<p data-narration="12">Now consider departure. A grazer can leave refuge after the hunters have observed the world. It is no longer protected, but that fact doesn't give a hunter an observation it never made. Keep the existing selected-target contract: another observation opportunity must discover the grazer before a hunt can name it. This creates the opposite test to the opening example. Arrival must withdraw permission from an old target; departure must not invent a new target.</p>
+<details><summary>Keep these boundaries while choosing an implementation</summary><p>Refuges are optional. Disabled and enabled with no sites are different reported capabilities, although neither protects anyone. Sites have no occupancy cap, and this extension adds no random movement, fleeing, injury, refuge resource, or hunter reproduction. Keep the prior rest, funded birth, maturation, and inherited upkeep rules. These choices bound the feature you are transferring into the existing architecture.</p></details>
+
+<h2 id="choose-data-before-code" data-narration="13">Choose the data before the system</h2>
+<p data-narration="14">Sketch the public configuration and private per-grazer state before consulting the worked shapes. The configuration needs enough information to locate each static site and reject ambiguous placements. The private state needs to say whether a grazer's current cell belongs to a refuge. Decide which values are authored and which are derived, and what a caller would need in an owned report to understand the answer after the world changes.</p>
+<p data-narration="15">A useful distinction is between a site's identity and an animal's identity. A refuge may persist while many different grazers use it, so it shouldn't borrow a grazer's ID or enter the birth allocator. Likewise, membership should not duplicate the animal's reserve, activity, or terminal state. Those already belong to the shared body and activity components. Your new data should describe the new relationship, leaving those existing owners authoritative.</p>
+<p data-narration="16">Write the rejection cases beside the constructor. What should happen if two sites use one ID, if two IDs name the same cell, or if a site lies outside the grid? What does an empty list mean? Then apply the same questions to reset: a rejected new configuration must leave both the current world and the policy used by its next ordinary reset intact. Validation has to finish before replacement begins.</p>
+<details><summary>Representation hint: a static site and a current membership answer different questions</summary><p>The worked design gives sites a small separate ID type and stores a cell for each. A grazer's private membership stores an optional site ID plus the tick when that cell was assessed. An owned public row includes the grazer ID and current cell as well, so the caller can interpret that assessment. The row is a current reading, not a history of visits.</p></details>
+<details><summary>Worked public adapter contract</summary><p>The worked interface uses <code>RefugeId</code>, <code>RefugeSeed { id, cell }</code>, and <code>RefugeConfig::new</code>, added through <code>MobileScenario::with_refuges</code>. <code>CourseWorld::refuge_snapshot()</code> returns <code>None</code> when disabled and an owned report when enabled. Positive unique site IDs, unique cells, and in-bounds placements are validated together. Site and animal IDs have separate types and namespaces, so <code>RefugeId(1)</code> can coexist with <code>SimId(1)</code> without using the child allocator. Your private component names and layout can differ while this public adapter lets the common experiments and course checks ask the same questions.</p></details>
+
+<h2 id="write-the-whole-membership-system" data-narration="17">Write the whole membership system</h2>
+<p data-narration="18">Write the complete ECS system now: its parameters, query membership, per-grazer lookup, state update, and assessment time. Start with the access it needs. Read site configuration, the clock, and the positions of grazer entities; change only their membership. Reserve and life already have authoritative owners, but locating a cell doesn't require borrowing those fields. Choose each access for the question this system answers rather than requesting every component associated with an animal.</p>
+<p data-narration="19">The important branch is the one that finds no refuge. Suppose the previous assessment put a grazer in site seven, then travel moves it elsewhere. Leaving its old value alone would turn a cached observation into permanent protection. Every refresh must write the answer for the current cell, including <code>None</code> outside shelter. Treating absence as an instruction to skip the update would preserve the very state that has become stale.</p>
+<p data-narration="20">Decide how the system finds a site. A linear scan can be enough for a small authored list; a cell-keyed lookup can express the uniqueness established by validation. Either way, the lookup must use current grid cells, not renderer coordinates or the cell from an earlier prey observation. If you keep derived membership, be able to name every boundary at which it can become stale.</p>
+<details><summary>System hint: inspect the permissions before writing the loop</summary><p>Collect configuration access, clock access, and the grazer query on paper first. Read the configuration, clock, and positions through shared access, and request mutable access only for membership. The report projection can read identities separately; this spatial update does not need them. A private helper can answer which site contains a cell, but the exercise also requires the typed adapter that visits the intended entities and writes the result.</p></details>
+<details><summary>Complete system answer</summary><p>The complete <a href="reference/refuge/src/refuge.rs.html">refuge module</a> defines its private membership, validated site lookup, typed refresh system, and owned report together. Its query reads <code>Position</code>, mutates <code>RefugeMembership</code>, and uses <code>With&lt;Grazer&gt;</code> for membership. The optional refuge resource keeps the existing disabled mode available. Each visited component receives a complete new answer from the current cell and clock, including <code>None</code> outside a site. Initial installation and newborn setup use that same lookup.</p></details>
+<p data-narration="21">If you're listening, pause to write the full system and compare its access declaration with the module answer when you need help. Resume once you can explain why it clears departed membership.</p>
+<p data-narration="22">Use the same lookup contract when installing the initial population and placing a child. A newborn can be visible in a completed report before its first eligible action tick. Its position and membership should already describe where it is; protection must not be delayed merely because upkeep and hunting still exclude it on its birth tick. This is another reason not to infer membership from whether an animal happened to act.</p>
+
+<h2 id="refresh-where-the-answer-changes" data-narration="23">Refresh where the answer can change</h2>
+<p data-narration="24">The opening encounter tells us where to place the system. First assess membership before hunter perception so a protected grazer is absent from the local prey list. Then let the existing movement systems execute. Assess membership again before capture, because the travel just performed may have moved a selected grazer into shelter or an unobserved one out of it. These two assessments answer the same spatial question at different moments.</p>
+<p data-narration="25">Read the diagram from top to bottom. The first assessment constrains what the hunter may observe. Travel changes positions. The second assessment constrains what the selected interaction may do now. Capture must use that current answer while keeping the target from the earlier observation. Neither assessment executes a meal or adds a cost.</p>
+<figure>
+<svg viewBox="0 0 480 545" role="img" aria-labelledby="refuge-boundary-title refuge-boundary-desc">
+<title id="refuge-boundary-title">Refuge membership across observation and travel</title>
+<desc id="refuge-boundary-desc">Assess current grazer membership, then observe locally and choose targets. Travel changes cells. Assess membership again before the selected capture. A target observed outside shelter can enter refuge and reject capture; an unseen grazer leaving shelter needs a later observation.</desc>
+<g fill="none" stroke="currentColor" stroke-width="2"><rect x="75" y="15" width="330" height="65" rx="10"/><rect x="75" y="100" width="330" height="65" rx="10"/><rect x="75" y="185" width="330" height="65" rx="10"/><rect x="75" y="270" width="330" height="65" rx="10"/><rect x="75" y="355" width="330" height="65" rx="10"/><path d="M240 80v20m-6-6 6 6 6-6M240 165v20m-6-6 6 6 6-6M240 250v20m-6-6 6 6 6-6M240 335v20m-6-6 6 6 6-6"/></g>
+<g fill="currentColor" font-size="22" text-anchor="middle"><text x="240" y="55">Assess membership</text><text x="240" y="140">Observe and choose</text><text x="240" y="225">Travel</text><text x="240" y="310">Assess membership again</text><text x="240" y="395">Revalidate selected capture</text><text x="240" y="464">Observation supplies a target.</text><text x="240" y="499">Current protection can reject it.</text></g>
+</svg>
+<figcaption data-narration="26">Membership is current only relative to a known assessment boundary. A stored target does not preserve an earlier permission.</figcaption>
+</figure>
+<p data-narration="27">Connect both consumers of membership deliberately. Filtering the prey observation prevents a hidden grazer from becoming a target, but cannot handle the arrival case by itself. Checking only the capture prevents a protected kill, but would still let hunters select and pursue prey the observation policy says they cannot see. Those are separate promises, so give each an assertion that can fail independently.</p>
+<details><summary>Ordering hint: test the two uses of membership</summary><p>A fixture starting in refuge can expose a missing perception filter; a fixture entering refuge during travel can expose missing current revalidation. Inspect the copied prey list and its observation tick as well as the final membership. These tests distinguish two uses of the state, rather than proving that removing either refresh call must change a normal run.</p><p>With static sites, initial and newborn setup already assign membership, and the prior post-travel assessment can leave it current for the next observation. Deleting only the pre-observation refresh may therefore leave these public outcomes unchanged. That refresh explicitly reassesses the state at the declared boundary, while these two fixtures establish the filtering and capture contracts.</p></details>
+
+<h2 id="design-your-own-investigation" data-narration="28">Choose a test that exposes the mistake</h2>
+<p data-narration="29">Once the feature is connected, switch from construction to investigation. Choose one claim from your field note and design a public integration test around it before opening the worked file. Use <code>CourseWorld</code> and owned reports, keeping private components behind their adapter. Write down the inputs that make the assertion discriminating: what other rejection might make a broken refuge appear to work?</p>
+<p data-narration="30">For the opening arrival case, an ordinary moving hunter can be a poor test. It travels toward the prey's observed old cell while the grazer moves somewhere new, so they may fail contact even if protection is broken. A stationary hunter already at the grazer's destination removes that alternative explanation. Now both are in the same cell when capture resolves, and refuge membership is the reason the treatment should differ.</p>
+<p data-narration="31">The worked fixture uses a two-by-one grid. Grazer 1 begins at cell zero with reserve six, capacity eight, upkeep one, and a two-unit meal request. It can sense and move one cell, paying one reserve unit for that move. Patch 1000 at cell one holds five units, with no growth. Hunter 100 waits at cell one with reserve four, capacity ten, upkeep one, and attack cost one. It can sense the grazer but has speed zero. There is one founder and no partner; rest is disabled for this short investigation.</p>
+<p data-narration="32">First predict the run without a refuge. After upkeep and travel, the grazer has four reserve units. The hunter has three after upkeep, enough to pay its attack before receiving the prey. Then put a refuge at cell one while keeping every other input the same. Follow not only the capture count but also the grazer's later meal, patch biomass, hunter reserve, and each account's actual cost.</p>
+<details><summary>Worked arrival reasoning and observed native result</summary><p>The native reference confirms the predicted contrast. Without protection, the hunter pays one and receives four, ending at six. The captured grazer gets no meal, so patch biomass stays five. With protection, the hunter remains at three with no attack charge; the grazer eats two, finishes at six, and leaves three biomass. Both runs begin with fifteen stored units. Ending stores plus the appropriate upkeep, travel, and attack costs should account for those same fifteen units.</p></details>
+<p data-narration="33">For the companion test, move the refuge to cell zero. The grazer begins hidden, then leaves shelter and reaches the stationary hunter during tick one. It should still get its meal because the hunter has no selected prey for that action. A fresh tick-two observation can change that. Check the absence of a target on the departure tick as well as the later capture; merely checking current unprotected membership would miss the perception boundary.</p>
+<details><summary>Worked departure reasoning and observed native result</summary><p>The native reference finishes tick one with the grazer at six and the hunter at three, without a capture. Tick-two upkeep leaves five and two. Fresh observation selects the grazer, allowing a funded one-unit attack and five-unit transfer that brings the hunter to six. The investigation asserts the observation and capture ticks alongside these balances, rather than inferring when perception occurred from the final reserve.</p></details>
+<p data-narration="34">If you're listening, pause here to construct your fixture and write the test before reading the complete answer. The answer can be a comparison against your reasoning rather than the first source of the question. Keep the file beside your earlier hunting and rest investigations instead of replacing them.</p>
+<details><summary>Complete public investigation file: tests/refuge_investigation.rs</summary><p>Save this complete file beside your earlier investigations. It checks the worked arrival and departure mechanisms through the public course API; your own hypothesis may need another fixture. The exact decoded reference block passed both native tests. Run it against your saved implementation to compare those reference expectations with your own systems.</p><pre><code class="language-rust" data-refuge-test="arrival-and-departure">// Save as work/fieldwork/tests/refuge_investigation.rs in your continuing project.
+// From the Moss repository root:
+// cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test refuge_investigation
+use moss_course_ecosystem::{
+    Cell, CourseWorld, Daylight, FounderTrait, GrazerPlacement, GrazerSeed,
+    GridBounds, HuntConfig, HunterSeed, MobileScenario, Motion, PatchPlacement,
+    PatchSeed, PopulationConfig, RefugeConfig, RefugeId, RefugeSeed,
+    Scenario, SimId, SpatialConfig, UpkeepTrait,
+};
+
+fn fixture(refuge_cell: Option&lt;Cell&gt;) -&gt; MobileScenario {
+    let start = Cell { x: 0, y: 0 };
+    let destination = Cell { x: 1, y: 0 };
+    let motion = Motion {
+        sensing_radius: 1, max_cells_per_tick: 1, travel_units_per_cell: 1,
+    };
+    let scenario = Scenario {
+        daylight: Daylight::new(1, 0).unwrap(),
+        grazers: vec![GrazerSeed {
+            id: SimId(1), reserve_units: 6, capacity_units: 8,
+            maintenance_units_per_tick: 1, meal_units_per_tick: 2,
+            feeding_site: None,
+        }],
+        patches: vec![PatchSeed {
+            id: SimId(1000), biomass_units: 5, capacity_units: 5,
+            growth_units_per_lit_tick: 0,
+        }],
+        history_limit: 128,
+    };
+    let population = PopulationConfig {
+        founders: vec![FounderTrait {
+            id: SimId(1), upkeep: UpkeepTrait::new(1).unwrap(),
+        }],
+        maturation_ticks: 2, cooldown_ticks: 3,
+        contribution_units_per_parent: 2, birth_cost_units_per_parent: 1,
+        child_capacity_units: 8, child_meal_units_per_tick: 2,
+        max_living: 8, mutation_cycle: vec![0], history_limit: 128,
+    };
+    let space = SpatialConfig {
+        bounds: GridBounds { width_cells: 2, height_cells: 1 },
+        grazers: vec![GrazerPlacement { id: SimId(1), cell: start, motion }],
+        patches: vec![PatchPlacement { id: SimId(1000), cell: destination }],
+        newborn_motion: motion,
+    };
+    let initial = MobileScenario::new(scenario, population, space)
+        .with_hunters(HuntConfig::new(vec![HunterSeed {
+            id: SimId(100), reserve_units: 4, capacity_units: 10,
+            maintenance_units_per_tick: 1, attack_units: 1,
+            attack_effort_points: 2, cell: destination,
+            motion: Motion { max_cells_per_tick: 0, ..motion },
+        }]));
+    match refuge_cell {
+        None =&gt; initial,
+        Some(cell) =&gt; initial.with_refuges(RefugeConfig::new(vec![RefugeSeed {
+            id: RefugeId(7), cell,
+        }])),
+    }
+}
+
+#[test]
+fn entering_refuge_rejects_a_previously_observed_same_cell_capture() {
+    let plain = fixture(None);
+    let protected = fixture(Some(Cell { x: 1, y: 0 }));
+    assert_eq!(plain.scenario(), protected.scenario());
+    assert_eq!(plain.population(), protected.population());
+    assert_eq!(plain.space(), protected.space());
+    assert_eq!(plain.hunters(), protected.hunters());
+    let mut control = CourseWorld::new_mobile(plain).unwrap();
+    control.step();
+    let control_mobile = control.mobile_snapshot().unwrap();
+    let control_hunt = control.hunt_snapshot().unwrap();
+    assert!(control.refuge_snapshot().is_none());
+    assert!(control_mobile.base.grazers.is_empty());
+    assert_eq!(control_mobile.base.patches[0].biomass_units, 5);
+    assert_eq!(control_hunt.hunters[0].reserve_units, 6);
+    assert_eq!((control_hunt.ledger.captures, control_hunt.ledger.attack_units,
+        control_hunt.ledger.transferred_units), (1, 1, 4));
+    assert_eq!(control_mobile.base.ledger.eaten_units, 0);
+
+    let mut world = CourseWorld::new_mobile(protected).unwrap();
+    world.step();
+    let mobile = world.mobile_snapshot().unwrap();
+    let hunt = world.hunt_snapshot().unwrap();
+    let shelter = world.refuge_snapshot().unwrap();
+    assert_eq!((shelter.run, shelter.tick), (mobile.run, 1));
+    assert_eq!((hunt.run, hunt.tick), (mobile.run, 1));
+    assert_eq!(hunt.hunters[0].visible_prey[0].prey, SimId(1));
+    assert_eq!(hunt.hunters[0].visible_prey[0].cell, Cell { x: 0, y: 0 });
+    assert_eq!(hunt.hunters[0].visible_prey[0].reserve_units, 5);
+    let target = hunt.hunters[0].target.unwrap();
+    assert_eq!((target.prey, target.observed_tick), (SimId(1), 1));
+    assert_eq!(target.observed_cell, Cell { x: 0, y: 0 });
+    assert_eq!(hunt.hunters[0].cell, Cell { x: 1, y: 0 });
+    assert_eq!(mobile.grazers[0].cell, hunt.hunters[0].cell);
+    assert_eq!((shelter.grazers[0].id, shelter.grazers[0].refuge,
+        shelter.grazers[0].assessed_tick), (SimId(1), Some(RefugeId(7)), 1));
+    assert_eq!(shelter.grazers[0].cell, Cell { x: 1, y: 0 });
+    assert_eq!(mobile.base.grazers[0].reserve_units, 6);
+    assert_eq!(mobile.base.patches[0].biomass_units, 3);
+    assert_eq!(mobile.base.ledger.eaten_units, 2);
+    assert_eq!(hunt.hunters[0].reserve_units, 3);
+    assert_eq!(hunt.hunters[0].last_capture_tick, None);
+    assert_eq!((hunt.ledger.captures, hunt.ledger.attack_units,
+        hunt.ledger.transferred_units), (0, 0, 0));
+    assert_eq!(hunt.history.captures_between(1, 1), Some(0));
+    assert_eq!((mobile.base.ledger.maintenance_units, mobile.ledger.travel_units,
+        hunt.ledger.maintenance_units, hunt.ledger.travel_units), (1, 1, 1, 0));
+    let stores = u64::from(mobile.base.grazers[0].reserve_units)
+        + u64::from(mobile.base.patches[0].biomass_units)
+        + u64::from(hunt.hunters[0].reserve_units);
+    assert_eq!(stores, 12);
+    assert_eq!(stores + mobile.base.ledger.maintenance_units
+        + hunt.ledger.maintenance_units + mobile.ledger.travel_units
+        + hunt.ledger.travel_units + hunt.ledger.attack_units
+        + mobile.population.ledger.dissipated_units,
+        15 + mobile.base.ledger.added_units);
+}
+
+#[test]
+fn leaving_refuge_needs_a_fresh_observation_before_capture() {
+    let mut world = CourseWorld::new_mobile(fixture(Some(Cell { x: 0, y: 0 }))).unwrap();
+    let initial = world.refuge_snapshot().unwrap();
+    assert_eq!((initial.grazers[0].refuge, initial.grazers[0].assessed_tick),
+        (Some(RefugeId(7)), 0));
+    world.step();
+    let departure = world.refuge_snapshot().unwrap();
+    let mobile = world.mobile_snapshot().unwrap();
+    let hunt = world.hunt_snapshot().unwrap();
+    assert_eq!((departure.grazers[0].refuge, departure.grazers[0].assessed_tick), (None, 1));
+    assert_eq!(departure.grazers[0].cell, Cell { x: 1, y: 0 });
+    assert_eq!(hunt.hunters[0].observed_tick, Some(1));
+    assert!(hunt.hunters[0].visible_prey.is_empty());
+    assert_eq!(hunt.hunters[0].target, None);
+    assert_eq!(mobile.grazers[0].cell, hunt.hunters[0].cell);
+    assert_eq!(mobile.base.grazers[0].reserve_units, 6);
+    assert_eq!(hunt.hunters[0].reserve_units, 3);
+    assert_eq!(hunt.ledger.captures, 0);
+    assert_eq!(hunt.ledger.attack_units, 0);
+    assert_eq!(mobile.base.patches[0].biomass_units, 3);
+
+    world.step();
+    let later_hunt = world.hunt_snapshot().unwrap();
+    assert_eq!(later_hunt.hunters[0].observed_tick, Some(2));
+    assert_eq!(later_hunt.hunters[0].visible_prey[0].prey, SimId(1));
+    assert_eq!(later_hunt.hunters[0].visible_prey[0].reserve_units, 5);
+    assert_eq!(later_hunt.hunters[0].last_capture_tick, Some(2));
+    assert_eq!(later_hunt.hunters[0].reserve_units, 6);
+    assert_eq!((later_hunt.ledger.captures, later_hunt.ledger.attack_units,
+        later_hunt.ledger.transferred_units), (1, 1, 5));
+    assert_eq!(later_hunt.history.captures_between(1, 2), Some(1));
+    assert!(world.refuge_snapshot().unwrap().grazers.is_empty());
+    assert!(world.mobile_snapshot().unwrap().base.grazers.is_empty());
+    assert_eq!(departure.tick, 1);
+    assert_eq!(departure.grazers[0].id, SimId(1));
+}
+</code></pre></details>
+
+<h2 id="compare-placements-with-matched-inputs" data-narration="35">Compare placements with matched inputs</h2>
+<p data-narration="36">A mechanism test establishes that the refuge rule can act at the intended boundary. It doesn't tell you where to put a refuge in the meadow. Return to your initial hypothesis with a longer native comparison: disabled refuges, a refuge near a feeding opportunity, and an alternative placement that tests the mechanism you proposed. Hold the authored animals, stores, rest policy, and horizon fixed within the comparison.</p>
+<p data-narration="37">Record the complete configurations beside the results. Then compare captures with grazer starvations and hunter starvations, rather than interpreting every missing animal as the same outcome. Follow births and capacity-blocked pairs too. More grazers surviving one encounter can increase later competition or fill the living cap; fewer captures can deprive a hunter of the reserve it needs to survive its next journey.</p>
+<p data-narration="38">Keep the energy equation from hunting. Shelter adds no term, but it can change the actual values of existing terms by changing which animals remain to travel, eat, reproduce, and pay upkeep. Equal initial stores do not imply equal accepted growth over the run, because consumption changes how much room is available in a patch. Explain a difference in intake as part of the result rather than quietly treating the two runs as having identical received energy.</p>
+<p data-narration="39">If you're listening, pause to run your comparison and inspect the complete reference results below. The generated narration skips that answer disclosure. Read its interpretation of starvation, accepted growth, and coverage before returning to the final discussion; the ending census alone leaves those differences out.</p>
+<details><summary>Complete experiment and observed reference comparison</summary><p>The <a href="reference/refuge/examples/refuges.rs.html">complete native example</a> uses the same meadow, two hunters, and two-tick minimum rest from hunting. It runs 120 ticks with 128 initial stored units: 72 in grazers, 24 in patches, and 32 in hunters. The disabled control, food cell at (3, 2), transit cell at (4, 2), and both food cells at (3, 2) and (7, 2) differ only in refuge configuration. There are no random draws, and neither selector seeks shelter or flees.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Refuge comparison population outcomes"><table><caption>Observed native outcomes after 120 ticks under matched starting conditions</caption><thead><tr><th scope="col">Refuge placement</th><th scope="col">Living grazers / hunters</th><th scope="col">Births</th><th scope="col">Grazer starvations</th><th scope="col">Captures</th><th scope="col">Hunter starvations</th></tr></thead><tbody><tr><td>Disabled</td><td>0 / 0</td><td>3</td><td>4</td><td>3</td><td>2</td></tr><tr><td>Food cell (3, 2)</td><td>1 / 0</td><td>3</td><td>5</td><td>1</td><td>2</td></tr><tr><td>Transit cell (4, 2)</td><td>0 / 0</td><td>3</td><td>4</td><td>3</td><td>2</td></tr><tr><td>Both food cells</td><td>1 / 0</td><td>3</td><td>5</td><td>1</td><td>2</td></tr></tbody></table></div>
+<p>Both food-site treatments retain ID 2 at reserve 24, at (3, 2). One more grazer remains alive than in the control, but grazer starvations rose from four to five while captures fell from three to one. Births stayed at three, and capacity-blocked pairs and ticks stayed at zero in every treatment. That makes the living cap an unsupported explanation for these differences, even though it remains a relevant limit in another scenario.</p>
+<p>The transit treatment and control have identical final life counts but different paths. At tick twelve the control still has one grazer; the transit treatment has none. Their accepted growth and hunter travel also differ. An equal endpoint therefore doesn't establish that the site did nothing, just as a printed checkpoint with no protected animals doesn't describe every intervening tick.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Refuge comparison actual resource flows"><table><caption>Actual native flows across the same 120 ticks; all runs start with 128 stored units</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Disabled</th><th scope="col">Food cell</th><th scope="col">Transit cell</th><th scope="col">Both food cells</th></tr></thead><tbody><tr><th scope="row">Accepted growth</th><td>60</td><td>168</td><td>55</td><td>168</td></tr><tr><th scope="row">Grazer upkeep</th><td>53</td><td>171</td><td>51</td><td>171</td></tr><tr><th scope="row">Grazer travel</th><td>15</td><td>17</td><td>15</td><td>17</td></tr><tr><th scope="row">Hunter upkeep</th><td>62</td><td>38</td><td>62</td><td>38</td></tr><tr><th scope="row">Hunter travel</th><td>13</td><td>8</td><td>10</td><td>8</td></tr><tr><th scope="row">Attack costs</th><td>3</td><td>1</td><td>3</td><td>1</td></tr><tr><th scope="row">Birth costs</th><td>6</td><td>6</td><td>6</td><td>6</td></tr><tr><th scope="row">Ending stores</th><td>36</td><td>55</td><td>36</td><td>55</td></tr><tr><th scope="row">Prey reserve transferred</th><td>46</td><td>15</td><td>43</td><td>15</td></tr><tr><th scope="row">Reserve transferred to children</th><td>12</td><td>12</td><td>12</td><td>12</td></tr></tbody></table></div>
+<p>Transfers stay inside the world's stores, so don't add the last two rows as expenditures. For the food-cell run, initial stores 128 plus growth 168 equal ending stores 55 plus upkeep 171 and 38, travel 17 and 8, attack one, and birth cost six: both sides are 296. The example checks the full energy identity and the cause-specific grazer census after every executed tick.</p>
+<p>Food-site runs evict 209 base events and retain complete base coverage only after tick 68 through tick 120. Their lifetime starvation count is five, but a base-journal query for starvations across ticks one through 120 is unknown. Capture history is complete for all 120 ticks and reports one. The population, mobile, and rest journals also retain full coverage; the control and transit treatments retain all five journals completely. These are observed results of this declared matrix, not a guarantee that another placement or population behaves similarly.</p></details>
+
+<h2 id="read-only-what-the-record-keeps" data-narration="40">Read only what the record keeps</h2>
+<p data-narration="41">The refuge report tells you which site contains a current grazer at the assessment boundary. It doesn't measure time spent in shelter or preserve a sequence of entries and departures. If a snapshot shows protection at tick 120, you cannot infer that the animal stayed there throughout the experiment. A measurement of residence time would require an explicit collection rule, and is a separate extension you could propose after this one.</p>
+<p data-narration="42">The existing journals retain different histories under their own bounds. A known lifetime capture counter can coexist with an unknown capture count for a requested interval whose records were evicted. Use the relevant complete interval before describing an absent event as zero, and intersect coverage when your explanation requires more than one journal. Current membership cannot reconstruct a missing capture, meal, or birth record.</p>
+<p data-narration="43">State your conclusion at the scale of the experiment. You might find that a particular placement preserved more grazers for the chosen horizon, then explain the accompanying hunter losses and food competition. That doesn't make refuge universally beneficial or establish a scientifically calibrated ecological effect. The useful result is an inspectable causal account, together with a next comparison that could challenge it.</p>
+
+<h2 id="keep-your-project-and-show-the-evidence" data-narration="44">Keep the project and show the evidence</h2>
+<p data-narration="45">Complete this capstone in <code>work/fieldwork</code>, or the directory you've carried through the earlier guides. The <a href="downloads/refuge-reference.zip">complete refuge checkpoint</a> remains available separately, alongside its <a href="reference/refuge/README.md.html">README</a> and <a href="reference/refuge/changes.patch.html">review-only diff from hunting</a>. Use them to inspect a responsibility you couldn't yet complete. The diff is a map for deliberate edits, not a promise to apply over your changes; replacing the whole project would lose the earlier investigations that make it yours.</p>
+<details><summary>Complete source map for the continuing implementation</summary><table><caption>Responsibilities to connect in your saved project</caption><thead><tr><th scope="col">Complete module</th><th scope="col">Connection to inspect</th></tr></thead><tbody><tr><td><a href="reference/refuge/src/refuge.rs.html">refuge.rs</a></td><td>Validate sites, store private membership, refresh it through a typed query, and return an owned report.</td></tr><tr><td><a href="reference/refuge/src/mobile/config.rs.html">mobile/config.rs</a></td><td>Carry optional configuration through validation and the existing scenario.</td></tr><tr><td><a href="reference/refuge/src/simulation.rs.html">simulation.rs</a></td><td>Install and reset the capability; place refreshes at the two relevant schedule boundaries.</td></tr><tr><td><a href="reference/refuge/src/hunting/perception.rs.html">hunting/perception.rs</a></td><td>Exclude currently protected grazers from local prey observations.</td></tr><tr><td><a href="reference/refuge/src/hunting/capture.rs.html">hunting/capture.rs</a></td><td>Reject current protection before charging or accepting a capture.</td></tr><tr><td><a href="reference/refuge/src/reproduction.rs.html">reproduction.rs</a></td><td>Give a newborn the membership belonging to its placed cell.</td></tr><tr><td><a href="reference/refuge/src/lib.rs.html">lib.rs</a></td><td>Expose the additive public configuration and owned report types.</td></tr></tbody></table></details>
+<p data-narration="46">Run the direct investigation, then the full stage check and matched example from the repository root:</p>
+<pre><code class="language-sh">cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test refuge_investigation
+python3 learning/scripts/fieldwork.py check --project work/fieldwork --stage refuge
+cargo +1.93.1 run --offline --locked --manifest-path work/fieldwork/Cargo.toml --example refuges</code></pre>
+<p data-narration="47">The refuge stage check runs the prior suites as well as the new contract and your saved tests. Its successful result supports this native extension. Advancing your saved source to refuge makes its earlier compiled browser artifacts stale. Rebuild them with the existing guides' preview commands if you want those views to remain available from the current source. They still select their existing modes without refuge configuration; the hunting mode has no refuge controls or projection. A fresh build therefore identifies current source without establishing that this feature is displayed. The native experiment is the capstone's observation surface.</p>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway" data-narration="48">Keep the implementation and the claim open to inspection</h2>
+<p data-narration="49">The opening capture now has a reason to fail even though contact and funding are valid: current membership withdraws permission after the grazer enters shelter. The departure case checks the other direction, preserving the hunter's earlier lack of a target until fresh observation. Those mechanism tests establish the rule; your matched placement experiment asks what that rule changes over a longer run.</p>
+<p data-narration="50">Leave your result with four things someone else could inspect: the feature's declared policy, the whole system and schedule connections that implement it, a test that distinguishes a plausible mistake, and the matched experiment with its coverage limits. Your next design question can then begin with something the program actually did, while the implementation and evidence remain available to disagree with the explanation.</p>
+<p data-narration="51">Use <a href="24-experiments.html">the comparison lesson</a> to sharpen the next claim's denominator and matched inputs, or choose <a href="returns.html">a return exercise</a> to revisit a familiar Rust or ECS idea under a changed condition. Keep the new investigation beside the evidence already saved in this project.</p>
+</section>
+</article><details class="reading-notes" hidden><summary>Reading notes</summary><section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
+      <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
+      <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
+      <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
+      <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section></details></main>
+</div>
+<footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
+<noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>
+</body></html>

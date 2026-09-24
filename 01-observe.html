@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Follow one reserve through a tick, then separate the world&#x27;s state from the way it is drawn."><meta name="color-scheme" content="light"><meta name="theme-color" content="#164f50">
+<title>A tick is a promise · Moss Fieldnotes</title><link rel="icon" href="assets/identity/atlas-mark-v1.png" type="image/png"><link rel="stylesheet" href="assets/fieldnotes.css?v=1351a94cba7f">
+<script src="assets/records.js?v=1351a94cba7f" defer></script><script src="assets/models.js?v=1351a94cba7f" defer></script><script src="assets/terrarium.js?v=1351a94cba7f" defer></script><script src="assets/evidence.js?v=1351a94cba7f" defer></script><script src="assets/ecosystem.js?v=1351a94cba7f" defer></script><script src="assets/population.js?v=1351a94cba7f" defer></script><script src="assets/mobile.js?v=1351a94cba7f" defer></script><script src="assets/fieldnotes.js?v=1351a94cba7f" defer></script></head>
+<body data-page="01-observe"><a class="skip-link" href="#reading">Skip to reading</a>
+<header class="masthead"><div class="masthead-inner"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">Moss · Fieldnotes 0.4</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></div></header>
+<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><a class="introduction-link" href="introduction.html">Start here · Meet Moss</a><ol><li class="nav-group"><details open><summary>Start with evidence</summary><ol><li><a href="01-observe.html" aria-current="page"><span class="number">01</span><span>A tick is a promise<small>25 min · values</small></span><span class="progress-dot" data-progress-for="01-observe" aria-hidden="true"></span></a></li><li><a href="02-ownership.html"><span class="number">02</span><span>Who owns the next change?<small>35 min · ownership</small></span><span class="progress-dot" data-progress-for="02-ownership" aria-hidden="true"></span></a></li><li><a href="03-queries.html"><span class="number">03</span><span>Ask the world a typed question<small>35 min · components</small></span><span class="progress-dot" data-progress-for="03-queries" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Everyday Rust</summary><ol><li><a href="04-units.html"><span class="number">04</span><span>Give the number a unit<small>30 min · newtypes</small></span><span class="progress-dot" data-progress-for="04-units" aria-hidden="true"></span></a></li><li><a href="05-options.html"><span class="number">05</span><span>Missing is a different state<small>30 min · enums</small></span><span class="progress-dot" data-progress-for="05-options" aria-hidden="true"></span></a></li><li><a href="06-results.html"><span class="number">06</span><span>A rejected request has a reason<small>35 min · Result</small></span><span class="progress-dot" data-progress-for="06-results" aria-hidden="true"></span></a></li><li><a href="07-modules.html"><span class="number">07</span><span>Put the boundary in the code<small>30 min · modules</small></span><span class="progress-dot" data-progress-for="07-modules" aria-hidden="true"></span></a></li><li><a href="08-collections.html"><span class="number">08</span><span>Collect a report, release the world<small>35 min · Vec</small></span><span class="progress-dot" data-progress-for="08-collections" aria-hidden="true"></span></a></li><li><a href="09-traits.html"><span class="number">09</span><span>A trait is a promise you can use<small>35 min · traits</small></span><span class="progress-dot" data-progress-for="09-traits" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>The ECS contract</summary><ol><li><a href="10-borrows.html"><span class="number">10</span><span>Prove that the borrows cannot meet<small>35 min · disjoint queries</small></span><span class="progress-dot" data-progress-for="10-borrows" aria-hidden="true"></span></a></li><li><a href="11-schedules.html"><span class="number">11</span><span>Give the observations an order<small>35 min · schedules</small></span><span class="progress-dot" data-progress-for="11-schedules" aria-hidden="true"></span></a></li><li><a href="12-commands.html"><span class="number">12</span><span>Change structure at a known boundary<small>40 min · Commands</small></span><span class="progress-dot" data-progress-for="12-commands" aria-hidden="true"></span></a></li><li><a href="13-evidence.html"><span class="number">13</span><span>Make a test disagree with a plausible mistake<small>40 min · testing</small></span><span class="progress-dot" data-progress-for="13-evidence" aria-hidden="true"></span></a></li><li><a href="14-movement.html"><span class="number">14</span><span>Connect one affordable action to the world<small>35 min · movement bridge</small></span><span class="progress-dot" data-progress-for="14-movement" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Ecosystem depth</summary><ol><li><a href="15-meals.html"><span class="number">15</span><span>A finite meal has two sides<small>40 min · finite transfers</small></span><span class="progress-dot" data-progress-for="15-meals" aria-hidden="true"></span></a></li><li><a href="16-targets.html"><span class="number">16</span><span>Choose, then revalidate a target<small>40 min · local observations</small></span><span class="progress-dot" data-progress-for="16-targets" aria-hidden="true"></span></a></li><li><a href="17-variation.html"><span class="number">17</span><span>Compare individuals fairly<small>40 min · authored populations</small></span><span class="progress-dot" data-progress-for="17-variation" aria-hidden="true"></span></a></li><li><a href="18-growth.html"><span class="number">18</span><span>Let environmental input change supply<small>45 min · bounded growth</small></span><span class="progress-dot" data-progress-for="18-growth" aria-hidden="true"></span></a></li><li><a href="19-history.html"><span class="number">19</span><span>Keep a disappearance explainable<small>45 min · lifecycle</small></span><span class="progress-dot" data-progress-for="19-history" aria-hidden="true"></span></a></li><li><a href="20-predation.html"><span class="number">20</span><span>Consume once, even before removal<small>45 min · predation</small></span><span class="progress-dot" data-progress-for="20-predation" aria-hidden="true"></span></a></li><li><a href="21-rest.html"><span class="number">21</span><span>Make rest a commitment you can inspect<small>40 min · state machines</small></span><span class="progress-dot" data-progress-for="21-rest" aria-hidden="true"></span></a></li><li><a href="22-births.html"><span class="number">22</span><span>Commit both parents before creating a child<small>45 min · paired transactions</small></span><span class="progress-dot" data-progress-for="22-births" aria-hidden="true"></span></a></li><li><a href="23-inheritance.html"><span class="number">23</span><span>Keep inheritance distinct from selection<small>45 min · inheritance</small></span><span class="progress-dot" data-progress-for="23-inheritance" aria-hidden="true"></span></a></li><li><a href="24-experiments.html"><span class="number">24</span><span>Make a comparison explain its denominator<small>45 min · controlled comparisons</small></span><span class="progress-dot" data-progress-for="24-experiments" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>A selective Rust survey</summary><ol><li><a href="25-lifetimes.html"><span class="number">25</span><span>Let a view borrow exactly what it needs<small>40 min · lifetimes</small></span><span class="progress-dot" data-progress-for="25-lifetimes" aria-hidden="true"></span></a></li><li><a href="26-indirection.html"><span class="number">26</span><span>Choose the owner before the abstraction<small>45 min · Box</small></span><span class="progress-dot" data-progress-for="26-indirection" aria-hidden="true"></span></a></li><li><a href="27-async.html"><span class="number">27</span><span>Accept asynchronous results at a tick boundary<small>45 min · concurrency</small></span><span class="progress-dot" data-progress-for="27-async" aria-hidden="true"></span></a></li><li><a href="28-macros.html"><span class="number">28</span><span>Read the code a macro asks Rust to check<small>40 min · macro_rules</small></span><span class="progress-dot" data-progress-for="28-macros" aria-hidden="true"></span></a></li></ol></details></li></ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+</details></aside>
+<main id="reading" tabindex="-1"><details class="reading-options" hidden><summary>Reading options</summary><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span><span id="reading-status" role="status"></span></div></details>
+<article><p class="eyebrow">Start with evidence · 25 minutes</p><h1 data-narration="0">A tick is a promise</h1><p class="lesson-lead" data-narration="1">Our example hare is nicknamed Fern. In Moss's starting scene, she is standing still, but her reserve has fallen from 60 to 57. Has something gone wrong, or has the world done useful work that the picture doesn't show?</p>
+<p data-narration="2">If this is your first visit to Moss, <a href="introduction.html">meet the project and its world</a> before following the numbers. This lesson begins with its smallest working rule: an animal pays upkeep as the simulation advances.</p>
+<aside class="scope-note"><p data-narration="3">You'll inspect the current maintenance-only Moss build and run a standalone Rust lab. Ordinary functions and structs are enough to begin; we'll introduce Bevy later. The live movement exercise remains in <code>NOW.md</code>.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview" data-narration="4">Tell a changing world from a changing view</h2>
+<p data-narration="5">Start by pairing Fern's reserve with the completed-tick counter, then follow the same distinction in a small Rust program. Comparing three advances with different numbers of reads will show which operation changes the state. Finally, check the installed maintenance rule separately, so you can explain both the expected 57 units and what each kind of evidence establishes.</p>
+</section><details class="chapter-contents"><summary>In this chapter <span>6 sections</span></summary><nav aria-label="In this chapter"><ol><li><a href="#one-observation">Read the reserve together with the tick</a></li><li><a href="#a-tick-has-an-end">Follow one request through the world</a></li><li><a href="#predict-before-running">Give two viewers the same three ticks</a></li><li><a href="#isolated-state-lab">Run the small example</a></li><li><a href="#evidence-with-a-boundary">Check the rule where it is installed</a></li><li><a href="#chapter-takeaway">A tick explains the change; a reading records it</a></li></ol></nav></details><section class="experiment" data-lab="observe" aria-label="Interactive teaching experiment"></section>
+
+<h2 id="one-observation" data-narration="6">Read the reserve together with the tick</h2>
+<p data-narration="7">In the current fixture, Fern and Flint each start with 60 reserve units and pay one unit of maintenance per executed simulation tick. After three ticks, each should have 57. Their positions can stay exactly where they were: the application has a maintenance rule, while movement is still unfinished and unscheduled. A changing reserve is already a consequence we can investigate.</p>
+<p data-narration="8">To see that consequence clearly, we need to control how much work the world performs. Run the following command from the repository root, then open <a href="http://127.0.0.1:8080">the local Moss preview</a>. This starts the simulation application alongside the course you're reading.</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh trunk serve --locked --release</code></pre>
+<p data-narration="9">Pause the simulation, reset the run, and make sure it is paused before stepping. Select Fern and read both her reserve and the completed-tick counter. Press Step three times. At this checkpoint, the expected pair is tick 3 and reserve 57. Now pan or zoom while paused and read the same pair again. You have changed the view, so there may be many new pictures, but you haven't requested any more simulation work.</p>
+<p data-narration="10">The two numbers help diagnose a surprising result. If Fern already has less than 60 when you first inspect her, a nonzero tick counter may explain it: the run advanced before you paused. If three presses leave the counter at zero, follow the Step control before changing the maintenance arithmetic. Without the tick, “reserve 57” leaves us guessing when the measurement was taken.</p>
+<p data-narration="11">Keeping observation separate from advancement also protects the simulation from its viewer. If drawing a creature charged its upkeep, a faster monitor could make it run out of reserve sooner. An offscreen creature might avoid the charge altogether. Moss gives advancement its own operation so that watching more often doesn't change the outcome.</p>
+
+<h2 id="a-tick-has-an-end" data-narration="12">Follow one request through the world</h2>
+<p data-narration="13">Open <code>crates/moss-sim/src/simulation.rs</code> and look for the installed schedule. It runs maintenance before <code>complete_tick</code> increments the counter. That order gives <code>SimClock.tick</code> a specific meaning: it counts work that has completed. The public <code>tick(&amp;mut World)</code> function requests this schedule once, producing the transition shown below.</p>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 170" role="img" aria-labelledby="tick-diagram-title tick-diagram-desc">
+<title id="tick-diagram-title">One requested tick, followed by any number of observations</title>
+<desc id="tick-diagram-desc">A request reaches maintenance, which deducts one unit. The completion counter then advances. The renderer reads that completed state repeatedly without changing it.</desc>
+<rect x="8" y="35" width="150" height="70" rx="12" fill="#e8eee1" stroke="#45634a"/><text x="83" y="65" text-anchor="middle" fill="#1d3526">Request one tick</text><text x="83" y="88" text-anchor="middle" fill="#1d3526">state: 0, 60</text>
+<path d="M158 70 H186" stroke="#45634a" stroke-width="3"/><path d="M180 64 L187 70 L180 76" fill="none" stroke="#45634a" stroke-width="3"/>
+<rect x="190" y="35" width="150" height="70" rx="12" fill="#e8eee1" stroke="#45634a"/><text x="265" y="65" text-anchor="middle" fill="#1d3526">Maintenance</text><text x="265" y="88" text-anchor="middle" fill="#1d3526">reserve: 59</text>
+<path d="M340 70 H367" stroke="#45634a" stroke-width="3"/><path d="M361 64 L368 70 L361 76" fill="none" stroke="#45634a" stroke-width="3"/>
+<rect x="372" y="35" width="150" height="70" rx="12" fill="#e8eee1" stroke="#45634a"/><text x="447" y="65" text-anchor="middle" fill="#1d3526">Complete tick</text><text x="447" y="88" text-anchor="middle" fill="#1d3526">state: 1, 59</text>
+<path d="M522 70 H548" stroke="#45634a" stroke-width="3"/><path d="M542 64 L549 70 L542 76" fill="none" stroke="#45634a" stroke-width="3"/>
+<rect x="554" y="35" width="158" height="70" rx="12" fill="#f3ead8" stroke="#786041"/><text x="633" y="65" text-anchor="middle" fill="#463620">Read for display</text><text x="633" y="88" text-anchor="middle" fill="#463620">still: 1, 59</text>
+<text x="360" y="145" text-anchor="middle" fill="#36513c">The ordered pair is (completed ticks, reserve units).</text>
+</svg>
+<figcaption data-narration="14">Maintenance changes reserve before the counter reports completion. Reading the completed state does not execute another tick.</figcaption>
+</figure>
+<p data-narration="15">Notice where the first tick becomes visible. Maintenance has already reduced reserve to 59 by the time the counter says 1. A reader of that completed state can therefore interpret the two numbers together. Reading it again follows only the last box; it doesn't send another request through maintenance.</p>
+<p data-narration="16">The host still has to decide when to request ticks. It can use elapsed time for pacing, and the browser may draw at a variable rate or become hidden. Those are reasons to make advancement explicit, rather than to ignore time altogether. For the same executed ticks and accepted inputs, a change in presentation should leave the simulation result unchanged. Moss also avoids catching up automatically after a hidden tab.</p>
+<p data-narration="17">There is a useful limit to what the counter tells us. Tick 3 means the work installed in the schedule has completed three times. It can't establish that an unscheduled function ran. This explains the opening scene: maintenance can reduce Fern's reserve while the unfinished movement helper has no effect on her position.</p>
+
+<h2 id="predict-before-running" data-narration="18">Give two viewers the same three ticks</h2>
+<p data-narration="19">Let's make the distinction small enough to test without a browser. Imagine two sessions beginning at reserve 60. Session A advances three times and reads the state twice after each advance. Session B also advances three times, but reads it two hundred times after each one. Before looking at the Rust, predict their final reserves and identify which operation would have to be wrong for the results to differ.</p>
+<p data-narration="20">We'll use an ordinary <code>State</code> struct containing the completed tick and the reserve. The function <code>advance</code> receives <code>&amp;mut State</code>, allowing it to change the caller's state. The inspector receives <code>&amp;State</code>, allowing it to read these fields. The signatures give us a place to look before tracing every call: the assignment to reserve belongs in the function with mutable access.</p>
+<details><summary>Hint 1: find the write</summary><p>Look for the assignment to <code>reserve_units</code> inside <code>advance</code>. Calling the inspector doesn't reach that assignment, regardless of how often the caller asks for a reading.</p></details>
+<details><summary>Hint 2: trace completed states</summary><p>Begin with (0, 60), then follow (1, 59), (2, 58), and (3, 57). Observations between two advances read the same pair. They don't add another pair to the trace.</p></details>
+<details><summary>Answer: both finish at 57</summary><p>Each session makes three calls that change the state. The extra observations in session B leave it at the same completed tick and reserve as session A. A comparison of these runs can test that promise in the small program; we'll return to the real schedule after running it.</p></details>
+
+<h2 id="isolated-state-lab" data-narration="21">Run the small example</h2>
+<p data-narration="22">The complete file below contains both sessions, a program that prints one result, and three tests. Start with <code>advance</code> and <code>inspect</code>, then follow the loop in <code>run</code>. This deliberately small world has no movement, feeding, or death, so every change to its two fields is visible here.</p>
+<pre><code class="language-rust" data-runnable="observe">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct State {
+    completed_ticks: u64,
+    reserve_units: u32,
+}
+
+fn initial_state() -&gt; State {
+    State { completed_ticks: 0, reserve_units: 60 }
+}
+
+fn advance(state: &amp;mut State) {
+    state.reserve_units = state.reserve_units.saturating_sub(1);
+    state.completed_ticks = state.completed_ticks
+        .checked_add(1).expect("tick counter overflow");
+}
+
+fn inspect(state: &amp;State) -&gt; (u64, u32) {
+    (state.completed_ticks, state.reserve_units)
+}
+
+fn run(reads_per_tick: usize) -&gt; State {
+    let mut state = initial_state();
+    for _ in 0..3 {
+        advance(&amp;mut state);
+        for _ in 0..reads_per_tick {
+            assert_eq!(inspect(&amp;state).0, state.completed_ticks);
+        }
+    }
+    state
+}
+
+fn main() {
+    let state = run(200);
+    println!("ticks={} reserve={}", state.completed_ticks, state.reserve_units);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn observations_do_not_advance_time() {
+        let state = initial_state();
+        for _ in 0..120 {
+            assert_eq!(inspect(&amp;state), (0, 60));
+        }
+        assert_eq!(state, initial_state());
+    }
+
+    #[test]
+    fn observation_frequency_does_not_change_outcome() {
+        assert_eq!(run(2), run(200));
+        assert_eq!(inspect(&amp;run(2)), (3, 57));
+    }
+
+    #[test]
+    fn empty_reserve_still_completes_a_tick() {
+        let mut state = State { completed_ticks: 8, reserve_units: 0 };
+        advance(&amp;mut state);
+        assert_eq!(inspect(&amp;state), (9, 0));
+    }
+}</code></pre>
+<p data-narration="23">From the repository root, the course runner extracts and checks this exact reference file:</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py check observe</code></pre>
+<p data-narration="24">If you'd like to work directly with Rust, save the block as <code>observe.rs</code> in a scratch directory. Run the following commands from that directory. They select this edition's pinned compiler, build the program, and then build and run its tests:</p>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 observe.rs -o observe
+./observe
+rustc +1.93.1 --edition=2024 --test observe.rs -o observe-tests
+./observe-tests</code></pre>
+<p data-narration="25">The expected output is <code>ticks=3 reserve=57</code>, with three passing tests. The comparison test checks the two observation frequencies from our prediction. The repeated-read test starts before any advance and checks that inspection alone leaves the initial state intact. Together, they give us more confidence than a printed result from just one session.</p>
+<p data-narration="26">The last test starts with an empty reserve. Advancing still completes a tick, while reserve remains zero. That follows from two separate choices in <code>advance</code>: <code>saturating_sub</code> floors reserve at zero, and <code>checked_add</code> advances the counter or fails if its next value cannot be represented. A floor makes sense for this reserve model; silently freezing or wrapping the completed-tick counter would hide how much work occurred.</p>
+<p data-narration="27">An empty reserve also doesn't remove a creature in this example. The current Moss maintenance rule has the same floor, with death still outside that live checkpoint. Arithmetic can tell us that an account is empty; deciding what happens to its owner requires a lifecycle rule. We'll keep those questions separate as the terrarium grows.</p>
+
+<h2 id="evidence-with-a-boundary" data-narration="28">Check the rule where it is installed</h2>
+<p data-narration="29">The two read frequencies tested the separation between observation and advancement in our small program. They don't tell us whether Moss actually installs and runs its maintenance rule. To follow the same claim into the real world, run the existing focused maintenance test from the repository root:</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test maintenance maintenance_spends_energy_and_stops_at_zero -- --exact</code></pre>
+<p data-narration="30">Look for one passed test with that exact name. A report of zero tests means the filter selected nothing, while a compilation error means execution never reached the assertion. If you run a broader suite and encounter the unfinished movement exercise, treat that failure as its own result; it doesn't replace this maintenance check.</p>
+<p data-narration="31">We now have three ways to investigate Fern's reserve. Each follows a different part of the path from a requested tick to a displayed number:</p>
+<table data-narration="32"><caption>Evidence for each part of the path</caption><thead><tr><th scope="col">Question</th><th scope="col">Useful check</th></tr></thead><tbody><tr><td>Can the small example be observed without advancing it?</td><td>Its standalone tests compare state after different read counts.</td></tr><tr><td>Does the installed Moss schedule charge both animals per tick?</td><td>The named native integration test creates a world, executes ticks, and asserts reserves.</td></tr><tr><td>Do the browser controls and inspector show that result?</td><td>Pause, reset, and Step three times, observing tick and reserve together.</td></tr></tbody></table>
+<p data-narration="33">A native assertion can catch incorrect reserve arithmetic even if the picture looks plausible. Checking the browser can reveal a stale label even when that arithmetic is correct. When the two disagree, you've learned where to look next instead of having to question the entire program at once.</p>
+<p data-narration="34">You can also inspect the installed Rust schedule inside this course through <a href="terrarium.html">the Rust terrarium</a>. It runs a locally compiled WebAssembly build of <code>moss-sim</code>. The small <code>State</code> example above remains useful because you can trace its access rules on one page; the terrarium lets you follow the corresponding behavior in the actual simulation crate.</p>
+
+<section class="lesson-summary" id="carry-the-model-forward" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway" data-narration="35">A tick explains the change; a reading records it</h2>
+<p data-narration="36">Fern's stationary square now has an explanation: three maintenance ticks changed her reserve, and observing her added no further charge. The small program made that separation easy to trace. The installed test checks Moss's scheduled work, while the browser observation checks what its controls and inspector show. In each case, reading tick and reserve together lets you connect a measurement to completed work instead of guessing from the picture.</p>
+<p data-narration="37">There is another kind of observation we haven't built yet. Suppose the inspector saves a reading at tick 0 and keeps it while Fern advances to tick 3. Should the saved reserve become 57 too, or should it remember 60? The answer depends on what we kept: access to the original value, or an independent value of our own.</p>
+<details><summary>Recall the access distinction</summary><p>A shared borrow lets a function read the original state under Rust's borrowing rules. A copied measurement can remain unchanged after the original changes. Both are useful, but a saved historical reading needs to retain what was true when it was captured.</p></details>
+<p data-narration="38">In <a href="02-ownership.html">ownership at the inspector boundary</a>, we'll build that saved reading and use it to work out when to borrow, copy, and take ownership.</p>
+</section>
+<p class="source-note" data-narration="39">The <a href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">Rust Book's references and borrowing chapter</a> develops the access rules used here. The schedule and test names match this edition's repository source. The browser results above describe what to check in your running build.</p>
+</article><details class="reading-notes" hidden><summary>Reading notes</summary><section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
+      <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
+      <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
+      <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
+      <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section></details><nav class="chapter-nav" aria-label="Lesson navigation"><a href="introduction.html">← Meet Moss</a><a href="02-ownership.html">Who owns the next change? →</a></nav></main>
+</div>
+<footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
+<noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>
+</body></html>

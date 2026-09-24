@@ -1,0 +1,225 @@
+# One world: the first cumulative course ecology
+
+This complete reference library connects the first ecological arc in one Bevy
+world: multiple grazers share finite patches, daylight renews bounded supply,
+individuals pay upkeep, meals transfer actual units, and starvation happens after
+a chance to eat. Owned snapshots and bounded event history make those interactions
+inspectable. It is an explicitly proposed course game model. It does not change
+the live `moss-sim` crate, its schedule, or the movement assignment in
+`NOW.md` in the Moss checkout.
+
+This is not the completed ecosystem curriculum. There is no travel, target
+selection, predation, fatigue, reproduction, maturation, inheritance, randomness,
+or spatial density model yet. Every feeding contact is authored directly. The
+reference demonstrates interacting rules and a repeatable supply comparison; it
+does not claim calibrated ecology or long-term population stability.
+
+## Run the native reference
+
+The package is its own Cargo workspace. It pins Rust **1.93.1**, Bevy ECS
+**0.18.1**, and an independent `Cargo.lock`; its only direct dependency is
+`bevy_ecs` with default features disabled and `std` enabled. The local cache must
+already contain those locked dependencies. No browser, renderer, or live Moss
+dependency is needed for these commands.
+
+From the directory containing this checkpoint’s `Cargo.toml` (or your prepared copy):
+
+```sh
+cargo +1.93.1 test --offline --locked
+cargo +1.93.1 run --offline --locked --example compare
+cargo +1.93.1 fmt --all -- --check
+cargo +1.93.1 clippy --offline --locked --all-targets -- -D warnings
+```
+
+This standalone package uses its own `target` directory, separate from live-project
+and single-file lesson artifacts. Native tests establish Rust and installed-schedule
+behavior. This package does not itself supply a WASM host or browser observation;
+use the Fieldnotes fieldwork guide for its checked browser adapter.
+
+## Find the responsibility before editing it
+
+| File | Responsibility |
+| --- | --- |
+| [`src/lib.rs`](src/lib.rs) | Thin public export surface. |
+| [`src/model.rs`](src/model.rs) | Stable identities, authored scenarios, validation, components, owned readings, and actual tick flows. |
+| [`src/simulation.rs`](src/simulation.rs) | Installation, explicit single-threaded schedule, reset, scenario switching, and read-only snapshots. |
+| [`src/supply.rs`](src/supply.rs) | Bounded external input on lit simulation ticks. |
+| [`src/feeding.rs`](src/feeding.rs) | Local contact eligibility, deterministic competing claims, and immediate two-store transfer. |
+| [`src/lifecycle.rs`](src/lifecycle.rs) | Upkeep and permanent terminal transitions. |
+| [`src/history.rs`](src/history.rs) | Bounded retained events and conservative whole-tick coverage. |
+| [`tests/acceptance.rs`](tests/acceptance.rs) | Black-box public API acceptance cases; no access to private components. |
+| [`examples/compare.rs`](examples/compare.rs) | Twelve-tick limited/generous supply comparison. |
+
+Tests written by a learner can be added as another integration-test file and run
+with normal Cargo. A prepared practice copy should preserve those tests separately
+from the course's acceptance suite. This package has no HTML extraction or
+trailing-test replacement convention.
+
+## Public API and ownership
+
+```rust
+use moss_course_ecosystem::{CourseWorld, Scenario};
+
+let mut world = CourseWorld::new(Scenario::limited_supply()).unwrap();
+let before = world.snapshot(); // owned, sorted, and read-only with respect to the world
+world.step();                  // exactly one complete simulation tick
+let after = world.snapshot();
+assert_eq!((before.tick, after.tick), (0, 1));
+
+world.reset();                 // same selected scenario, new run ID, tick zero
+world.reset_with(Scenario::generous_supply()).unwrap();
+```
+
+`CourseWorld::new(Scenario)` validates all authored inputs and returns
+`Result<CourseWorld, ScenarioError>`. `step(&mut self)` executes the installed
+schedule. `snapshot(&self)` returns an owned `Snapshot`. `reset(&mut self)` restores
+the currently selected scenario. `reset_with(&mut self, Scenario)` validates before
+changing anything, selects the new scenario, and starts the next run. A later
+`reset` repeats that new selection. A rejected switch leaves both current state
+and the saved reset scenario unchanged.
+
+Run IDs begin at one and increase across both forms of reset. Tick, run, ledger,
+and eviction counters use checked arithmetic; exhaustion panics rather than
+wrapping. There is no recovery contract for a partially executed tick after a
+panic. Ordinary invalid configuration is returned as an error before a new run
+is installed.
+
+`Scenario` exposes authored `GrazerSeed` and `PatchSeed` vectors, a validated
+`Daylight`, and an event retention limit. IDs are `SimId(u32)` and must be unique
+across both kinds of entity. Initial reserve/biomass cannot exceed capacity.
+Empty populations, zero capacities, zero upkeep, zero meal requests, and zero
+retained events have explicit valid meanings. Daylight rejects a zero cycle or
+more lit ticks than cycle ticks; entirely dark and entirely lit cycles are valid.
+
+`Snapshot` contains run and completed tick, daylight configuration and current
+phase, sorted grazer/patch readings, the latest actual `TickLedger`, and an owned
+`HistorySnapshot`. Tick zero has `lit: None` because no environmental phase has
+executed. Every configured rate and feeding contact remains visible in the
+readings. Modifying an owned reading cannot mutate the world. The internal roster
+contains Bevy entity handles only; it is an index, not a mirrored biological world.
+
+## Exact biological choices
+
+One `Schedule`, using `ExecutorKind::SingleThreaded` and an explicit `.chain()`,
+executes these phases:
+
+1. Advance the tick and clear the latest flow ledger.
+2. Charge upkeep to living grazers, limited by their current reserves.
+3. Grow patches on lit ticks, limited by remaining patch capacity.
+4. Let living grazers eat in ascending stable-ID order.
+5. Mark any still-living zero-reserve grazer dead.
+6. Mark the tick's history as collected.
+
+All authored grazers initially enter alive, including an initial zero-reserve
+grazer. Reaching zero during upkeep does not prevent its meal attempt. An available
+meal can rescue it in this same tick. A grazer still at zero afterward becomes
+permanently dead; it remains in the roster at zero for inspection, pays no more
+upkeep, and receives no later meal. This is a selected game rule, not a claim about
+real starvation. Keeping dead rows preserves the starting-cohort denominator.
+
+Each grazer's optional `feeding_site` names the patch with which it has contact.
+`None`, a missing ID, or an ID belonging to a grazer grants no contact and no meal.
+All patches can still appear in the global inspector. Seeing a patch there does
+not make it locally eligible. There is no automatic fallback to another patch.
+
+A meal accepts the minimum of the grazer's per-tick request, current patch biomass,
+and remaining reserve capacity. It subtracts from the patch and credits the grazer
+immediately before the next claimant runs. A full or zero-demand consumer leaves
+food for later consumers. A successful meal is one-for-one in these toy units.
+The stable-ID ordering is deterministic and deliberately gives lower IDs priority;
+it is not a fairness algorithm. Spawn order cannot change the result.
+
+Upkeep is a sink; daylight growth is an external source. Eating moves units between
+stores. Growth limits the accepted addition before adding, and feeding limits the
+accepted transfer before either mutation, including near `u32::MAX`. The ledger
+reports actual additions, paid upkeep, transferred food, and new starvations.
+For the tested population sizes:
+
+```text
+stores_after + upkeep_paid = stores_before + growth_added
+stores = sum(grazer reserves) + sum(patch biomass)
+```
+
+The reserve floor means unpaid upkeep is not retained as debt. It is consequently
+important to compare actual upkeep paid with configured upkeep rather than
+silently treating them as the same quantity.
+
+The authored comparison uses four-tick days: ticks 1–2 are lit, 3–4 dark, then the
+cycle repeats. Neither rules nor observation read wall time. Extra snapshots,
+redraws, or delayed requests cannot create an additional dawn.
+
+## Follow the connected result
+
+Both comparison scenarios begin with grazer IDs 1 and 2 at reserve 3, capacity 8,
+and meal request 2. ID 1 pays upkeep 2; ID 2 pays upkeep 1. Both contact patch 100,
+which begins empty with capacity 8. Only external supply differs: limited adds up
+to **2**, generous up to **6**, on each lit tick.
+
+The native example produced these literal readings on September 23, 2026:
+
+| Tick | Limited reserves 1 / 2 | Limited alive / biomass | Generous reserves 1 / 2 | Generous alive / biomass |
+| --- | --- | --- | --- | --- |
+| 1 | 3 / 2 | 2 / 0 | 3 / 4 | 2 / 2 |
+| 2 | 3 / 1 | 2 / 0 | 3 / 5 | 2 / 4 |
+| 3 | 1 / 0 | 1 / 0 | 3 / 6 | 2 / 0 |
+| 4 | 0 / 0 | 0 / 0 | 1 / 5 | 2 / 0 |
+| 8 | 0 / 0 | 0 / 4 | 0 / 7 | 1 / 0 |
+| 12 | 0 / 0 | 0 / 8 | 0 / 8 | 1 / 5 |
+
+At generous tick 3 both grazers eat from stored biomass, exhausting it before the
+second dark tick. ID 1's larger upkeep then spends reserve faster. It dies at tick
+8 despite having first claim on food; ID 2 remains alive through tick 12. The label
+“generous” means greater external input, not guaranteed survival for every animal.
+The initial test draft incorrectly expected both to survive; following this
+literal trace corrected that expectation without changing the authored rules.
+
+After both limited-supply grazers die, supply accumulates because no eligible
+consumer remains. Observing biomass 8 at tick 12 therefore does not establish that
+food was available when either grazer needed it. Current state and event history
+answer different questions. These results establish this twelve-tick comparison,
+not long-term stability, reproduction, adaptation, or an ecological forecast.
+
+## History: unknown is different from zero
+
+Positive actual growth, upkeep, and meals are recorded, along with each one-time
+starvation. Events include run, tick, and stable subject/patch IDs. Zero transfers
+and rejected meal attempts create no event; inspecting a complete interval can
+still establish that it contains zero starvation events.
+
+The journal retains at most `history_limit` events. When an event is evicted, its
+entire tick is conservatively outside complete coverage even if other events from
+that tick remain. `complete_after_tick` is an exclusive lower bound;
+`collected_through_tick` is an inclusive upper bound. `evicted_events` reports the
+actual number lost. `starvations_between(first, last)` returns `None` for an invalid,
+future, or incompletely retained interval and `Some(0)` for a fully covered interval
+with no starvation. A zero-length journal can lose tick 1 but still know that an
+event-free tick 2 had zero transitions. Dead state never depends on retaining its
+terminal event.
+
+Within each phase, stable-ID ordering also makes event retention deterministic.
+The reset operations clear retained events and coverage while advancing the run
+identity. A saved owned report remains an observation of its old run.
+
+## Observed verification and limits
+
+- **19 public API acceptance tests passed** with `cargo +1.93.1 test --offline
+  --locked`. They cover competing claims, no second reward, capacity and zero
+  demand, absent contact, full-reserve upkeep, rescue before starvation, dead
+  ineligibility, phase-sensitive literals, the twelve-tick comparison, accounting,
+  immutable reads, spawn-order independence, bounded/zero history, reset and
+  atomic scenario switching, integer limits, empty populations, invalid setup, and
+  entirely lit/dark days.
+- `compare` ran natively and printed all twelve readings for both scenarios.
+- Pinned rustfmt and Clippy with `--all-targets -- -D warnings` passed.
+- Two isolated copies under `learning/work/ecosystem-probe-*` compiled with
+  deliberate faults and failed the intended acceptance test. Starvation before
+  feeding produced `(0, Dead)` instead of `(2, Alive)`. Omitting patch depletion
+  gave competing consumers `3/3` instead of `3/2`. The runnable probe script is
+  scratch evidence at `learning/work/ecosystem-negative-probes.py`; the reference
+  files were not mutated.
+
+The first test run was 18 passed and one incorrect comparison expectation failed;
+the corrected complete run is the 19-pass result above. There are no hidden ignored
+tests. This handoff validates the native first arc only. It does not certify a
+learner's later modifications, a browser host, teaching efficacy, or the full
+original goal.

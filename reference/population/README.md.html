@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>README.md · population · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../assets/source.css?v=1351a94cba7f">
+<script src="../../assets/source.js?v=1351a94cba7f" defer></script></head>
+<body data-source-view="population"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">population checkpoint</p><h1>README.md</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../population.html">← Let the next generation enter the same world</a>
+<a href="README.md" download>Download raw file</a>
+<a href="../../downloads/population-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-markdown" data-source-file="README.md"># One world: cumulative course ecology
+
+This complete reference library connects the first ecological arc in one Bevy
+world: multiple grazers share finite patches, daylight renews bounded supply,
+individuals pay upkeep, meals transfer actual units, and starvation happens after
+a chance to eat. Owned snapshots and bounded event history make those interactions
+inspectable. It is an explicitly proposed course game model. It does not change
+the live `moss-sim` crate, its schedule, or the movement assignment in
+`NOW.md`.
+
+The original first-arc mode remains unchanged. An explicit population mode now
+extends this same world with maturation, funded births, and inherited upkeep; its
+API and policies are documented below. Neither mode completes the ecosystem
+curriculum. There is no travel, target selection, predation, fatigue, randomness,
+or spatial density model yet. Every feeding contact is authored directly. These
+are repeatable authored comparisons, not calibrated ecology or evidence of
+long-term population stability.
+
+## Run the native reference
+
+The package is its own Cargo workspace. It pins Rust **1.93.1**, Bevy ECS
+**0.18.1**, and an independent `Cargo.lock`; its only direct dependency is
+`bevy_ecs` with default features disabled and `std` enabled. The local cache must
+already contain those locked dependencies. No browser, renderer, or live Moss
+dependency is needed for these commands.
+
+From this directory (the extracted `population` folder, or `learning/checkpoints/population`):
+
+```sh
+cargo +1.93.1 test --offline --locked
+cargo +1.93.1 run --offline --locked --example compare
+cargo +1.93.1 run --offline --locked --example populations
+cargo +1.93.1 fmt --all -- --check
+cargo +1.93.1 clippy --offline --locked --all-targets -- -D warnings
+```
+
+The private target directory keeps these builds away from live-project and
+single-file lesson artifacts. Native tests establish Rust and installed-schedule
+behavior. This package does not itself supply a WASM host or browser observation;
+those are separate integration work.
+
+## Find the responsibility before editing it
+
+| File | Responsibility |
+| --- | --- |
+| [`src/lib.rs`](src/lib.rs) | Thin public export surface. |
+| [`src/model.rs`](src/model.rs) | Stable identities, authored scenarios, validation, components, owned readings, and actual tick flows. |
+| [`src/simulation.rs`](src/simulation.rs) | Installation, explicit single-threaded schedule, reset, scenario switching, and read-only snapshots. |
+| [`src/supply.rs`](src/supply.rs) | Bounded external input on lit simulation ticks. |
+| [`src/feeding.rs`](src/feeding.rs) | Local contact eligibility, deterministic competing claims, and immediate two-store transfer. |
+| [`src/lifecycle.rs`](src/lifecycle.rs) | Upkeep and permanent terminal transitions. |
+| [`src/history.rs`](src/history.rs) | Bounded retained events and conservative whole-tick coverage. |
+| [`tests/acceptance.rs`](tests/acceptance.rs) | Black-box public API acceptance cases; no access to private components. |
+| [`examples/compare.rs`](examples/compare.rs) | Twelve-tick limited/generous supply comparison. |
+
+Tests written by a learner can be added as another integration-test file and run
+with normal Cargo. A prepared practice copy should preserve those tests separately
+from the course's acceptance suite. This package has no HTML extraction or
+trailing-test replacement convention.
+
+## Public API and ownership
+
+```rust
+use moss_course_ecosystem::{CourseWorld, Scenario};
+
+let mut world = CourseWorld::new(Scenario::limited_supply()).unwrap();
+let before = world.snapshot(); // owned, sorted, and read-only with respect to the world
+world.step();                  // exactly one complete simulation tick
+let after = world.snapshot();
+assert_eq!((before.tick, after.tick), (0, 1));
+
+world.reset();                 // same selected scenario, new run ID, tick zero
+world.reset_with(Scenario::generous_supply()).unwrap();
+```
+
+`CourseWorld::new(Scenario)` validates all authored inputs and returns
+`Result&lt;CourseWorld, ScenarioError&gt;`. `step(&amp;mut self)` executes the installed
+schedule. `snapshot(&amp;self)` returns an owned `Snapshot`. `reset(&amp;mut self)` restores
+the currently selected scenario. `reset_with(&amp;mut self, Scenario)` validates before
+changing anything, selects the new scenario, and starts the next run. A later
+`reset` repeats that new selection. A rejected switch leaves both current state
+and the saved reset scenario unchanged.
+
+Run IDs begin at one and increase across both forms of reset. Tick, run, ledger,
+and eviction counters use checked arithmetic; exhaustion panics rather than
+wrapping. There is no recovery contract for a partially executed tick after a
+panic. Ordinary invalid configuration is returned as an error before a new run
+is installed.
+
+`Scenario` exposes authored `GrazerSeed` and `PatchSeed` vectors, a validated
+`Daylight`, and an event retention limit. IDs are `SimId(u32)` and must be unique
+across both kinds of entity. Initial reserve/biomass cannot exceed capacity.
+Empty populations, zero capacities, zero upkeep, zero meal requests, and zero
+retained events have explicit valid meanings. Daylight rejects a zero cycle or
+more lit ticks than cycle ticks; entirely dark and entirely lit cycles are valid.
+
+`Snapshot` contains run and completed tick, daylight configuration and current
+phase, sorted grazer/patch readings, the latest actual `TickLedger`, and an owned
+`HistorySnapshot`. Tick zero has `lit: None` because no environmental phase has
+executed. Every configured rate and feeding contact remains visible in the
+readings. Modifying an owned reading cannot mutate the world. The internal roster
+contains Bevy entity handles only; it is an index, not a mirrored biological world.
+
+## Exact biological choices
+
+One `Schedule`, using `ExecutorKind::SingleThreaded` and an explicit `.chain()`,
+executes these phases:
+
+1. Advance the tick and clear the latest flow ledger.
+2. Charge upkeep to living grazers, limited by their current reserves.
+3. Grow patches on lit ticks, limited by remaining patch capacity.
+4. Let living grazers eat in ascending stable-ID order.
+5. Mark any still-living zero-reserve grazer dead.
+6. Mark the tick's history as collected.
+
+All authored grazers initially enter alive, including an initial zero-reserve
+grazer. Reaching zero during upkeep does not prevent its meal attempt. An available
+meal can rescue it in this same tick. A grazer still at zero afterward becomes
+permanently dead; it remains in the roster at zero for inspection, pays no more
+upkeep, and receives no later meal. This is a selected game rule, not a claim about
+real starvation. Keeping dead rows preserves the starting-cohort denominator.
+
+Each grazer's optional `feeding_site` names the patch with which it has contact.
+`None`, a missing ID, or an ID belonging to a grazer grants no contact and no meal.
+All patches can still appear in the global inspector. Seeing a patch there does
+not make it locally eligible. There is no automatic fallback to another patch.
+
+A meal accepts the minimum of the grazer's per-tick request, current patch biomass,
+and remaining reserve capacity. It subtracts from the patch and credits the grazer
+immediately before the next claimant runs. A full or zero-demand consumer leaves
+food for later consumers. A successful meal is one-for-one in these toy units.
+The stable-ID ordering is deterministic and deliberately gives lower IDs priority;
+it is not a fairness algorithm. Spawn order cannot change the result.
+
+Upkeep is a sink; daylight growth is an external source. Eating moves units between
+stores. Growth limits the accepted addition before adding, and feeding limits the
+accepted transfer before either mutation, including near `u32::MAX`. The ledger
+reports actual additions, paid upkeep, transferred food, and new starvations.
+For the tested population sizes:
+
+```text
+stores_after + upkeep_paid = stores_before + growth_added
+stores = sum(grazer reserves) + sum(patch biomass)
+```
+
+The reserve floor means unpaid upkeep is not retained as debt. It is consequently
+important to compare actual upkeep paid with configured upkeep rather than
+silently treating them as the same quantity.
+
+The authored comparison uses four-tick days: ticks 1–2 are lit, 3–4 dark, then the
+cycle repeats. Neither rules nor observation read wall time. Extra snapshots,
+redraws, or delayed requests cannot create an additional dawn.
+
+## Follow the connected result
+
+Both comparison scenarios begin with grazer IDs 1 and 2 at reserve 3, capacity 8,
+and meal request 2. ID 1 pays upkeep 2; ID 2 pays upkeep 1. Both contact patch 100,
+which begins empty with capacity 8. Only external supply differs: limited adds up
+to **2**, generous up to **6**, on each lit tick.
+
+The native example produced these literal readings on September 23, 2026:
+
+| Tick | Limited reserves 1 / 2 | Limited alive / biomass | Generous reserves 1 / 2 | Generous alive / biomass |
+| --- | --- | --- | --- | --- |
+| 1 | 3 / 2 | 2 / 0 | 3 / 4 | 2 / 2 |
+| 2 | 3 / 1 | 2 / 0 | 3 / 5 | 2 / 4 |
+| 3 | 1 / 0 | 1 / 0 | 3 / 6 | 2 / 0 |
+| 4 | 0 / 0 | 0 / 0 | 1 / 5 | 2 / 0 |
+| 8 | 0 / 0 | 0 / 4 | 0 / 7 | 1 / 0 |
+| 12 | 0 / 0 | 0 / 8 | 0 / 8 | 1 / 5 |
+
+At generous tick 3 both grazers eat from stored biomass, exhausting it before the
+second dark tick. ID 1's larger upkeep then spends reserve faster. It dies at tick
+8 despite having first claim on food; ID 2 remains alive through tick 12. The label
+“generous” means greater external input, not guaranteed survival for every animal.
+The initial test draft incorrectly expected both to survive; following this
+literal trace corrected that expectation without changing the authored rules.
+
+After both limited-supply grazers die, supply accumulates because no eligible
+consumer remains. Observing biomass 8 at tick 12 therefore does not establish that
+food was available when either grazer needed it. Current state and event history
+answer different questions. These results establish this twelve-tick comparison,
+not long-term stability, reproduction, adaptation, or an ecological forecast.
+
+## History: unknown is different from zero
+
+Positive actual growth, upkeep, and meals are recorded, along with each one-time
+starvation. Events include run, tick, and stable subject/patch IDs. Zero transfers
+and rejected meal attempts create no event; inspecting a complete interval can
+still establish that it contains zero starvation events.
+
+The journal retains at most `history_limit` events. When an event is evicted, its
+entire tick is conservatively outside complete coverage even if other events from
+that tick remain. `complete_after_tick` is an exclusive lower bound;
+`collected_through_tick` is an inclusive upper bound. `evicted_events` reports the
+actual number lost. `starvations_between(first, last)` returns `None` for an invalid,
+future, or incompletely retained interval and `Some(0)` for a fully covered interval
+with no starvation. A zero-length journal can lose tick 1 but still know that an
+event-free tick 2 had zero transitions. Dead state never depends on retaining its
+terminal event.
+
+Within each phase, stable-ID ordering also makes event retention deterministic.
+The reset operations clear retained events and coverage while advancing the run
+identity. A saved owned report remains an observation of its old run.
+
+## Observed verification and limits
+
+- **19 public API acceptance tests passed** with `cargo +1.93.1 test --offline
+  --locked`. They cover competing claims, no second reward, capacity and zero
+  demand, absent contact, full-reserve upkeep, rescue before starvation, dead
+  ineligibility, phase-sensitive literals, the twelve-tick comparison, accounting,
+  immutable reads, spawn-order independence, bounded/zero history, reset and
+  atomic scenario switching, integer limits, empty populations, invalid setup, and
+  entirely lit/dark days.
+- `compare` ran natively and printed all twelve readings for both scenarios.
+- Pinned rustfmt and Clippy with `--all-targets -- -D warnings` passed.
+- Two isolated copies under `learning/work/ecosystem-probe-*` compiled with
+  deliberate faults and failed the intended acceptance test. Starvation before
+  feeding produced `(0, Dead)` instead of `(2, Alive)`. Omitting patch depletion
+  gave competing consumers `3/3` instead of `3/2`. The runnable probe script is
+  scratch evidence at `learning/work/ecosystem-negative-probes.py`; the reference
+  files were not mutated.
+
+The first test run was 18 passed and one incorrect comparison expectation failed;
+the corrected complete run is the 19-pass result above. There are no hidden ignored
+tests. This section records native first-arc verification. It does not certify a
+learner's later modifications, a browser host, teaching efficacy, or the full
+original goal.
+
+## Select the population extension explicitly
+
+The first arc remains selected by `CourseWorld::new` and `reset_with`. It keeps
+dead rows, has no birth policy, and returns `None` from `population_snapshot`.
+`Scenario`, `Snapshot`, `TickLedger`, and `EventKind` retain their existing public
+fields and variants. The original nineteen-test acceptance file is unchanged.
+The course's `learning/checkpoints/shared-meadow` preserves the earlier source
+for the first construction guide; later work extends the learner's saved project.
+
+The additive APIs are:
+
+```rust
+use moss_course_ecosystem::{
+    CourseWorld, FounderTrait, PopulationConfig, Scenario, UpkeepTrait,
+};
+
+let scenario = Scenario::generous_supply();
+let founders = scenario.grazers.iter().map(|seed| FounderTrait {
+    id: seed.id,
+    upkeep: UpkeepTrait::new(u8::try_from(seed.maintenance_units_per_tick).unwrap()).unwrap(),
+}).collect();
+let config = PopulationConfig::new(founders);
+let mut course = CourseWorld::new_population(scenario.clone(), config.clone()).unwrap();
+course.step();
+let stores = course.snapshot();
+let population = course.population_snapshot().unwrap();
+assert_eq!((stores.run, stores.tick), (population.run, population.tick));
+course.reset(); // repeat this scenario AND population policy under the next run ID
+course.reset_with_population(scenario, config).unwrap(); // select a new validated pair
+course.reset_with(Scenario::limited_supply()).unwrap(); // explicitly turn population mode off
+assert!(course.population_snapshot().is_none());
+```
+
+`new_population(Scenario, PopulationConfig)` returns
+`Result&lt;CourseWorld, PopulationError&gt;`; `reset_with_population` returns
+`Result&lt;(), PopulationError&gt;`. Invalid inputs leave current state, run identity,
+history, and the saved reset selection unchanged. Population mode canonicalizes
+authored grazer, patch, and founder arrays by stable ID so the **complete** owned
+report is independent of insertion order. Ordinary first-arc construction retains
+its original behavior. Reads never advance a tick.
+
+`PopulationSnapshot` is supplemental version `moss-course-population-v1`. It owns
+the initial scenario, validated policy, sorted `PopulationReading` values, living
+juvenile/adult counts, lifetime `PopulationTotals`, latest `PopulationLedger`,
+identity/accepted-birth cursors, and bounded `PopulationHistorySnapshot`. The
+initial scenario is provenance for repeating the run, not a second evolving
+world. `individuals` contains current living entities after completed ticks.
+Each reading supplies stage, deadlines, actual `UpkeepTrait`, and optional
+`BirthOrigin`; its ordinary `Snapshot` row supplies reserve, capacity, meal rate,
+and fixed feeding contact. No second biological implementation is introduced.
+
+| New file | Responsibility |
+| --- | --- |
+| [`src/population/config.rs`](src/population/config.rs) | Authored policy, bounded trait, and atomic input validation. |
+| [`src/population.rs`](src/population.rs) | Stage data, population reports, maturation, terminal cleanup, and lifetime counters. |
+| [`src/reproduction.rs`](src/reproduction.rs) | Read/revalidate a pair, preflight every fallible birth value, then commit payment and reserve a deferred child slot. |
+| [`src/population/history.rs`](src/population/history.rs) | Versioned birth/maturation events with explicit retained coverage. |
+| [`src/simulation/tests.rs`](src/simulation/tests.rs) | Internal deferred-command, newborn-eligibility, and preflight-exhaustion checks. |
+| [`tests/population.rs`](tests/population.rs) | Fifteen black-box public population acceptance tests. |
+| [`examples/populations.rs`](examples/populations.rs) | Fully declared forty-tick matched-cohort experiment. |
+
+## Population policy and transaction boundary
+
+`PopulationConfig::new(founders)` selects contribution **2** and dissipated birth
+cost **1** per parent, maturity delay **2** ticks, parental cooldown **3** ticks,
+child capacity **8**, child meal request **2**, maximum **8** living entities,
+mutation cycle `[0]`, and population history limit **128**. Founders begin adult
+and first become eligible at tick 1. Every authored grazer needs exactly one
+founder trait, whose value must agree with its actual maintenance rate.
+
+`UpkeepTrait::new` accepts only values **1–3**. The value is the actual number of
+upkeep units requested on each eligible tick, not a label in the inspector.
+Mutation entries are `i8` values restricted to **-1, 0, +1**; an empty cycle or
+another value is an input error. Delays must be positive, the living limit must be
+positive and accommodate all founders, contributions must be positive, and child
+capacity must hold both contributions. Payment arithmetic and initial child-ID
+availability are checked during validation. Zero history and zero child meal
+request remain valid choices. Population mode's trait bounds deliberately narrow
+the first arc's unrestricted upkeep configuration.
+
+The explicit single-threaded population schedule is:
+
+```text
+advance tick / clear both ledgers
+  → mature eligible juveniles
+  → upkeep → bounded daylight growth → competing meals → terminal starvation
+  → resolve funded births → ApplyDeferred
+  → remove dead entities → ApplyDeferred
+  → complete both histories and lifetime counts
+```
+
+Within the birth phase, eligible adults are grouped by shared feeding-site ID,
+groups are visited in site-ID order, and members pair in ascending stable-ID order
+as disjoint pairs. There is no sex, compatibility score, mate search, or spatial
+proximity rule. The shared non-absent site must currently resolve to a **Patch**;
+an empty real patch still qualifies, while a missing ID or grazer ID does not.
+The child inherits that accepted contact. A globally visible patch is not
+automatically a local contact.
+
+Both parents must be alive, eligible this tick, past cooldown, and able to pay
+contribution plus cost while retaining at least one reserve unit. Each pays 3
+under the default policy: 2 transfers to the child's initial reserve and 1 leaves
+the modeled stores. The child therefore starts with 4; neither parent can fund it
+alone. Births are resolved after starvation, so a dead parent cannot reproduce and
+its vacated slot is available this tick. A selected pair denied specifically by
+the living cap increments `capacity_blocked_pairs`; `capacity_blocked_ticks`
+increments once if at least one such denial occurred. A full world with no funded
+eligible pair does not count a blocked tick.
+
+Preflight checks both parents again and computes deadlines, the next ID, accepted
+birth ordinal, child values, transfer/cost ledger additions, and event-eviction
+headroom before the first debit. Rejections cannot spend one parent's reserve,
+advance inheritance, reserve a slot, or queue a child. The cap-denial count itself
+is an intentional observation. After acceptance, both costs and cooldowns change
+immediately, and an available slot is reserved before `Commands::spawn` queues the
+child. A second pair cannot claim that pending slot. `ApplyDeferred` makes queued
+children visible at the explicit phase boundary. Re-running birth resolution in
+the same tick cannot reward the original pair again.
+
+A child born at tick `t` has `first_eligible_tick = t + 1`; visibility alone grants
+no maintenance or meal in the birth tick. It matures at `t + maturation_ticks`,
+before that tick's other biological phases, and its initial birth deadline is
+that maturity tick. It does not inherit a parent's cooldown. Parents' next birth
+deadline becomes `t + cooldown_ticks`. Dead entities are removed in population
+mode, so living storage stays bounded; descendants retain their parents' stable
+IDs in owned origin data even after a parent disappears.
+
+Child IDs begin one above the maximum authored grazer **or patch** ID. They are
+never recycled within a run. Using the last representable ID exhausts the next-ID
+cursor; a later attempted birth panics before debit. Counter/deadline exhaustion
+also panics before that birth's mutation. This is a per-birth guarantee: completed
+upkeep, growth, meals, or earlier births are not rolled back if a later operation
+panics. The public API does not promise to resume a partially executed tick.
+
+Inheritance algorithm `upkeep-copy-cycle-v1` uses the zero-based accepted-birth
+ordinal. Even ordinals copy the lower-ID parent's trait; odd ordinals copy the
+higher-ID parent's. The same ordinal indexes the mutation cycle, the result clamps
+to 1–3, and `BirthOrigin` retains both the proposed and actually applied delta.
+Rejected pairs consume neither cursor. This is an authored deterministic policy,
+not Mendelian genetics, random mutation, or evidence of evolution. In particular,
+the model gives greater upkeep no compensating advantage.
+
+## Literal birth trace and accounting
+
+The population acceptance fixture starts both founders at reserve 5, capacity 8,
+meal request 2, upkeep 1, contact 100. Patch 100 starts empty, capacity 20, adding
+up to 6 on every tick of a fully lit four-tick cycle. It uses the default policy:
+
+| Completed tick | Reserves by stable ID | Patch biomass | Population consequence |
+| --- | --- | --- | --- |
+| 1 | `1:3, 2:3, 101:4` | 2 | Parents each reach 6 before paying 3; child 101 is juvenile. |
+| 2 | `1:4, 2:4, 101:5` | 2 | Child 101 takes its first maintenance and meal. |
+| 3 | `1:5, 2:5, 101:6` | 2 | Child 101 matures; founders remain on cooldown. |
+| 4 | `1:3, 2:3, 101:7, 102:4` | 2 | The original pair produces child 102. |
+
+The tick-4 population ledger reports transfer 4 and dissipation 2. Transfer moves
+existing units; it is not new supply. Across each completed population tick:
+
+```text
+stores_after + actual_upkeep + birth_dissipation = stores_before + actual_growth
+living + total_starvations = initial_founders + total_births
+living = juveniles + adults ≤ configured_living_limit
+```
+
+Starvation removes a zero-reserve entity, so that cleanup discards no stored
+energy. The tests use widened sums and check these equations at every tick of
+eight forty-tick runs. Actual upkeep can be less than its trait value when reserve
+hits the floor; a configured demand must not be silently substituted into the
+energy equation.
+
+## Forty-tick controlled comparisons
+
+The native `populations` example declares four two-founder upkeep cohorts:
+`[1,1]`, `[1,2]`, `[2,2]`, and `[1,3]`, assigned respectively to IDs 1 and 2.
+Every founder starts at reserve 5, capacity 8, meal request 2, and contact 100.
+The shared patch starts at zero with capacity 20. All population defaults above
+remain fixed. Both histories retain at most 128 events. Each run starts fresh and
+executes exactly **40 ticks**.
+
+For each cohort, the environmental comparison changes the temporal supply
+pattern while retaining a requested budget of 24 per four-tick cycle: **steady**
+adds up to 6 on each of four lit ticks; **pulsed** adds up to 12 on the first two
+ticks and nothing on the next two. This is a matched supply-budget intervention,
+not one parameter with identical light exposure. Capacity could make actual
+accepted input differ; in these eight observed runs it was exactly **240** in
+each. Within each matched pair, founders, IDs, contacts, and population policy are
+identical. Across cohorts, the declared trait assignment changes.
+
+Observed September 23, 2026:
+
+| Cohort / supply | Living (juvenile / adult) | Births / deaths | Living trait counts (1 / 2 / 3) | Cap-denied pairs / ticks |
+| --- | --- | --- | --- | --- |
+| 1,1 / steady | 6 (1 / 5) | 15 / 11 | 6 / 0 / 0 | 0 / 0 |
+| 1,1 / pulsed | 5 (1 / 4) | 15 / 12 | 5 / 0 / 0 | 1 / 1 |
+| 1,2 / steady | 5 (1 / 4) | 14 / 11 | 4 / 1 / 0 | 0 / 0 |
+| 1,2 / pulsed | 5 (0 / 5) | 17 / 14 | 5 / 0 / 0 | 0 / 0 |
+| 2,2 / steady | 3 (0 / 3) | 1 / 0 | 0 / 3 / 0 | 0 / 0 |
+| 2,2 / pulsed | 3 (0 / 3) | 1 / 0 | 0 / 3 / 0 | 0 / 0 |
+| 1,3 / steady | 5 (1 / 4) | 14 / 11 | 4 / 0 / 1 | 0 / 0 |
+| 1,3 / pulsed | 5 (0 / 5) | 17 / 14 | 5 / 0 / 0 | 0 / 0 |
+
+| Cohort / supply | Actual upkeep | Birth transfer / dissipation | Final reserve sum / biomass | Base complete ticks; evicted events |
+| --- | --- | --- | --- | --- |
+| 1,1 / steady | 200 | 60 / 30 | 20 / 0 | `(28,40]`; 275 |
+| 1,1 / pulsed | 208 | 60 / 30 | 12 / 0 | `(26,40]`; 233 |
+| 1,2 / steady | 208 | 56 / 28 | 14 / 0 | `(26,40]`; 211 |
+| 1,2 / pulsed | 210 | 68 / 34 | 6 / 0 | `(27,40]`; 228 |
+| 2,2 / steady | 238 | 4 / 2 | 8 / 2 | `(22,40]`; 150 |
+| 2,2 / pulsed | 238 | 4 / 2 | 8 / 2 | `(21,40]`; 130 |
+| 1,3 / steady | 208 | 56 / 28 | 14 / 0 | `(26,40]`; 211 |
+| 1,3 / pulsed | 210 | 68 / 34 | 6 / 0 | `(27,40]`; 228 |
+
+The population journal retains full `(0,40]` coverage with zero evictions in all
+eight runs, so `births_between(1,40)` returns the corresponding known birth count.
+The base journal has lost early events, so `starvations_between(1,40)` is `None`
+in **all eight**, including the no-death `[2,2]` runs. Lifetime totals are retained
+counters; they remain known independently of the journal's ability to explain an
+interval. Born and Matured events are in the supplemental journal; starvation
+events retain the original base schema. A child's surviving origin record is
+not a promise to retain every ancestor forever.
+
+More births do not necessarily produce more living entities at tick 40: the
+`[1,2]` pulsed case has three more births and three more deaths than its steady
+match. The `[1,2]` and `[1,3]` endpoint flows coincide despite different configured
+upkeep; the reserve floor and actual accepted meals matter. Equal endpoints do
+not establish identical paths or equivalent traits. These eight authored runs
+are neither independent statistical samples nor a claim of long-run stability,
+adaptation, ecological calibration, or a universally preferable supply pattern.
+
+## Population verification and remaining boundary
+
+The pinned offline native run passed **38 tests**: the unchanged 19 first-arc
+acceptance cases, 15 top-level population acceptance cases, and 4 focused internal
+tests. Population cases cover literal phases, inheritance changing actual upkeep,
+clamped deltas and donor alternation, immediate maturity eligibility, real versus
+phantom contact, positive parental remainder, pending-slot reservation, cap
+accounting, terminal slot release, retained ancestry, history limits, forty-tick
+flow/census equations, complete-report insertion-order independence, owned reads,
+empty populations, reset modes, and atomic invalid configuration.
+
+The internal checks observe a queued child before and after applying commands,
+then retry birth resolution in the same tick. Separate late maintenance and meal
+checks assert the newborn's state **and** absence of child events/ledger flows;
+opposing illegal changes cannot cancel and pass. Nine preflight-exhaustion cases
+cover first-action/maturity/cooldown deadlines, accepted birth count, per-tick birth
+count, transfer/cost sums, exhausted child identity, and event-eviction count. Each
+checks unchanged reports after explicitly flushing the rejected queue.
+
+Four scratch copies compiled successfully and failed the intended assertion:
+removing the newborn maintenance guard changed reserve 4 to 3; removing its meal
+guard changed 4 to 6; omitting the second parental debit produced reserves
+`3/6/4` instead of `3/3/4`; omitting immediate slot reservation produced six living
+entities under a cap of five. The reference remained unchanged. The reproducible
+scratch driver is `learning/work/ecosystem-population-negative-probes.py`, with
+each result in its own `ecosystem-population-probe-*` directory.
+
+Pinned rustfmt and Clippy (`--all-targets -- -D warnings`) passed. Probe builds use
+separate target directories so deliberately broken artifacts cannot contaminate
+the reference's incremental cache.
+
+`tests/acceptance.rs` still has SHA-256
+`1968bd2f287779574689c63cc6476610827a4c07f1086fa69a7e0e99b6e1bb9c`.
+This native extension does not itself validate a browser adapter, a learner's
+later implementation, or the complete course. Rest, predation, spatial target
+validity, and movement remain subsequent interacting work. The live Moss crate
+and active movement assignment are untouched.
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

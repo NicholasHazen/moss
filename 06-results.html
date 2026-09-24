@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Carry a form input through parsing and domain validation. Return a useful error instead of a misleading default."><meta name="color-scheme" content="light"><meta name="theme-color" content="#164f50">
+<title>A rejected request has a reason · Moss Fieldnotes</title><link rel="icon" href="assets/identity/atlas-mark-v1.png" type="image/png"><link rel="stylesheet" href="assets/fieldnotes.css?v=1351a94cba7f">
+<script src="assets/records.js?v=1351a94cba7f" defer></script><script src="assets/models.js?v=1351a94cba7f" defer></script><script src="assets/terrarium.js?v=1351a94cba7f" defer></script><script src="assets/evidence.js?v=1351a94cba7f" defer></script><script src="assets/ecosystem.js?v=1351a94cba7f" defer></script><script src="assets/population.js?v=1351a94cba7f" defer></script><script src="assets/mobile.js?v=1351a94cba7f" defer></script><script src="assets/fieldnotes.js?v=1351a94cba7f" defer></script></head>
+<body data-page="06-results"><a class="skip-link" href="#reading">Skip to reading</a>
+<header class="masthead"><div class="masthead-inner"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">Moss · Fieldnotes 0.4</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></div></header>
+<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><a class="introduction-link" href="introduction.html">Start here · Meet Moss</a><ol><li class="nav-group"><details><summary>Start with evidence</summary><ol><li><a href="01-observe.html"><span class="number">01</span><span>A tick is a promise<small>25 min · values</small></span><span class="progress-dot" data-progress-for="01-observe" aria-hidden="true"></span></a></li><li><a href="02-ownership.html"><span class="number">02</span><span>Who owns the next change?<small>35 min · ownership</small></span><span class="progress-dot" data-progress-for="02-ownership" aria-hidden="true"></span></a></li><li><a href="03-queries.html"><span class="number">03</span><span>Ask the world a typed question<small>35 min · components</small></span><span class="progress-dot" data-progress-for="03-queries" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details open><summary>Everyday Rust</summary><ol><li><a href="04-units.html"><span class="number">04</span><span>Give the number a unit<small>30 min · newtypes</small></span><span class="progress-dot" data-progress-for="04-units" aria-hidden="true"></span></a></li><li><a href="05-options.html"><span class="number">05</span><span>Missing is a different state<small>30 min · enums</small></span><span class="progress-dot" data-progress-for="05-options" aria-hidden="true"></span></a></li><li><a href="06-results.html" aria-current="page"><span class="number">06</span><span>A rejected request has a reason<small>35 min · Result</small></span><span class="progress-dot" data-progress-for="06-results" aria-hidden="true"></span></a></li><li><a href="07-modules.html"><span class="number">07</span><span>Put the boundary in the code<small>30 min · modules</small></span><span class="progress-dot" data-progress-for="07-modules" aria-hidden="true"></span></a></li><li><a href="08-collections.html"><span class="number">08</span><span>Collect a report, release the world<small>35 min · Vec</small></span><span class="progress-dot" data-progress-for="08-collections" aria-hidden="true"></span></a></li><li><a href="09-traits.html"><span class="number">09</span><span>A trait is a promise you can use<small>35 min · traits</small></span><span class="progress-dot" data-progress-for="09-traits" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>The ECS contract</summary><ol><li><a href="10-borrows.html"><span class="number">10</span><span>Prove that the borrows cannot meet<small>35 min · disjoint queries</small></span><span class="progress-dot" data-progress-for="10-borrows" aria-hidden="true"></span></a></li><li><a href="11-schedules.html"><span class="number">11</span><span>Give the observations an order<small>35 min · schedules</small></span><span class="progress-dot" data-progress-for="11-schedules" aria-hidden="true"></span></a></li><li><a href="12-commands.html"><span class="number">12</span><span>Change structure at a known boundary<small>40 min · Commands</small></span><span class="progress-dot" data-progress-for="12-commands" aria-hidden="true"></span></a></li><li><a href="13-evidence.html"><span class="number">13</span><span>Make a test disagree with a plausible mistake<small>40 min · testing</small></span><span class="progress-dot" data-progress-for="13-evidence" aria-hidden="true"></span></a></li><li><a href="14-movement.html"><span class="number">14</span><span>Connect one affordable action to the world<small>35 min · movement bridge</small></span><span class="progress-dot" data-progress-for="14-movement" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Ecosystem depth</summary><ol><li><a href="15-meals.html"><span class="number">15</span><span>A finite meal has two sides<small>40 min · finite transfers</small></span><span class="progress-dot" data-progress-for="15-meals" aria-hidden="true"></span></a></li><li><a href="16-targets.html"><span class="number">16</span><span>Choose, then revalidate a target<small>40 min · local observations</small></span><span class="progress-dot" data-progress-for="16-targets" aria-hidden="true"></span></a></li><li><a href="17-variation.html"><span class="number">17</span><span>Compare individuals fairly<small>40 min · authored populations</small></span><span class="progress-dot" data-progress-for="17-variation" aria-hidden="true"></span></a></li><li><a href="18-growth.html"><span class="number">18</span><span>Let environmental input change supply<small>45 min · bounded growth</small></span><span class="progress-dot" data-progress-for="18-growth" aria-hidden="true"></span></a></li><li><a href="19-history.html"><span class="number">19</span><span>Keep a disappearance explainable<small>45 min · lifecycle</small></span><span class="progress-dot" data-progress-for="19-history" aria-hidden="true"></span></a></li><li><a href="20-predation.html"><span class="number">20</span><span>Consume once, even before removal<small>45 min · predation</small></span><span class="progress-dot" data-progress-for="20-predation" aria-hidden="true"></span></a></li><li><a href="21-rest.html"><span class="number">21</span><span>Make rest a commitment you can inspect<small>40 min · state machines</small></span><span class="progress-dot" data-progress-for="21-rest" aria-hidden="true"></span></a></li><li><a href="22-births.html"><span class="number">22</span><span>Commit both parents before creating a child<small>45 min · paired transactions</small></span><span class="progress-dot" data-progress-for="22-births" aria-hidden="true"></span></a></li><li><a href="23-inheritance.html"><span class="number">23</span><span>Keep inheritance distinct from selection<small>45 min · inheritance</small></span><span class="progress-dot" data-progress-for="23-inheritance" aria-hidden="true"></span></a></li><li><a href="24-experiments.html"><span class="number">24</span><span>Make a comparison explain its denominator<small>45 min · controlled comparisons</small></span><span class="progress-dot" data-progress-for="24-experiments" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>A selective Rust survey</summary><ol><li><a href="25-lifetimes.html"><span class="number">25</span><span>Let a view borrow exactly what it needs<small>40 min · lifetimes</small></span><span class="progress-dot" data-progress-for="25-lifetimes" aria-hidden="true"></span></a></li><li><a href="26-indirection.html"><span class="number">26</span><span>Choose the owner before the abstraction<small>45 min · Box</small></span><span class="progress-dot" data-progress-for="26-indirection" aria-hidden="true"></span></a></li><li><a href="27-async.html"><span class="number">27</span><span>Accept asynchronous results at a tick boundary<small>45 min · concurrency</small></span><span class="progress-dot" data-progress-for="27-async" aria-hidden="true"></span></a></li><li><a href="28-macros.html"><span class="number">28</span><span>Read the code a macro asks Rust to check<small>40 min · macro_rules</small></span><span class="progress-dot" data-progress-for="28-macros" aria-hidden="true"></span></a></li></ol></details></li></ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+</details></aside>
+<main id="reading" tabindex="-1"><details class="reading-options" hidden><summary>Reading options</summary><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span><span id="reading-status" role="status"></span></div></details>
+<article><p class="eyebrow">Everyday Rust · 35 minutes</p><h1 data-narration="0">A rejected request has a reason</h1><p class="lesson-lead" data-narration="1">Suppose an inspector form asks for a report beginning at tick 12 and covering three ticks. We can turn that into a window containing 12, 13, and 14. Now change the count to zero. The text still parses as a number, but the request no longer satisfies the report's rules.</p>
+<aside class="scope-note"><p data-narration="2">You'll implement a constructor in the isolated <code>results.rs</code> lab, then compare it with Moss's existing configuration code. The 4,096-tick limit is an illustrative reporting policy. This exercise doesn't add a live form or change the movement task in <code>NOW.md</code>.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview" data-narration="3">Turn a request into a value callers can trust</h2>
+<p data-narration="4">You'll build a constructor that either produces a valid reading window or explains why it cannot. We'll separate parsing from the report's policy, follow errors through the supplied parsing function, and test both accepted and rejected endpoints. That gives a request for ticks 12 through 14 a dependable representation, while keeping a zero count or an overflowing endpoint from becoming a misleading report.</p>
+</section><details class="chapter-contents"><summary>In this chapter <span>7 sections</span></summary><nav aria-label="In this chapter"><ol><li><a href="#valid-text-is-not-valid-configuration">Follow a request from text to meaning</a></li><li><a href="#put-the-reason-in-the-type">Give the caller enough information to respond</a></li><li><a href="#one-constructor-owns-the-invariant">Make accepted windows dependable</a></li><li><a href="#follow-the-error-path">Read the validation pipeline</a></li><li><a href="#implement-the-boundary">Write the constructor&#x27;s checks</a></li><li><a href="#recognize-the-live-pattern">Find the same boundary in Moss</a></li><li><a href="#chapter-takeaway">Carry the accepted value forward</a></li></ol></nav></details>
+
+<h2 id="valid-text-is-not-valid-configuration" data-narration="5">Follow a request from text to meaning</h2>
+<p data-narration="6">A form begins with strings, so our first question is whether each input can be read as the integer type we've chosen. “Three” can't be parsed as a <code>u64</code>; “3” can. But parsing only gives us a representable number. It doesn't know what our report considers a useful count, which is why “0” gets through this first step.</p>
+<p data-narration="7">We'll give the report an explicit policy: a requested window must contain at least one tick and at most 4,096. Its stored endpoints will be an inclusive start and an exclusive end. Starting at 12 with a count of 3 therefore produces an end of 15, describing ticks 12, 13, and 14. This convention makes the count equal to end minus start and lets adjacent windows meet without sharing a tick.</p>
+<p data-narration="8">The field name <code>end_tick_exclusive</code> keeps that convention visible in code. It also belongs in the explanation a reader sees. Two unlabeled endpoints would leave us wondering whether 15 was included, and a correct calculation wouldn't prevent the resulting off-by-one misunderstanding.</p>
+<p data-narration="9">There's one more numerical constraint: the exclusive end must fit in <code>u64</code>. Even a valid count of one can overflow if the start is already the maximum. We'll check the count first and the addition second, giving each failure its own explanation.</p>
+<p data-narration="10">A value that passes these checks means “this is a well-formed requested window.” It doesn't establish that its ticks have happened or that observations were retained for all of them. When we build history, we'll compare the request with available coverage. Keeping those questions separate continues the previous lesson's distinction between a valid identity and an available reading.</p>
+
+<h2 id="put-the-reason-in-the-type" data-narration="11">Give the caller enough information to respond</h2>
+<p data-narration="12"><a href="05-options.html">The target lesson</a> used <code>Option</code> when asking whether a selected ID was present. For a rejected form request, the caller also needs a reason. <code>Result&lt;ReadingWindow, WindowError&gt;</code> describes the two outcomes: <code>Ok(window)</code> carries the accepted value, and <code>Err(reason)</code> carries an explanation of failure.</p>
+<p data-narration="13">We'll make <code>WindowError</code> an enum, using the same data-bearing alternatives we used for target status. An invalid-integer error identifies the field. A count-range error keeps the rejected count. An end-overflow error keeps the start and count that couldn't be combined. The caller can match the variant and decide what to show beside the input.</p>
+<table data-narration="14"><caption>How four requests move through validation</caption><thead><tr><th scope="col">Request</th><th scope="col">Outcome</th></tr></thead><tbody><tr><td>Start “12”, count “3”</td><td>An accepted window containing 12, 13, and 14.</td></tr><tr><td>Start “12”, count “three”</td><td>The tick-count field can't be parsed as the required integer.</td></tr><tr><td>Start “12”, count “0”</td><td>Parsing succeeds, then the count-range check rejects zero.</td></tr><tr><td>Start at the maximum <code>u64</code>, count 1</td><td>The count is valid, but its exclusive endpoint can't be represented.</td></tr></tbody></table>
+<p data-narration="15">The integer error deliberately groups malformed text, negative values, and text larger than the unsigned type can hold. That is enough detail for this lab to identify the field that needs attention. It doesn't retain the original text or the parser's full diagnostic. A form could keep the entered text separately; an import tool might preserve the underlying error as well. <code>Result</code> can carry whichever error type the caller needs.</p>
+<p data-narration="16">The <a href="https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html">Rust Book's recoverable-error chapter</a> explains how these unsuccessful outcomes travel as values. That fits a form naturally: invalid input is something to report so the user can revise it, rather than a reason to pretend a report was successfully created.</p>
+
+<h2 id="one-constructor-owns-the-invariant" data-narration="17">Make accepted windows dependable</h2>
+<p data-narration="18">We want the same rules to apply whether numbers come from a form, a file, or a test. We'll put them in <code>ReadingWindow::new</code>, a constructor that accepts numeric inputs. It validates the count, checks the endpoint addition, and constructs the window only when both succeed. A failed check returns an error without supplying a partially validated value.</p>
+<p data-narration="19">This gives the later getters a useful fact to rely on. In a window produced by the constructor, the end is greater than the start and their difference is between 1 and 4,096. The <code>tick_count</code> getter can therefore subtract them directly. It doesn't need to repeat the count and overflow checks whenever someone asks how many ticks were requested.</p>
+<p data-narration="20">The fields are private, but Rust's privacy boundary needs a precise reading here. Code outside the owning module and its descendants can't directly access private fields. In this single-file lab, code in the defining module or a descendant module still could construct them itself. Using the constructor is therefore a local convention here; the next lesson will use modules to make the intended path enforceable for callers across that boundary.</p>
+<p data-narration="21">Keeping fields unchanged through the getter interface preserves the relationship established at construction. Direct construction inside the allowed module still carries responsibility for that relationship. “Private” doesn't mean that one particular method is the only code capable of touching a field.</p>
+<p data-narration="22">We also need to decide what rejection means. Clamping a request for 4,097 ticks to 4,096 would silently change what the caller asked for. This constructor rejects the unsupported count instead. An interface could offer a suggested correction afterward, but the accepted value should describe a request the caller actually agreed to make.</p>
+
+<h2 id="follow-the-error-path" data-narration="23">Read the validation pipeline</h2>
+<p data-narration="24">The constructor gives us one place to enforce the policy for numeric inputs; the form still begins with text. The supplied <code>parse_window</code> function connects those text inputs to the constructor. It parses the start, then the count, and finally calls <code>ReadingWindow::new</code>. Keeping that final call matters: successfully parsing two integers mustn't bypass the report's range policy.</p>
+<p data-narration="25">After each parse, <code>map_err</code> converts the parser's error into our field-specific <code>WindowError</code>. The following question mark either yields the successful integer for continued work or returns the error from <code>parse_window</code>. It saves us an explicit match for propagation. It doesn't log a message, retry, or decide which correction the user should make.</p>
+<p data-narration="26">Inside the constructor, <code>checked_add</code> presents a slightly different shape: it returns an <code>Option</code>, because its failed result carries no reason of its own. We know what failure means at this point, so <code>ok_or</code> turns <code>None</code> into <code>EndOverflow</code> with the relevant inputs. A question mark then propagates that error in the same way as the parsing failures.</p>
+<p data-narration="27">The <a href="https://doc.rust-lang.org/std/option/enum.Option.html#method.ok_or">Option conversion reference</a> and <a href="https://doc.rust-lang.org/std/result/enum.Result.html#method.map_err">Result error-mapping reference</a> describe these transformations. In this example, they let several operations speak the same error language. The final constructor call already returns the right <code>Result</code>, so <code>parse_window</code> returns it directly.</p>
+
+<h2 id="implement-the-boundary" data-narration="28">Write the constructor's checks</h2>
+<p data-narration="29">Try the accepted and rejected edges before implementing them. Starting at 12, counts of 1 and 4,096 should succeed, while 4,097 should fail. For the endpoint, compare a count of one starting at <code>u64::MAX - 1</code> with the same count starting at <code>u64::MAX</code>. Only the first can represent its exclusive end.</p>
+<details><summary>Hint 1: include both supported count endpoints</summary><p>Check the inclusive range from 1 through <code>MAX_WINDOW_TICKS</code>. Outside it, return <code>CountOutOfRange</code> carrying the rejected count.</p></details>
+<details><summary>Hint 2: construct only after successful addition</summary><p>Use <code>checked_add</code> for the endpoint. Convert its missing result into <code>EndOverflow</code> and return that error before constructing the window.</p></details>
+<details><summary>Prediction answer</summary><p>Counts 1 and 4,096 are accepted, while 4,097 is rejected. Maximum minus one plus one reaches the exact representable endpoint and succeeds. Maximum plus one doesn't fit. Accepting the exact boundary matters just as much as rejecting the value beyond it.</p></details>
+<p data-narration="30">From the repository root, prepare a new practice directory and run the first check. Choose a different destination if this path already holds your work.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare results --dest work/results-practice
+python3 learning/scripts/labs.py check results --file work/results-practice/results.rs</code></pre>
+<p data-narration="31">The initial failure comes from the constructor's intentional <code>todo!</code>. Replace only the body of <code>ReadingWindow::new</code> and repeat the check. Parsing and tests are supplied so you can concentrate on when construction is allowed.</p>
+<details><summary>Complete starter file: results.rs</summary><pre><code class="language-rust" data-starter="results">const MAX_WINDOW_TICKS: u64 = 4096;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReadingWindow {
+    start_tick: u64,
+    end_tick_exclusive: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum WindowError {
+    InvalidInteger { field: &amp;'static str },
+    CountOutOfRange { tick_count: u64 },
+    EndOverflow { start_tick: u64, tick_count: u64 },
+}
+
+impl ReadingWindow {
+    fn new(start_tick: u64, tick_count: u64) -&gt; Result&lt;Self, WindowError&gt; {
+        let _ = (start_tick, tick_count);
+        todo!("validate the count, check the end, then construct the window")
+    }
+
+    fn start_tick(self) -&gt; u64 { self.start_tick }
+    fn end_tick_exclusive(self) -&gt; u64 { self.end_tick_exclusive }
+    fn tick_count(self) -&gt; u64 { self.end_tick_exclusive - self.start_tick }
+}
+
+fn parse_window(start: &amp;str, count: &amp;str) -&gt; Result&lt;ReadingWindow, WindowError&gt; {
+    let start_tick = start.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "start tick" })?;
+    let tick_count = count.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "tick count" })?;
+    ReadingWindow::new(start_tick, tick_count)
+}
+
+fn main() {
+    let window = parse_window("12", "3").expect("the example window is valid");
+    println!("ticks {}..{} ({} ticks)",
+        window.start_tick(), window.end_tick_exclusive(), window.tick_count());
+    match parse_window("12", "0") {
+        Ok(_) =&gt; println!("accepted"),
+        Err(error) =&gt; println!("rejected: {error:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn both_supported_count_boundaries_are_accepted() {
+        for count in [1, MAX_WINDOW_TICKS] {
+            let window = ReadingWindow::new(12, count).unwrap();
+            assert_eq!(window.start_tick(), 12);
+            assert_eq!(window.end_tick_exclusive(), 12 + count);
+            assert_eq!(window.tick_count(), count);
+        }
+    }
+
+    #[test]
+    fn zero_and_oversized_counts_are_rejected_not_clamped() {
+        for count in [0, MAX_WINDOW_TICKS + 1] {
+            assert_eq!(ReadingWindow::new(12, count),
+                Err(WindowError::CountOutOfRange { tick_count: count }));
+        }
+    }
+
+    #[test]
+    fn exact_end_limit_is_valid_but_overflow_is_not() {
+        let window = ReadingWindow::new(u64::MAX - 1, 1).unwrap();
+        assert_eq!(window.end_tick_exclusive(), u64::MAX);
+        assert_eq!(ReadingWindow::new(u64::MAX, 1),
+            Err(WindowError::EndOverflow { start_tick: u64::MAX, tick_count: 1 }));
+    }
+
+    #[test]
+    fn parse_errors_identify_the_field_that_failed() {
+        assert_eq!(parse_window("fern", "3"),
+            Err(WindowError::InvalidInteger { field: "start tick" }));
+        for text in ["three", "-1", "18446744073709551616"] {
+            assert_eq!(parse_window("12", text),
+                Err(WindowError::InvalidInteger { field: "tick count" }));
+        }
+    }
+
+    #[test]
+    fn parsed_integers_still_pass_through_domain_validation() {
+        assert_eq!(parse_window("12", "0"),
+            Err(WindowError::CountOutOfRange { tick_count: 0 }));
+        assert_eq!(parse_window("12", "4097"),
+            Err(WindowError::CountOutOfRange { tick_count: 4097 }));
+        assert_eq!(parse_window("12", "3").unwrap().end_tick_exclusive(), 15);
+    }
+}</code></pre></details>
+<details><summary>Complete worked answer: results.rs</summary><pre><code class="language-rust" data-runnable="results">const MAX_WINDOW_TICKS: u64 = 4096;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReadingWindow {
+    start_tick: u64,
+    end_tick_exclusive: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum WindowError {
+    InvalidInteger { field: &amp;'static str },
+    CountOutOfRange { tick_count: u64 },
+    EndOverflow { start_tick: u64, tick_count: u64 },
+}
+
+impl ReadingWindow {
+    fn new(start_tick: u64, tick_count: u64) -&gt; Result&lt;Self, WindowError&gt; {
+        if !(1..=MAX_WINDOW_TICKS).contains(&amp;tick_count) {
+            return Err(WindowError::CountOutOfRange { tick_count });
+        }
+        let end_tick_exclusive = start_tick.checked_add(tick_count)
+            .ok_or(WindowError::EndOverflow { start_tick, tick_count })?;
+        Ok(Self { start_tick, end_tick_exclusive })
+    }
+
+    fn start_tick(self) -&gt; u64 { self.start_tick }
+    fn end_tick_exclusive(self) -&gt; u64 { self.end_tick_exclusive }
+    fn tick_count(self) -&gt; u64 { self.end_tick_exclusive - self.start_tick }
+}
+
+fn parse_window(start: &amp;str, count: &amp;str) -&gt; Result&lt;ReadingWindow, WindowError&gt; {
+    let start_tick = start.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "start tick" })?;
+    let tick_count = count.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "tick count" })?;
+    ReadingWindow::new(start_tick, tick_count)
+}
+
+fn main() {
+    let window = parse_window("12", "3").expect("the example window is valid");
+    println!("ticks {}..{} ({} ticks)",
+        window.start_tick(), window.end_tick_exclusive(), window.tick_count());
+    match parse_window("12", "0") {
+        Ok(_) =&gt; println!("accepted"),
+        Err(error) =&gt; println!("rejected: {error:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn both_supported_count_boundaries_are_accepted() {
+        for count in [1, MAX_WINDOW_TICKS] {
+            let window = ReadingWindow::new(12, count).unwrap();
+            assert_eq!(window.start_tick(), 12);
+            assert_eq!(window.end_tick_exclusive(), 12 + count);
+            assert_eq!(window.tick_count(), count);
+        }
+    }
+
+    #[test]
+    fn zero_and_oversized_counts_are_rejected_not_clamped() {
+        for count in [0, MAX_WINDOW_TICKS + 1] {
+            assert_eq!(ReadingWindow::new(12, count),
+                Err(WindowError::CountOutOfRange { tick_count: count }));
+        }
+    }
+
+    #[test]
+    fn exact_end_limit_is_valid_but_overflow_is_not() {
+        let window = ReadingWindow::new(u64::MAX - 1, 1).unwrap();
+        assert_eq!(window.end_tick_exclusive(), u64::MAX);
+        assert_eq!(ReadingWindow::new(u64::MAX, 1),
+            Err(WindowError::EndOverflow { start_tick: u64::MAX, tick_count: 1 }));
+    }
+
+    #[test]
+    fn parse_errors_identify_the_field_that_failed() {
+        assert_eq!(parse_window("fern", "3"),
+            Err(WindowError::InvalidInteger { field: "start tick" }));
+        for text in ["three", "-1", "18446744073709551616"] {
+            assert_eq!(parse_window("12", text),
+                Err(WindowError::InvalidInteger { field: "tick count" }));
+        }
+    }
+
+    #[test]
+    fn parsed_integers_still_pass_through_domain_validation() {
+        assert_eq!(parse_window("12", "0"),
+            Err(WindowError::CountOutOfRange { tick_count: 0 }));
+        assert_eq!(parse_window("12", "4097"),
+            Err(WindowError::CountOutOfRange { tick_count: 4097 }));
+        assert_eq!(parse_window("12", "3").unwrap().end_tick_exclusive(), 15);
+    }
+}</code></pre></details>
+<p data-narration="32">Expect five passing tests. A failure at 4,096 often points to an exclusive upper bound; a failure at the maximum start points to unchecked addition. The parsing tests also make sure representable but unsupported counts still go through the constructor. You can check the printed reference separately with <code>python3 learning/scripts/labs.py check results</code>, or use these commands from your saved file's directory:</p>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 --test results.rs -o results-tests
+./results-tests
+rustc +1.93.1 --edition=2024 results.rs -o results
+./results</code></pre>
+<p data-narration="33">The expected result is five passed tests and this program output:</p>
+<pre><code class="language-text">ticks 12..15 (3 ticks)
+rejected: CountOutOfRange { tick_count: 0 }</code></pre>
+<p data-narration="34">The rejected line prints the error's debug representation so you can see its variant and payload. A form would translate that value into wording appropriate for its reader. The fixed valid example uses <code>expect</code> to assert our authored input; the other path demonstrates matching the result and reporting a rejected request.</p>
+
+<h2 id="recognize-the-live-pattern" data-narration="35">Find the same boundary in Moss</h2>
+<p data-narration="36">For a read-only comparison, open <code>crates/moss-sim/src/config.rs</code>. Its <code>WorldConfig::new</code> accepts world dimensions from 8 through 256 cells and returns a configuration error with the rejected dimensions otherwise. Getters expose the accepted values. The domain is different, but the reasoning is familiar: validate once at construction, then let code using the value rely on that boundary.</p>
+<p data-narration="37">Run the following focused native test from the repository root to check the existing constructor. Expect one passed library test.</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh cargo test -p moss-sim --locked --lib config::tests::configuration_rejects_dimensions_outside_the_supported_range -- --exact</code></pre>
+<p data-narration="38">This command doesn't resize a running world or exercise a browser form. It checks the actual dimension constructor, just as our isolated tests check the window calculation. Following an entered value through a real form would add another question: did the interface send the intended input and display the resulting acceptance or error?</p>
+
+<section class="lesson-summary" id="a-value-you-can-rely-on" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway" data-narration="39">Carry the accepted value forward</h2>
+<p data-narration="40">The request for zero ticks now has a useful outcome. Parsing recognizes the number, the constructor rejects its meaning for this report, and the caller receives the count-range reason. For a valid request, the caller instead receives a window whose getters can rely on the checks already performed.</p>
+<details><summary>Recall why the getter can subtract directly</summary><p>The constructor establishes an end greater than the start, with a supported difference. Keeping those fields unchanged preserves the relationship. Parsing alone wouldn't establish it, and code that directly constructs fields inside the owning module must still uphold it.</p></details>
+<p data-narration="41">We have one remaining design task: make this construction path the one other parts of the program actually use. <a href="07-modules.html">Put the boundary in the code</a> follows the same contract into modules and visibility, where the layout of the program can help preserve the promises we've just tested.</p>
+</section>
+</article><details class="reading-notes" hidden><summary>Reading notes</summary><section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
+      <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
+      <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
+      <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
+      <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section></details><nav class="chapter-nav" aria-label="Lesson navigation"><a href="05-options.html">← Missing is a different state</a><a href="07-modules.html">Put the boundary in the code →</a></nav></main>
+</div>
+<footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
+<noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>
+</body></html>

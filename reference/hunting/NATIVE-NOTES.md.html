@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>NATIVE-NOTES.md · hunting · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../assets/source.css?v=1351a94cba7f">
+<script src="../../assets/source.js?v=1351a94cba7f" defer></script></head>
+<body data-source-view="hunting"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">hunting checkpoint</p><h1>NATIVE-NOTES.md</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../hunting.html">← One capture changes the rest of the tick</a>
+<a href="NATIVE-NOTES.md" download>Download raw file</a>
+<a href="../../downloads/hunting-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-markdown" data-source-file="NATIVE-NOTES.md"># Checkpoint C native contract and observations
+
+This is the isolated course reference, using Rust 1.93.1 and Bevy ECS 0.18.1. It
+adds finite, mortal, nonreproducing hunters to the same `CourseWorld`. It does not
+activate a live Moss rule or change the learner-owned movement assignment. The
+public investigations and browser guide are authored separately; native, WASM,
+and actual-browser evidence remain distinct.
+
+## API and compatibility
+
+`MobileScenario::with_hunters(HuntConfig)` is additive. Its fields remain private;
+`hunters()` borrows the optional configuration. `HuntConfig::new(Vec&lt;HunterSeed&gt;)`
+sets a journal limit of 128. Its public fields are `hunters` and `history_limit`.
+`HunterSeed` has `id`, reserve/capacity/upkeep units, `attack_units`,
+`attack_effort_points`, `cell`, and `motion`. The two authored presets are
+`MobileScenario::hunting_contention()` and `HuntConfig::meadow()`.
+
+Hunter IDs must be unique across grazers, patches, and all other hunters. Every
+hunter is in bounds with reserve no greater than capacity, positive travel and
+attack costs, and positive capture effort. When fatigue is enabled, capture
+effort must fit its maximum. Validation includes hunter IDs in the initial child
+allocator; an exhausted identity range is rejected. All validation precedes
+replacement of current or saved reset state. Reset repeats the selected policy;
+selecting any prior mode clears hunter state. An empty `HuntConfig` is valid and
+produces a present, empty hunter report.
+
+`CourseWorld::hunt_snapshot()` returns `None` when hunting is disabled. Otherwise
+it returns an owned `HuntSnapshot` with version `moss-course-hunting-c-v1`, run,
+completed tick, canonical initial hunter configuration, initial/living hunter
+counts, stable-ID-sorted hunter readings, latest ledger, lifetime totals, and a
+bounded journal. Each hunter row contains body budget fields, attack settings,
+first eligibility, position/motion, retained prey target, owned local readings
+and their observer origin/tick, optional fatigue, activity, and last rest,
+transition, travel-opportunity, and successful-capture ticks.
+
+`PreyObservation` has prey ID, copied cell, and copied reserve. `PreyTarget` has
+prey ID, observed cell, and observed tick. Missing observation time means
+uncollected; a collected empty list means no eligible local prey was observed.
+After another hunter wins, a loser can still hold a copied reading and target
+for the removed prey. That retained intention is not a reservation or current
+eligibility claim. `last_capture_tick` records an accepted capture only.
+
+The earlier public seeds, reports, ledgers, and event variants keep their shapes.
+Base/population/mobile/rest projections describe grazers and patches; hunter
+flows, fatigue and events are only in the supplemental hunt report. A complete C
+observation combines these reports, including the shared rest policy in the
+mobile initial configuration. In C, the grazer census requires captures as well
+as starvation; the old population report alone cannot establish a closed census.
+
+The private refactor splits `Body` from grazer diet/contact. `Body` holds reserve,
+capacity, upkeep, first eligibility, and a single `Terminal` enum: alive,
+starved, or captured by a named stable hunter. Both roles share upkeep, the pure
+bounded travel calculation, the pure rest transition and recovery calculation,
+and structural cleanup. Role adapters keep earlier event meanings intact.
+
+## Execution and transaction
+
+The single-threaded chained schedule is:
+
+```text
+advance tick / clear ledgers → mature → all-body upkeep → patch growth
+→ grazer/hunter rest decisions → all local observations → target decisions
+→ grazer travel → hunter travel → grazer/hunter rest effects
+→ captures → derive grazer contacts → grazer meals → terminal starvation
+→ grazer births → ApplyDeferred → terminal cleanup → ApplyDeferred
+→ complete all journals
+```
+
+Both observation phases finish before either role travels. The hunter retains an
+eligible target in its current local view, otherwise chooses nearest positive-
+reserve, living, eligible grazer, breaking ties by stable ID. Inspector rows are
+not input to this selector. Travel follows the copied prey cell; a current lookup
+can reject wrong/removed/terminal identity but cannot replace the observed
+destination with a newly fetched global cell. A fleeing policy is absent: an
+ordinary grazer's independent travel already makes stale contact observable.
+
+Capture processes hunters by stable ID. It requires a living eligible active
+hunter and distinct living eligible grazer in the same **current** cell. The
+prey must have positive current reserve. The hunter must afford the positive
+attack cost before receiving anything, have room for the **entire** prey reserve
+after that cost, and fit all capture effort if fatigue is enabled. There is no
+partial credit, scavenging, hunter prey, fallback target inside an action, or
+hunger override. Resting prey may be captured. An enabled fatigue policy charges
+actual travel and accepted capture; disabled fatigue leaves those points absent,
+while energy costs still apply.
+
+All amounts, counters and event headroom are preflighted. One mutable body query
+then obtains the two distinct bodies. The commit pays the hunter cost and adds
+the transfer, zeros prey reserve, sets its predation terminal state immediately,
+and records the successful-action tick. Deferred despawn happens later. A second
+hunter receives nothing from the terminal prey; a late meal, birth, upkeep or
+starvation cannot reinterpret it as alive. Rejection changes no participant,
+reserve, fatigue, cursor, counter or history. Counter/history exhaustion panics
+before that transaction mutates state; it does not roll back earlier completed
+upkeep or other transactions.
+
+The hunter counters are `maintenance_units`, `travel_cells`, `travel_units`,
+`attack_units`, `transferred_units`, `captures`, `hunter_starvations`,
+`target_changes`, `effort_points`, `recovered_points`, `rest_actions`,
+`entered_rest`, and `woke`. `Captured` records both IDs, contact cell, actual
+transfer, attack cost and effort. Other events cover hunter upkeep, targets,
+travel, rest transitions/effects and starvation. The journal reports conservative
+whole-tick coverage; `captures_between` returns unknown for partially evicted,
+future or invalid intervals. Lifetime counts survive journal eviction.
+
+## Literal mechanism observations
+
+`hunting_contention` authors grazers 1/2 at `(0,0)`, reserve 5, capacity 8, upkeep
+1, meal 2. Patch 1000 there holds 10 with no growth. Two hunters 100/101 share that
+cell, reserve 4, capacity 8, upkeep 1, attack 1 and effort 2. All have sensing 1,
+speed 0 and positive travel cost 1; grid `2 × 1`; default rest and population
+policies apply. The no-hunter control produces a funded birth on tick 1.
+
+| Tick | Living grazer reserves | Patch | Hunter 100 reserve / target | Hunter 101 reserve / target | Total captures / transfer / attack |
+| --- | --- | --- | --- | --- | --- |
+| 1 | ID 2: 6 | 8 | 6 / 1 | 3 / 1 | 1 / 4 / 1 |
+| 2 | none | 8 | 5 / 2 | 6 / 2 | 2 / 9 / 2 |
+| 3 | none | 8 | 4 / none | 5 / none | 2 / 9 / 2 |
+
+On tick 1 both hunters copied reserve 4 for each prey after upkeep. Hunter 100
+wins prey 1; the later hunter cannot switch to prey 2. Only grazer 2 eats, and the
+captured parent cannot fund the control's birth. On tick 2, hunter 100 has reserve
+5 after upkeep; paying 1 then taking prey 2's reserve 5 would exceed capacity 8.
+It rejects without payment, allowing hunter 101 to take the whole transfer.
+Changing only hunter 100's initial capacity to 5 also makes it reject on tick 1;
+hunter 101 wins instead. Both cases are public acceptance tests.
+
+A separate actual pursuit begins from `short_journey`, with hunter 50 at `(0,0)`,
+reserve 10, capacity 20, upkeep/attack/travel cost 1, sensing 3, speed 1, capture
+effort 2, and default rest. Tick 1 ends grazer x1/hunter x0; tick 2 ends grazer
+x2/hunter x1. The hunter follows the prey cells copied at x0 then x1, not the new
+positions. Tick 3 reaches the stationary grazer at x2 and captures its current
+reserve 2 before its meal. Hunter reserve is 6 and one patch unit remains.
+Its next two ticks execute committed rest; those events do not pollute the
+grazer rest totals. All of these actions occur in the same persistent world.
+
+## Four matched 120-tick runs
+
+All runs use the unchanged checkpoint-A meadow inputs and the default rest policy
+except minimum 2 versus 3. Hunter-present runs add exactly hunters 100/101 at
+`(5,2)`/`(8,2)`, reserve 16/capacity 24/upkeep 1, sensing 5/speed 1/travel 1,
+attack 1/effort 2. No-hunter runs begin with 96 stored energy units;
+hunter-present runs begin with 128. Patch IDs 1000/1001 keep the child allocator
+identical across this intervention. All history limits are 128.
+
+| Minimum / hunters | Final grazers / hunters | Births | Grazer starvation / captures | Hunter starvation | Grazer / hunter travel | Grazer / hunter rest actions |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 / none | 0 / 0 | 7 | 11 / 0 | 0 | 36 / 0 | 21 / 0 |
+| 3 / none | 1 / 0 | 10 | 13 / 0 | 0 | 71 / 0 | 53 / 0 |
+| 2 / two | 0 / 0 | 3 | 4 / 3 | 2 | 15 / 13 | 7 / 13 |
+| 3 / two | 0 / 0 | 3 | 3 / 4 | 2 | 14 / 11 | 6 / 15 |
+
+The no-hunter minimum-3 survivor is founder 1. Hunter-present minimum 2 has lost
+all animals by tick 40; minimum 3 still has one hunter with reserve 6 at tick 40,
+then loses it before tick 80. The reference preserves these outcomes. Neither
+run establishes calibration, evolutionary adaptation, balance or enjoyment.
+
+| Minimum / hunters | Growth | Grazer / hunter upkeep | Attack | Birth dissipation | Prey transfer | Final total stores |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 / none | 98 | 108 / 0 | 0 | 14 | 0 | 36 |
+| 3 / none | 308 | 258 / 0 | 0 | 20 | 0 | 55 |
+| 2 / two | 60 | 53 / 62 | 3 | 6 | 46 | 36 |
+| 3 / two | 74 | 59 / 72 | 4 | 6 | 55 | 36 |
+
+Actual travel costs equal cells in these fixtures. Prey and birth transfers are
+internal, so they are not extra sources or sinks. Every executed tick checks:
+
+```text
+previous stores + accepted growth
+  = current stores + grazer upkeep + hunter upkeep
+    + grazer travel + hunter travel + attack cost + birth dissipation
+
+living grazers + grazer starvation + captures = founders + births
+living hunters + hunter starvation = initial hunters
+```
+
+Both hunter-present runs retain **all five journals** across ticks 1–120:
+`complete_after_tick = 0`, `collected_through_tick = 120`, zero evictions. The
+no-hunter minimum-2 run retains base ticks 3–120 (11 evictions), and the other
+three applicable journals retain 1–120. Minimum 3 without hunters retains base
+69–120 (296 evictions), mobile 7–120 (28), rest 11–120 (31), and population
+1–120. Hunting is disabled there, not an invented empty collection.
+
+The first 12 hunter-present ticks are also a mechanism test: retained evidence
+contains births, maturation, positive upkeep by a descendant after its first
+eligible tick, grazer rest, hunter rest, and successful capture. The finite pilot
+therefore exercises the integrated interactions before extinction. A separate
+current-contact test proves actual prey movement invalidates an earlier view.
+
+## Native verification
+
+The four prior modes were run against independently compiled frozen checkpoint B
+and the new reference: first arc, fixed-contact population, mobile A, and resting
+B, each across ticks 0–120 and reset ticks 0/1. Every preexisting public report
+field and every prior `MobileScenario` input was printed, without comparing a
+new private optional field's debug formatting. The **14,615,890 output bytes are
+identical**, SHA-256:
+`594398d371bfb321dfdebfd731247244d563b2fba149506397e1be843a2c7e5d`.
+Evidence is in `learning/work/ecosystem-hunt-compatibility-rp2aznw_`.
+
+The two exact HTML learner tests decoded from `hunting.html` passed in their own
+copied project and target directory, evidence
+`learning/work/ecosystem-hunt-guide-test-_9u9_ugb/result.txt`. New public tests
+include complete-report reversed insertion/read independence, atomic invalid
+reset, global-ID allocation, optional fatigue, retained-history absence, literal
+contention/pursuit, and per-tick energy/census closure. Private tests inspect
+terminal state before cleanup, deliberately invoke later adapters, inject a
+newborn target, and exhaust capture counters/history before flushing queues.
+
+One initial mutation probe exposed a **test weakness**: removing the per-tick
+successful-capture guard did not fail because the winner lacked room for another
+whole prey. The private fixture now grants capacity 16 before the first claim,
+so the guard is isolated from the capacity check. The production transaction did
+not need a change. Final command and mutant results are recorded in the package
+README after all checks finish.
+
+Predator reproduction, fleeing, obstacles, pathfinding, randomness, scavenging,
+refuge policies, live activation and full-goal completion are outside C.
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

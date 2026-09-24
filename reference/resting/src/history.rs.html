@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/history.rs · resting · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../assets/source.css?v=1351a94cba7f">
+<script src="../../../assets/source.js?v=1351a94cba7f" defer></script></head>
+<body data-source-view="resting"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">resting checkpoint</p><h1>src/history.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../resting.html">← A pause still has a cost</a>
+<a href="history.rs" download>Download raw file</a>
+<a href="../../../downloads/resting-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="history.rs">//! Bounded owned outcomes with conservative whole-tick coverage.
+
+use std::collections::VecDeque;
+
+use bevy_ecs::prelude::*;
+
+use crate::model::{Clock, SimId};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EventKind {
+    Growth {
+        patch: SimId,
+        units: u32,
+    },
+    Maintenance {
+        grazer: SimId,
+        units: u32,
+    },
+    Meal {
+        grazer: SimId,
+        patch: SimId,
+        units: u32,
+    },
+    Starved {
+        grazer: SimId,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Event {
+    pub run: u64,
+    pub tick: u64,
+    pub kind: EventKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HistorySnapshot {
+    pub events: Vec&lt;Event&gt;,
+    pub limit: usize,
+    pub evicted_events: u64,
+    /// Complete history is available only for ticks strictly above this bound.
+    /// A partially retained tick is deliberately excluded.
+    pub complete_after_tick: u64,
+    pub collected_through_tick: u64,
+}
+
+impl HistorySnapshot {
+    /// None means invalid, not-yet-collected, or incomplete history; Some(0)
+    /// means a fully covered interval contains no starvation event.
+    pub fn starvations_between(&amp;self, first_tick: u64, last_tick: u64) -&gt; Option&lt;usize&gt; {
+        if first_tick == 0
+            || first_tick &gt; last_tick
+            || first_tick &lt;= self.complete_after_tick
+            || last_tick &gt; self.collected_through_tick
+        {
+            return None;
+        }
+        Some(
+            self.events
+                .iter()
+                .filter(|event| {
+                    (first_tick..=last_tick).contains(&amp;event.tick)
+                        &amp;&amp; matches!(event.kind, EventKind::Starved { .. })
+                })
+                .count(),
+        )
+    }
+}
+
+#[derive(Resource)]
+pub(crate) struct History {
+    events: VecDeque&lt;Event&gt;,
+    limit: usize,
+    evicted_events: u64,
+    complete_after_tick: u64,
+    collected_through_tick: u64,
+}
+
+impl History {
+    pub fn new(limit: usize) -&gt; Self {
+        Self {
+            events: VecDeque::new(),
+            limit,
+            evicted_events: 0,
+            complete_after_tick: 0,
+            collected_through_tick: 0,
+        }
+    }
+
+    pub fn record(&amp;mut self, clock: &amp;Clock, kind: EventKind) {
+        self.events.push_back(Event {
+            run: clock.run,
+            tick: clock.tick,
+            kind,
+        });
+        if self.events.len() &gt; self.limit {
+            let evicted = self.events.pop_front().expect("an event was just appended");
+            self.complete_after_tick = self.complete_after_tick.max(evicted.tick);
+            self.evicted_events = self
+                .evicted_events
+                .checked_add(1)
+                .expect("event eviction counter exhausted");
+        }
+    }
+
+    pub fn snapshot(&amp;self) -&gt; HistorySnapshot {
+        HistorySnapshot {
+            events: self.events.iter().copied().collect(),
+            limit: self.limit,
+            evicted_events: self.evicted_events,
+            complete_after_tick: self.complete_after_tick,
+            collected_through_tick: self.collected_through_tick,
+        }
+    }
+}
+
+pub(crate) fn complete_tick(clock: Res&lt;Clock&gt;, mut history: ResMut&lt;History&gt;) {
+    history.collected_through_tick = clock.tick;
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

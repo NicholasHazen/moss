@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Give individuals different costs while holding the starting conditions fixed, then separate that comparison from a density change."><meta name="color-scheme" content="light"><meta name="theme-color" content="#164f50">
+<title>Compare individuals fairly · Moss Fieldnotes</title><link rel="icon" href="assets/identity/atlas-mark-v1.png" type="image/png"><link rel="stylesheet" href="assets/fieldnotes.css?v=1351a94cba7f">
+<script src="assets/records.js?v=1351a94cba7f" defer></script><script src="assets/models.js?v=1351a94cba7f" defer></script><script src="assets/terrarium.js?v=1351a94cba7f" defer></script><script src="assets/evidence.js?v=1351a94cba7f" defer></script><script src="assets/ecosystem.js?v=1351a94cba7f" defer></script><script src="assets/population.js?v=1351a94cba7f" defer></script><script src="assets/mobile.js?v=1351a94cba7f" defer></script><script src="assets/fieldnotes.js?v=1351a94cba7f" defer></script></head>
+<body data-page="17-variation"><a class="skip-link" href="#reading">Skip to reading</a>
+<header class="masthead"><div class="masthead-inner"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">Moss · Fieldnotes 0.4</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></div></header>
+<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><a class="introduction-link" href="introduction.html">Start here · Meet Moss</a><ol><li class="nav-group"><details><summary>Start with evidence</summary><ol><li><a href="01-observe.html"><span class="number">01</span><span>A tick is a promise<small>25 min · values</small></span><span class="progress-dot" data-progress-for="01-observe" aria-hidden="true"></span></a></li><li><a href="02-ownership.html"><span class="number">02</span><span>Who owns the next change?<small>35 min · ownership</small></span><span class="progress-dot" data-progress-for="02-ownership" aria-hidden="true"></span></a></li><li><a href="03-queries.html"><span class="number">03</span><span>Ask the world a typed question<small>35 min · components</small></span><span class="progress-dot" data-progress-for="03-queries" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Everyday Rust</summary><ol><li><a href="04-units.html"><span class="number">04</span><span>Give the number a unit<small>30 min · newtypes</small></span><span class="progress-dot" data-progress-for="04-units" aria-hidden="true"></span></a></li><li><a href="05-options.html"><span class="number">05</span><span>Missing is a different state<small>30 min · enums</small></span><span class="progress-dot" data-progress-for="05-options" aria-hidden="true"></span></a></li><li><a href="06-results.html"><span class="number">06</span><span>A rejected request has a reason<small>35 min · Result</small></span><span class="progress-dot" data-progress-for="06-results" aria-hidden="true"></span></a></li><li><a href="07-modules.html"><span class="number">07</span><span>Put the boundary in the code<small>30 min · modules</small></span><span class="progress-dot" data-progress-for="07-modules" aria-hidden="true"></span></a></li><li><a href="08-collections.html"><span class="number">08</span><span>Collect a report, release the world<small>35 min · Vec</small></span><span class="progress-dot" data-progress-for="08-collections" aria-hidden="true"></span></a></li><li><a href="09-traits.html"><span class="number">09</span><span>A trait is a promise you can use<small>35 min · traits</small></span><span class="progress-dot" data-progress-for="09-traits" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>The ECS contract</summary><ol><li><a href="10-borrows.html"><span class="number">10</span><span>Prove that the borrows cannot meet<small>35 min · disjoint queries</small></span><span class="progress-dot" data-progress-for="10-borrows" aria-hidden="true"></span></a></li><li><a href="11-schedules.html"><span class="number">11</span><span>Give the observations an order<small>35 min · schedules</small></span><span class="progress-dot" data-progress-for="11-schedules" aria-hidden="true"></span></a></li><li><a href="12-commands.html"><span class="number">12</span><span>Change structure at a known boundary<small>40 min · Commands</small></span><span class="progress-dot" data-progress-for="12-commands" aria-hidden="true"></span></a></li><li><a href="13-evidence.html"><span class="number">13</span><span>Make a test disagree with a plausible mistake<small>40 min · testing</small></span><span class="progress-dot" data-progress-for="13-evidence" aria-hidden="true"></span></a></li><li><a href="14-movement.html"><span class="number">14</span><span>Connect one affordable action to the world<small>35 min · movement bridge</small></span><span class="progress-dot" data-progress-for="14-movement" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details open><summary>Ecosystem depth</summary><ol><li><a href="15-meals.html"><span class="number">15</span><span>A finite meal has two sides<small>40 min · finite transfers</small></span><span class="progress-dot" data-progress-for="15-meals" aria-hidden="true"></span></a></li><li><a href="16-targets.html"><span class="number">16</span><span>Choose, then revalidate a target<small>40 min · local observations</small></span><span class="progress-dot" data-progress-for="16-targets" aria-hidden="true"></span></a></li><li><a href="17-variation.html" aria-current="page"><span class="number">17</span><span>Compare individuals fairly<small>40 min · authored populations</small></span><span class="progress-dot" data-progress-for="17-variation" aria-hidden="true"></span></a></li><li><a href="18-growth.html"><span class="number">18</span><span>Let environmental input change supply<small>45 min · bounded growth</small></span><span class="progress-dot" data-progress-for="18-growth" aria-hidden="true"></span></a></li><li><a href="19-history.html"><span class="number">19</span><span>Keep a disappearance explainable<small>45 min · lifecycle</small></span><span class="progress-dot" data-progress-for="19-history" aria-hidden="true"></span></a></li><li><a href="20-predation.html"><span class="number">20</span><span>Consume once, even before removal<small>45 min · predation</small></span><span class="progress-dot" data-progress-for="20-predation" aria-hidden="true"></span></a></li><li><a href="21-rest.html"><span class="number">21</span><span>Make rest a commitment you can inspect<small>40 min · state machines</small></span><span class="progress-dot" data-progress-for="21-rest" aria-hidden="true"></span></a></li><li><a href="22-births.html"><span class="number">22</span><span>Commit both parents before creating a child<small>45 min · paired transactions</small></span><span class="progress-dot" data-progress-for="22-births" aria-hidden="true"></span></a></li><li><a href="23-inheritance.html"><span class="number">23</span><span>Keep inheritance distinct from selection<small>45 min · inheritance</small></span><span class="progress-dot" data-progress-for="23-inheritance" aria-hidden="true"></span></a></li><li><a href="24-experiments.html"><span class="number">24</span><span>Make a comparison explain its denominator<small>45 min · controlled comparisons</small></span><span class="progress-dot" data-progress-for="24-experiments" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>A selective Rust survey</summary><ol><li><a href="25-lifetimes.html"><span class="number">25</span><span>Let a view borrow exactly what it needs<small>40 min · lifetimes</small></span><span class="progress-dot" data-progress-for="25-lifetimes" aria-hidden="true"></span></a></li><li><a href="26-indirection.html"><span class="number">26</span><span>Choose the owner before the abstraction<small>45 min · Box</small></span><span class="progress-dot" data-progress-for="26-indirection" aria-hidden="true"></span></a></li><li><a href="27-async.html"><span class="number">27</span><span>Accept asynchronous results at a tick boundary<small>45 min · concurrency</small></span><span class="progress-dot" data-progress-for="27-async" aria-hidden="true"></span></a></li><li><a href="28-macros.html"><span class="number">28</span><span>Read the code a macro asks Rust to check<small>40 min · macro_rules</small></span><span class="progress-dot" data-progress-for="28-macros" aria-hidden="true"></span></a></li></ol></details></li></ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+</details></aside>
+<main id="reading" tabindex="-1"><details class="reading-options" hidden><summary>Reading options</summary><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span><span id="reading-status" role="status"></span></div></details>
+<article><p class="eyebrow">Ecosystem depth · 40 minutes</p><h1 data-narration="0">Compare individuals fairly</h1><p class="lesson-lead" data-narration="1">One run ends with 111 reserve units and another with 222. The second looks more successful until we count its animals: it has twice as many.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview" data-narration="2">Build populations whose differences you can explain</h2>
+<p data-narration="3">To interpret those totals, we need to know what each animal started with and which cost it actually paid. You'll implement <code>populate</code>, validating an authored roster before spawning it and resolving each optional maintenance override into an individual component. Then we'll follow the same stable IDs through a pair of runs while changing the population size.</p>
+<p data-narration="4">The resulting reports should let you separate three questions: what a default supplies, what an individual stores, and what a larger aggregate means. You'll check that an invalid roster leaves the world unchanged and that doubling this maintenance-only population changes the total without improving either original animal's outcome.</p>
+</section><details class="chapter-contents"><summary>In this chapter <span>6 sections</span></summary><nav aria-label="In this chapter"><ol><li><a href="#name-the-comparison">Start with two individuals you can recognize</a></li><li><a href="#defaults-become-individual-values">Choose when a cost becomes the animal&#x27;s own</a></li><li><a href="#keep-authorship-repeatable">Validate the whole roster before spawning it</a></li><li><a href="#author-one-roster">Build the population boundary</a></li><li><a href="#read-the-evidence-at-its-scale">Return to the two totals</a></li><li><a href="#chapter-takeaway">Keep the individual behind the total</a></li></ol></nav></details>
+<aside class="scope-note"><p data-narration="5">This isolated Bevy lab uses authored maintenance costs to study comparisons. Its profiles are teaching inputs rather than measurements of real species. It doesn't change Moss's fixture or the active assignment in <code>NOW.md</code>.</p></aside>
+
+<h2 id="name-the-comparison" data-narration="6">Start with two individuals you can recognize</h2>
+<p data-narration="7">Begin with two hares, IDs 10 and 20. Each starts with 60 reserve units and receives three maintenance executions. ID 10 costs two units per tick; ID 20 costs one. There is no feeding, movement, or interaction, so we can first ask a narrow question: what difference does the configured upkeep make under otherwise equal conditions?</p>
+<p data-narration="8">After three executions, ID 10 should have 54 units and ID 20 should have 57. Their three-unit difference follows from paying different rates three times. The upkeep system doesn't read the IDs, so identity doesn't cause the difference. IDs let us connect each outcome to its profile without assuming that ECS query order matches authoring order. As in <a href="16-targets.html">target resolution</a>, an identity gives us something stable to follow through changing collections.</p>
+<p data-narration="9">Now keep those two animals and add IDs 30 and 40 with the same pair of cost profiles. All four share the same declared area of 64 cells. Count per area rises from 2/64 to 4/64, but we have also doubled the starting reserve from 120 to 240. These facts belong beside the final totals if we want the comparison to mean anything.</p>
+<table data-narration="10"><caption>The original pair and a denser roster after three executions</caption><thead><tr><th scope="col">Run</th><th scope="col">Shared conditions</th><th scope="col">Outcome</th></tr></thead><tbody><tr><td>Two hares</td><td>64 cells; 60 reserve each; rates 2 and 1</td><td>ID 10 has 54; ID 20 has 57; total 111.</td></tr><tr><td>Four hares</td><td>64 cells; 60 reserve each; rates 2, 1, 2, 1</td><td>The original individuals still have 54 and 57; total 222.</td></tr></tbody></table>
+<p data-narration="11">The unchanged individual results are expected here. Area is experiment metadata; no system reads it to calculate space, contact, or competition. Doubling this roster changes the count and totals without giving the original animals another interaction. A finite feeding system could make added neighbors consequential, but maintenance alone can't demonstrate that effect.</p>
+
+<h2 id="defaults-become-individual-values" data-narration="12">Choose when a cost becomes the animal's own</h2>
+<p data-narration="13">To make the cost comparison repeatable, we need to decide when a default becomes an individual's stored value. Each authored <code>Profile</code> contains a species and an optional maintenance override. The species resource supplies defaults of Hare 2 and Fox 4. When we populate the world, we'll resolve the override once and store the result in the individual's <code>Maintenance</code> component. The running upkeep system then reads that component.</p>
+<p data-narration="14">This gives two hares a straightforward way to differ. ID 10 uses <code>None</code>, meaning “use the species default,” while ID 20 uses <code>Some(1)</code>. An explicit <code>Some(0)</code> is also valid in this experiment: it requests zero cost. Treating zero as though it meant absence would silently discard an authored value and replace it with the default.</p>
+<p data-narration="15">Resolving at spawn time has a consequence we should test. Changing the default afterward won't rewrite components that already exist. One test changes the Hare default to 99 and checks that the original pair still pays two and one. This differs from the earlier query lab, where maintenance read the shared rates resource on each execution. Either design can be useful; here we want each profile to remain a stable experimental input.</p>
+<p data-narration="16">The fallback comes from the <a href="https://doc.rust-lang.org/std/option/enum.Option.html#method.unwrap_or">standard Option API</a>. Its method provides a value when the override is absent. The larger choice—when to apply that fallback and where to store the result—belongs to our model. Reading the resolved component makes it possible to explain an individual's cost without consulting a resource that may have changed later.</p>
+
+<h2 id="keep-authorship-repeatable" data-narration="17">Validate the whole roster before spawning it</h2>
+<p data-narration="18">To compare individuals across runs, we need unambiguous IDs. This lab reserves zero as invalid and rejects duplicates, including an incoming ID that already belongs to an entity in the world. The identities are stable within this run; retained reports from several runs would also need a run identifier.</p>
+<p data-narration="19">There's a subtle failure case when importing several profiles at once. Suppose the world already contains ID 10, and a new batch offers valid ID 30 followed by duplicate ID 10. If we spawn while validating, the function could return an error after leaving ID 30 behind. The caller would have a rejected batch and a changed starting population.</p>
+<p data-narration="20">We'll avoid that partial result with two passes. First, <code>populate</code> collects existing IDs in a <code>BTreeSet</code> and validates every incoming profile against it. Inserting an ID reports whether it was new, so the same operation catches collisions with the world and repetitions inside the batch. Only after the complete pass succeeds does spawning begin.</p>
+<p data-narration="21">The resulting guarantee is specific: validation errors leave the population unchanged. We aren't adding rollback for allocation failure or arbitrary panics, and the supplied fixture ensures that the defaults resource exists. A focused guarantee is easier to use and test than a broad transaction promise the implementation can't fulfill.</p>
+<p data-narration="22">The function borrows the profile slice, but the world doesn't keep that borrow. The world keeps copied identity, species, and reserve values together with the resolved maintenance rate; it doesn't retain the profile slice or its optional override. Reporting makes another owned projection and sorts it by stable ID. Reversing spawn order may change ECS handles while leaving that report equal. <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/world/struct.World.html#method.spawn">Bevy 0.18.1's World API</a> describes the immediate spawn operation used during this setup.</p>
+
+<h2 id="author-one-roster" data-narration="23">Build the population boundary</h2>
+<p data-narration="24">Your population constructor has two promises to keep: resolve valid profiles consistently and leave a rejected batch unapplied. Before editing, trace both the ordinary and rejected batches. For the ordinary pair, resolve each cost and calculate the two reserves after three executions. For the rejected extension, decide exactly when the duplicate ID should stop the function and whether any spawning should have occurred.</p>
+<details><summary>Hint 1: finish validation first</summary><p>Collect existing <code>SimId</code> values, then reject incoming zero IDs or IDs that the set can't insert as new. Keep <code>world.spawn</code> out of this first pass.</p></details>
+<details><summary>Hint 2: copy the resolved cost into each animal</summary><p>After validation, obtain the defaults. For each profile, use its override or matching species default and spawn the ID, species, reserve, and maintenance component together.</p></details>
+<details><summary>Prediction answer</summary><p>The pair finishes at 54 and 57, while the doubled roster totals 222. The extension with ID 30 followed by existing ID 10 returns <code>DuplicateId(10)</code> and leaves only the original pair. A partially accepted extension would change the experiment before it began.</p></details>
+<p data-narration="25">Prepare a new practice file from the repository root. Replace only <code>populate</code>; the schedule, report, fixtures, and eight tests are supplied.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare variation --dest work/variation-practice
+python3 learning/scripts/labs.py check variation --file work/variation-practice/variation.rs</code></pre>
+<p data-narration="26">The initial file compiles and fails at its intentional <code>todo!</code>. After the edit, expect eight passing tests. If a valid roster is reported as duplicate, inspect whether validation inserts the same ID twice. If an error leaves an extra animal, look for a spawn that happens before the full validation pass completes.</p>
+<details><summary>Complete starter file: variation.rs</summary><pre><code class="language-rust" data-starter="variation">use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+use std::collections::BTreeSet;
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+struct SimId(u32);
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+enum Species {
+    Hare,
+    Fox,
+}
+
+#[derive(Component)]
+struct Reserve(u32);
+
+#[derive(Component)]
+struct Maintenance(u32);
+
+#[derive(Resource, Clone, Copy)]
+struct Defaults {
+    hare: u32,
+    fox: u32,
+}
+
+impl Defaults {
+    fn rate(self, species: Species) -&gt; u32 {
+        match species {
+            Species::Hare =&gt; self.hare,
+            Species::Fox =&gt; self.fox,
+        }
+    }
+}
+
+#[derive(Resource)]
+struct AreaCells(u32);
+
+#[derive(Clone, Copy)]
+struct Profile {
+    id: u32,
+    species: Species,
+    initial_reserve_units: u32,
+    maintenance_override: Option&lt;u32&gt;,
+}
+
+const PAIR: [Profile; 2] = [
+    Profile {
+        id: 10,
+        species: Species::Hare,
+        initial_reserve_units: 60,
+        maintenance_override: None,
+    },
+    Profile {
+        id: 20,
+        species: Species::Hare,
+        initial_reserve_units: 60,
+        maintenance_override: Some(1),
+    },
+];
+
+const DENSER: [Profile; 4] = [
+    PAIR[0],
+    PAIR[1],
+    Profile { id: 30, ..PAIR[0] },
+    Profile { id: 40, ..PAIR[1] },
+];
+
+#[derive(Debug, PartialEq, Eq)]
+enum AuthorError {
+    ZeroId,
+    DuplicateId(u32),
+}
+
+fn populate(world: &amp;mut World, profiles: &amp;[Profile]) -&gt; Result&lt;(), AuthorError&gt; {
+    let _ = (world, profiles);
+    todo!("validate the whole roster, then resolve and copy individual costs")
+}
+
+fn empty_world() -&gt; World {
+    let mut world = World::new();
+    world.insert_resource(Defaults { hare: 2, fox: 4 });
+    world.insert_resource(AreaCells(64));
+    world
+}
+
+fn fixture(profiles: &amp;[Profile]) -&gt; World {
+    let mut world = empty_world();
+    populate(&amp;mut world, profiles).expect("authored fixture IDs are valid");
+    world
+}
+
+fn upkeep(mut creatures: Query&lt;(&amp;Maintenance, &amp;mut Reserve)&gt;) {
+    for (rate, mut reserve) in &amp;mut creatures {
+        reserve.0 = reserve.0.saturating_sub(rate.0);
+    }
+}
+
+fn execute(world: &amp;mut World, ticks: u32) {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems(upkeep);
+    for _ in 0..ticks {
+        schedule.run(world);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Reading {
+    id: u32,
+    species: Species,
+    reserve_units: u32,
+    units_per_tick: u32,
+}
+
+fn readings(world: &amp;mut World) -&gt; Vec&lt;Reading&gt; {
+    let mut query = world.query::&lt;(&amp;SimId, &amp;Species, &amp;Reserve, &amp;Maintenance)&gt;();
+    let mut rows: Vec&lt;_&gt; = query
+        .iter(world)
+        .map(|(id, species, reserve, rate)| Reading {
+            id: id.0,
+            species: *species,
+            reserve_units: reserve.0,
+            units_per_tick: rate.0,
+        })
+        .collect();
+    rows.sort_by_key(|row| row.id);
+    rows
+}
+
+fn total_units(rows: &amp;[Reading]) -&gt; u64 {
+    rows.iter().map(|row| u64::from(row.reserve_units)).sum()
+}
+
+fn main() {
+    let defaults = *empty_world().resource::&lt;Defaults&gt;();
+    println!(
+        "defaults: Hare={}/tick Fox={}/tick",
+        defaults.rate(Species::Hare),
+        defaults.rate(Species::Fox)
+    );
+    for (label, profiles) in [("pair", PAIR.as_slice()), ("denser", DENSER.as_slice())] {
+        let mut world = fixture(profiles);
+        execute(&amp;mut world, 3);
+        let rows = readings(&amp;mut world);
+        println!(
+            "{label}: count={} cells={} reserve_total={}",
+            rows.len(),
+            world.resource::&lt;AreaCells&gt;().0,
+            total_units(&amp;rows)
+        );
+        for row in rows {
+            println!(
+                "  #{}: reserve={} cost={}/tick",
+                row.id, row.reserve_units, row.units_per_tick
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_pair_shares_initial_inputs_except_its_configured_cost() {
+        let mut world = fixture(&amp;PAIR);
+        assert_eq!(
+            readings(&amp;mut world),
+            vec![
+                Reading {
+                    id: 10,
+                    species: Species::Hare,
+                    reserve_units: 60,
+                    units_per_tick: 2
+                },
+                Reading {
+                    id: 20,
+                    species: Species::Hare,
+                    reserve_units: 60,
+                    units_per_tick: 1
+                },
+            ]
+        );
+        assert_eq!(world.resource::&lt;AreaCells&gt;().0, 64);
+    }
+
+    #[test]
+    fn equal_execution_counts_reveal_the_individual_rate() {
+        let mut world = fixture(&amp;PAIR);
+        execute(&amp;mut world, 3);
+        let rows = readings(&amp;mut world);
+        assert_eq!((rows[0].reserve_units, rows[1].reserve_units), (54, 57));
+        execute(&amp;mut world, 70);
+        assert!(
+            readings(&amp;mut world)
+                .iter()
+                .all(|row| row.reserve_units == 0)
+        );
+        assert_eq!(readings(&amp;mut world).len(), 2);
+    }
+
+    #[test]
+    fn none_uses_species_default_but_some_zero_remains_zero() {
+        let mut world = fixture(&amp;[
+            Profile {
+                id: 1,
+                maintenance_override: Some(0),
+                ..PAIR[0]
+            },
+            Profile {
+                id: 2,
+                species: Species::Fox,
+                ..PAIR[0]
+            },
+        ]);
+        execute(&amp;mut world, 1);
+        let rows = readings(&amp;mut world);
+        assert_eq!((rows[0].units_per_tick, rows[0].reserve_units), (0, 60));
+        assert_eq!((rows[1].units_per_tick, rows[1].reserve_units), (4, 56));
+    }
+
+    #[test]
+    fn defaults_initialize_components_without_rewriting_existing_individuals() {
+        let mut world = fixture(&amp;PAIR);
+        world.resource_mut::&lt;Defaults&gt;().hare = 99;
+        execute(&amp;mut world, 1);
+        let rows = readings(&amp;mut world);
+        assert_eq!((rows[0].reserve_units, rows[1].reserve_units), (58, 59));
+    }
+
+    #[test]
+    fn an_invalid_batch_does_not_partly_extend_the_population() {
+        let mut world = fixture(&amp;PAIR);
+        let before = readings(&amp;mut world);
+        assert_eq!(
+            populate(
+                &amp;mut world,
+                &amp;[Profile { id: 30, ..PAIR[0] }, Profile { id: 10, ..PAIR[0] },]
+            ),
+            Err(AuthorError::DuplicateId(10))
+        );
+        assert_eq!(readings(&amp;mut world), before);
+    }
+
+    #[test]
+    fn duplicate_and_zero_ids_are_rejected_before_any_spawn() {
+        let mut world = empty_world();
+        assert_eq!(
+            populate(&amp;mut world, &amp;[PAIR[0], PAIR[0]]),
+            Err(AuthorError::DuplicateId(10))
+        );
+        assert!(readings(&amp;mut world).is_empty());
+        assert_eq!(
+            populate(&amp;mut world, &amp;[Profile { id: 0, ..PAIR[0] }]),
+            Err(AuthorError::ZeroId)
+        );
+        assert!(readings(&amp;mut world).is_empty());
+    }
+
+    #[test]
+    fn authored_ids_and_sorted_readings_survive_reordered_input() {
+        let mut first = fixture(&amp;PAIR);
+        let mut reordered = fixture(&amp;[PAIR[1], PAIR[0]]);
+        execute(&amp;mut first, 3);
+        execute(&amp;mut reordered, 3);
+        assert_eq!(readings(&amp;mut first), readings(&amp;mut reordered));
+    }
+
+    #[test]
+    fn density_changes_the_total_without_improving_either_original_individual() {
+        let mut pair = fixture(&amp;PAIR);
+        let mut denser = fixture(&amp;DENSER);
+        execute(&amp;mut pair, 3);
+        execute(&amp;mut denser, 3);
+        let a = readings(&amp;mut pair);
+        let b = readings(&amp;mut denser);
+        assert_eq!((a.len(), b.len()), (2, 4));
+        assert_eq!(
+            pair.resource::&lt;AreaCells&gt;().0,
+            denser.resource::&lt;AreaCells&gt;().0
+        );
+        assert_eq!(total_units(&amp;a), 111);
+        assert_eq!(total_units(&amp;b), 222);
+        assert_eq!(b.iter().find(|row| row.id == 10), Some(&amp;a[0]));
+        assert_eq!(b.iter().find(|row| row.id == 20), Some(&amp;a[1]));
+    }
+}
+</code></pre></details>
+<details><summary>Complete worked answer: variation.rs</summary><pre><code class="language-rust" data-runnable="variation">use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+use std::collections::BTreeSet;
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+struct SimId(u32);
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+enum Species {
+    Hare,
+    Fox,
+}
+
+#[derive(Component)]
+struct Reserve(u32);
+
+#[derive(Component)]
+struct Maintenance(u32);
+
+#[derive(Resource, Clone, Copy)]
+struct Defaults {
+    hare: u32,
+    fox: u32,
+}
+
+impl Defaults {
+    fn rate(self, species: Species) -&gt; u32 {
+        match species {
+            Species::Hare =&gt; self.hare,
+            Species::Fox =&gt; self.fox,
+        }
+    }
+}
+
+#[derive(Resource)]
+struct AreaCells(u32);
+
+#[derive(Clone, Copy)]
+struct Profile {
+    id: u32,
+    species: Species,
+    initial_reserve_units: u32,
+    maintenance_override: Option&lt;u32&gt;,
+}
+
+const PAIR: [Profile; 2] = [
+    Profile {
+        id: 10,
+        species: Species::Hare,
+        initial_reserve_units: 60,
+        maintenance_override: None,
+    },
+    Profile {
+        id: 20,
+        species: Species::Hare,
+        initial_reserve_units: 60,
+        maintenance_override: Some(1),
+    },
+];
+
+const DENSER: [Profile; 4] = [
+    PAIR[0],
+    PAIR[1],
+    Profile { id: 30, ..PAIR[0] },
+    Profile { id: 40, ..PAIR[1] },
+];
+
+#[derive(Debug, PartialEq, Eq)]
+enum AuthorError {
+    ZeroId,
+    DuplicateId(u32),
+}
+
+fn populate(world: &amp;mut World, profiles: &amp;[Profile]) -&gt; Result&lt;(), AuthorError&gt; {
+    let mut ids: BTreeSet&lt;u32&gt; = world.query::&lt;&amp;SimId&gt;().iter(world).map(|id| id.0).collect();
+    for profile in profiles {
+        if profile.id == 0 {
+            return Err(AuthorError::ZeroId);
+        }
+        if !ids.insert(profile.id) {
+            return Err(AuthorError::DuplicateId(profile.id));
+        }
+    }
+    let defaults = *world.resource::&lt;Defaults&gt;();
+    for profile in profiles {
+        let rate = profile
+            .maintenance_override
+            .unwrap_or(defaults.rate(profile.species));
+        world.spawn((
+            SimId(profile.id),
+            profile.species,
+            Reserve(profile.initial_reserve_units),
+            Maintenance(rate),
+        ));
+    }
+    Ok(())
+}
+
+fn empty_world() -&gt; World {
+    let mut world = World::new();
+    world.insert_resource(Defaults { hare: 2, fox: 4 });
+    world.insert_resource(AreaCells(64));
+    world
+}
+
+fn fixture(profiles: &amp;[Profile]) -&gt; World {
+    let mut world = empty_world();
+    populate(&amp;mut world, profiles).expect("authored fixture IDs are valid");
+    world
+}
+
+fn upkeep(mut creatures: Query&lt;(&amp;Maintenance, &amp;mut Reserve)&gt;) {
+    for (rate, mut reserve) in &amp;mut creatures {
+        reserve.0 = reserve.0.saturating_sub(rate.0);
+    }
+}
+
+fn execute(world: &amp;mut World, ticks: u32) {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems(upkeep);
+    for _ in 0..ticks {
+        schedule.run(world);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Reading {
+    id: u32,
+    species: Species,
+    reserve_units: u32,
+    units_per_tick: u32,
+}
+
+fn readings(world: &amp;mut World) -&gt; Vec&lt;Reading&gt; {
+    let mut query = world.query::&lt;(&amp;SimId, &amp;Species, &amp;Reserve, &amp;Maintenance)&gt;();
+    let mut rows: Vec&lt;_&gt; = query
+        .iter(world)
+        .map(|(id, species, reserve, rate)| Reading {
+            id: id.0,
+            species: *species,
+            reserve_units: reserve.0,
+            units_per_tick: rate.0,
+        })
+        .collect();
+    rows.sort_by_key(|row| row.id);
+    rows
+}
+
+fn total_units(rows: &amp;[Reading]) -&gt; u64 {
+    rows.iter().map(|row| u64::from(row.reserve_units)).sum()
+}
+
+fn main() {
+    let defaults = *empty_world().resource::&lt;Defaults&gt;();
+    println!(
+        "defaults: Hare={}/tick Fox={}/tick",
+        defaults.rate(Species::Hare),
+        defaults.rate(Species::Fox)
+    );
+    for (label, profiles) in [("pair", PAIR.as_slice()), ("denser", DENSER.as_slice())] {
+        let mut world = fixture(profiles);
+        execute(&amp;mut world, 3);
+        let rows = readings(&amp;mut world);
+        println!(
+            "{label}: count={} cells={} reserve_total={}",
+            rows.len(),
+            world.resource::&lt;AreaCells&gt;().0,
+            total_units(&amp;rows)
+        );
+        for row in rows {
+            println!(
+                "  #{}: reserve={} cost={}/tick",
+                row.id, row.reserve_units, row.units_per_tick
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_pair_shares_initial_inputs_except_its_configured_cost() {
+        let mut world = fixture(&amp;PAIR);
+        assert_eq!(
+            readings(&amp;mut world),
+            vec![
+                Reading {
+                    id: 10,
+                    species: Species::Hare,
+                    reserve_units: 60,
+                    units_per_tick: 2
+                },
+                Reading {
+                    id: 20,
+                    species: Species::Hare,
+                    reserve_units: 60,
+                    units_per_tick: 1
+                },
+            ]
+        );
+        assert_eq!(world.resource::&lt;AreaCells&gt;().0, 64);
+    }
+
+    #[test]
+    fn equal_execution_counts_reveal_the_individual_rate() {
+        let mut world = fixture(&amp;PAIR);
+        execute(&amp;mut world, 3);
+        let rows = readings(&amp;mut world);
+        assert_eq!((rows[0].reserve_units, rows[1].reserve_units), (54, 57));
+        execute(&amp;mut world, 70);
+        assert!(
+            readings(&amp;mut world)
+                .iter()
+                .all(|row| row.reserve_units == 0)
+        );
+        assert_eq!(readings(&amp;mut world).len(), 2);
+    }
+
+    #[test]
+    fn none_uses_species_default_but_some_zero_remains_zero() {
+        let mut world = fixture(&amp;[
+            Profile {
+                id: 1,
+                maintenance_override: Some(0),
+                ..PAIR[0]
+            },
+            Profile {
+                id: 2,
+                species: Species::Fox,
+                ..PAIR[0]
+            },
+        ]);
+        execute(&amp;mut world, 1);
+        let rows = readings(&amp;mut world);
+        assert_eq!((rows[0].units_per_tick, rows[0].reserve_units), (0, 60));
+        assert_eq!((rows[1].units_per_tick, rows[1].reserve_units), (4, 56));
+    }
+
+    #[test]
+    fn defaults_initialize_components_without_rewriting_existing_individuals() {
+        let mut world = fixture(&amp;PAIR);
+        world.resource_mut::&lt;Defaults&gt;().hare = 99;
+        execute(&amp;mut world, 1);
+        let rows = readings(&amp;mut world);
+        assert_eq!((rows[0].reserve_units, rows[1].reserve_units), (58, 59));
+    }
+
+    #[test]
+    fn an_invalid_batch_does_not_partly_extend_the_population() {
+        let mut world = fixture(&amp;PAIR);
+        let before = readings(&amp;mut world);
+        assert_eq!(
+            populate(
+                &amp;mut world,
+                &amp;[Profile { id: 30, ..PAIR[0] }, Profile { id: 10, ..PAIR[0] },]
+            ),
+            Err(AuthorError::DuplicateId(10))
+        );
+        assert_eq!(readings(&amp;mut world), before);
+    }
+
+    #[test]
+    fn duplicate_and_zero_ids_are_rejected_before_any_spawn() {
+        let mut world = empty_world();
+        assert_eq!(
+            populate(&amp;mut world, &amp;[PAIR[0], PAIR[0]]),
+            Err(AuthorError::DuplicateId(10))
+        );
+        assert!(readings(&amp;mut world).is_empty());
+        assert_eq!(
+            populate(&amp;mut world, &amp;[Profile { id: 0, ..PAIR[0] }]),
+            Err(AuthorError::ZeroId)
+        );
+        assert!(readings(&amp;mut world).is_empty());
+    }
+
+    #[test]
+    fn authored_ids_and_sorted_readings_survive_reordered_input() {
+        let mut first = fixture(&amp;PAIR);
+        let mut reordered = fixture(&amp;[PAIR[1], PAIR[0]]);
+        execute(&amp;mut first, 3);
+        execute(&amp;mut reordered, 3);
+        assert_eq!(readings(&amp;mut first), readings(&amp;mut reordered));
+    }
+
+    #[test]
+    fn density_changes_the_total_without_improving_either_original_individual() {
+        let mut pair = fixture(&amp;PAIR);
+        let mut denser = fixture(&amp;DENSER);
+        execute(&amp;mut pair, 3);
+        execute(&amp;mut denser, 3);
+        let a = readings(&amp;mut pair);
+        let b = readings(&amp;mut denser);
+        assert_eq!((a.len(), b.len()), (2, 4));
+        assert_eq!(
+            pair.resource::&lt;AreaCells&gt;().0,
+            denser.resource::&lt;AreaCells&gt;().0
+        );
+        assert_eq!(total_units(&amp;a), 111);
+        assert_eq!(total_units(&amp;b), 222);
+        assert_eq!(b.iter().find(|row| row.id == 10), Some(&amp;a[0]));
+        assert_eq!(b.iter().find(|row| row.id == 20), Some(&amp;a[1]));
+    }
+}
+</code></pre></details>
+<p data-narration="27">The answer is a complete <code>src/main.rs</code> for the course's locked Bevy ECS 0.18.1 lab. Use <code>python3 learning/scripts/labs.py check variation</code> to check that reference separately; the earlier <code>--file</code> command checks your implementation. The expected program output is:</p>
+<pre><code class="language-text">defaults: Hare=2/tick Fox=4/tick
+pair: count=2 cells=64 reserve_total=111
+  #10: reserve=54 cost=2/tick
+  #20: reserve=57 cost=1/tick
+denser: count=4 cells=64 reserve_total=222
+  #10: reserve=54 cost=2/tick
+  #20: reserve=57 cost=1/tick
+  #30: reserve=54 cost=2/tick
+  #40: reserve=57 cost=1/tick</code></pre>
+
+<h2 id="read-the-evidence-at-its-scale" data-narration="28">Return to the two totals</h2>
+<p data-narration="29">The program now gives us enough information to interpret 111 and 222. The larger population began with twice the reserve and contains twice the animals. IDs 10 and 20 finish at the same values in both runs. Nothing in their individual outcomes supports the claim that adding neighbors improved their condition.</p>
+<p data-narration="30">Both means are 55.5 reserve units per animal, but that summary also benefits from the individual rows. It combines two different costs and hides which animal retained more. If a later model removes animals, the mean among survivors could rise simply because low-reserve individuals disappeared. A mean needs a stated population and sampling point, just as a total needs a count.</p>
+<p data-narration="31">Within this maintenance-only model, lower upkeep preserves at least as much reserve when starts and execution counts are equal. That follows from the rule we've written. It doesn't demonstrate a tradeoff, because lower upkeep has no disadvantage here. We haven't modeled food acquisition, reproduction, or removal at zero, so those outcomes can't be inferred from this trace.</p>
+<p data-narration="32">The tests preserve the assumptions behind that explanation. They check configured costs, resolved overrides, unchanged existing individuals after default edits, and reports that survive reordered authoring. The density comparison retains the original IDs rather than relying only on the final sum. Together, those checks make the next experiment easier to change deliberately.</p>
+<details><summary>Recall what is fixed in each comparison</summary><p>The two individuals share starting reserve and execution count while their stored costs differ. The two rosters share the original profiles and declared area, while count and total starting reserve differ. Editing the species default later doesn't alter either individual's already resolved component.</p></details>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway" data-narration="33">Keep the individual behind the total</h2>
+<p data-narration="34">The totals of 111 and 222 now lead back to explicit starting profiles. Validation protects the roster, resolved components preserve each individual's cost, and stable IDs let us follow the same animals through both runs. The higher total belongs to a larger population; the original pair hasn't gained a benefit from its extra neighbors in this model.</p>
+<p data-narration="35">In <a href="18-growth.html">environmental input and bounded supply</a>, we'll keep one consumer fixed and add a source of material. That lets us ask a new question with the starting conditions under control: when does the new supply become available for a meal?</p>
+</section>
+</article><details class="reading-notes" hidden><summary>Reading notes</summary><section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
+      <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
+      <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
+      <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
+      <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section></details><nav class="chapter-nav" aria-label="Lesson navigation"><a href="16-targets.html">← Choose, then revalidate a target</a><a href="18-growth.html">Let environmental input change supply →</a></nav></main>
+</div>
+<footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
+<noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>
+</body></html>
