@@ -1,0 +1,42 @@
+<p class="lede">Read in the browser, then bring the compiler to the question.</p>
+<p>You can follow the explanations, diagrams, and teaching models without setting up Rust first. When you're ready to edit a lab, the local workbench compiles and tests your saved file. That gives you Rust's actual diagnostics while keeping the lesson beside your editor. The small browser teaching models provide a quicker way to test a prediction; their labels distinguish them from compiled Rust.</p>
+<h2 id="open-course">Open this edition</h2>
+<p>From the root of the Moss checkout containing <code>learning</code>, build and serve the course. You need Python 3.11 or newer, with no additional Python packages:</p>
+<pre><code class="language-sh">python3 learning/scripts/build.py
+python3 learning/scripts/serve.py</code></pre>
+<p>Open <a href="http://127.0.0.1:8091">Moss Fieldnotes on port 8091</a> and leave the terminal running while you read. Control-C stops the server, which binds only to your computer. Rebuild and reload after changing lesson sources. Keeping the same port also keeps the browser origin consistent, so your locally saved notes remain available.</p>
+<h2 id="check-toolchain">Check the tools selected by Moss</h2>
+<p>The repository pins Rust 1.93.1 and Bevy ECS 0.18.1, the combination used for the course examples. From the same repository root, confirm that the toolchain is available:</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh rustc +1.93.1 --version
+scripts/with-toolchain.sh cargo +1.93.1 --version</code></pre>
+<p>If rustup reports that it is missing, install it and repeat those checks:</p>
+<pre><code class="language-sh">rustup toolchain install 1.93.1 --profile minimal --component rustfmt --component clippy</code></pre>
+<p>The first two labs use only the standard library. The query lab also needs the locked Bevy ECS dependencies in Cargo's cache, which a normal Moss build prepares. On a new machine, use <code>docs/development/README.md</code> for the complete project setup. If a command can't find a cached crate, resolve that setup problem before interpreting it as a result of your exercise.</p>
+<h2 id="run-reference">Check the answer's starting point</h2>
+<p>Run the opening references once to see the workbench's test output and sample trace:</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py check observe
+python3 learning/scripts/labs.py check ownership
+python3 learning/scripts/labs.py check queries</code></pre>
+<p>Each command extracts the exact marked example from its lesson, compiles it separately, requires its named tests to run, and then executes the sample program. The output identifies this as <strong>PRINTED REFERENCE</strong>. Its passing result establishes that the published example works for those cases on your machine; the next step is to select an edit of your own.</p>
+<h2 id="edit-copy">Make an edit that belongs to you</h2>
+<p>The ownership lesson starts with an unfinished inspector function. Prepare a fresh copy, open it in your editor, then check the file you've selected:</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare ownership --dest work/ownership-practice
+python3 learning/scripts/labs.py check ownership --file work/ownership-practice/ownership.rs</code></pre>
+<p>The first check fails at the intended <code>todo!</code>. Replace the body of <code>capture</code>, save, and repeat the second command. Both checks identify the source as <strong>LEARNER FILE</strong> and name your path; after the edit, the required tests should pass. That label distinguishes feedback on your file from a run of the printed answer. Preparation refuses an existing destination; return to the same file for another attempt.</p>
+<details><summary>Which tests are used for a short lab?</summary><p>When checking your copy, the runner uses the reference's trailing test module as the required course checks. Changing a copied assertion therefore cannot make an incorrect solution pass those checks. Keep additional exploratory tests in a separate scratch file. Later, the continuing project has a different workflow that retains and runs learner-authored integration tests alongside its required suites.</p></details>
+<h2 id="compile-preview">See checked Rust run in the browser</h2>
+<p>The <a href="terrarium.html">maintenance terrarium</a> runs the actual simulation crate, while the <a href="13-evidence.html#a-browser-claim-needs-browser-evidence">evidence lesson</a> can run your completed projection exercise in a browser host. Both use local compilation. To reproduce their included references, install the pinned WebAssembly target and build the hosts:</p>
+<pre><code class="language-sh">rustup target add --toolchain 1.93.1 wasm32-unknown-unknown
+python3 learning/scripts/runtime.py check
+python3 learning/scripts/runtime.py build
+python3 learning/scripts/preview.py evidence
+python3 learning/scripts/build.py</code></pre>
+<p>For your own completed evidence exercise, add <code>--file work/evidence-practice/evidence.rs</code> to its preview command, then rebuild the course and reload. The panel identifies the source kind and compiled build. Rust source stays in the local workbench rather than being sent to a compiler service.</p>
+<p>The continuing route begins in <a href="fieldwork.html">one saved meadow project</a> and keeps that directory through <a href="population.html">population</a>, <a href="mobile.html">movement and local observation</a>, <a href="resting.html">rest</a>, and <a href="hunting.html">hunting</a>. Those guides supply their stage-specific check and preview commands, along with complete source answers. Follow their instructions as you extend the project; don't prepare a replacement copy each time you begin a new guide.</p>
+<p>Keep that same directory for the <a href="refuge.html">independent refuge capstone</a>. Its stage check runs your growing collection of tests, and its native example compares shelter placements through printed reports. There is no additional refuge browser mode. If you want to reopen an earlier browser view after changing the source, rebuild it with that guide's preview command; a current build still displays only the rules and reports that its mode supports.</p>
+<details><summary>What does the runner execute?</summary><p>These are local Rust programs running with your normal process permissions. The workbench runs original course examples or a file you explicitly select; it is not a sandbox for untrusted code. It doesn't accept source from the browser or start a local execution API. Build artifacts stay under <code>learning/work</code>, separate from the live simulation sources and active assignment.</p></details>
+<h2 id="open-simulation">Open the live terrarium when a lesson calls for it</h2>
+<p>The main Moss application has its own server. From the repository root, run:</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh trunk serve --locked --release</code></pre>
+<p>It opens at <a href="http://127.0.0.1:8080">port 8080</a>, separately from Fieldnotes; keep one simulation preview on that port. At the current live checkpoint, maintenance runs while the unfinished movement rule remains unscheduled. Full workspace tests still encounter that intentional exercise, so use the focused command named by a lesson when you're inspecting an existing rule.</p>
+<p>When you return to active Moss development, open <code>NOW.md</code>. Your course work can help explain the decision in front of you while the live assignment remains the place to make that project change.</p>

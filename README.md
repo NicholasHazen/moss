@@ -12,6 +12,14 @@ Start with [NOW.md](NOW.md) when returning, the
 [today's v2 tutorial](docs/tutorial/today-v2.md) for the prepared movement session.
 [PROJECT_BRIEF.md](PROJECT_BRIEF.md) records the vision.
 
+## Learn with Fieldnotes
+
+[Read Moss Fieldnotes](https://nicholashazen.github.io/moss/fieldnotes/) for the
+new Rust and ECS course, or use [the course source and local setup](learning/README.md).
+The course develops a separate continuing terrarium through food, population,
+movement, rest, hunting and refuge. It does not change the live movement assignment.
+The [original Moss book](https://nicholashazen.github.io/moss/) remains available.
+
 ## Run locally
 
 From the workspace root (`/Users/nick/Code/moss` on this Mac):

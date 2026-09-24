@@ -1,0 +1,366 @@
+<p class="lesson-lead">The percentage helper passes its tests, but the inspector still says 99. You fix the update and now its current value is 37, yet a downstream observer still records 99. Before changing the arithmetic again, we need evidence about the rest of that path: which sample was selected, whether the projection ran, and when the observer read its result. We'll repair the projection, then write tests that can distinguish these failures for themselves.</p>
+<aside class="scope-note"><p><strong>Isolated evidence lab.</strong> These are presentation samples in a miniature Bevy ECS 0.18.1 world. You will complete a projection system and investigate deliberately incomplete or misordered schedules. Nothing is installed into Moss, and the live movement exercise remains unchanged.</p></aside>
+
+<h2 id="name-the-claim-first">Name the claim before choosing a check</h2>
+<p>Start by making the claim small enough to check. “The percentage is correct” might mean the helper floors a fraction correctly, the system chooses the intended entity, an observer sees the updated result, or the browser displays it. A test must reach the part of the program that could make its particular claim false. Otherwise the test can remain green while the defect survives somewhere it never looked.</p>
+<p>Give those possibilities different visible results. The selected sample contains three used units out of eight, which our floor-based reporting rule turns into 37. An unselected sample contains one out of two and would produce 50. The display begins at a stale 99. Choosing these distinct values is part of designing the fixture: 50 suggests the wrong input, while 99 suggests that an old value reached the observation.</p>
+<p>The projection writes a <code>DisplayValue</code> resource, and the observer copies that resource into a trace. Checking the resource tells us where the projection eventually left the world; checking the trace tells us what its consumer actually read. This is a native consumer in our miniature schedule. It lets us test the timing relationship before adding the separate question of browser presentation.</p>
+<table><caption>Evidence for each claim in the lab</caption><thead><tr><th scope="col">Claim</th><th scope="col">Discriminating check</th></tr></thead><tbody><tr><td>The helper's numeric contract holds.</td><td>Test fractional rounding, a value beyond capacity, zero capacity, and large representable inputs.</td></tr><tr><td>The system reads the selected row.</td><td>Include an unselected row with a different result and assert the selected result in the display.</td></tr><tr><td>The observer sees the current projection.</td><td>Start with a distinct stale value and assert the actual trace after running the configured schedule.</td></tr><tr><td>A browser presents the current value.</td><td>Exercise the built browser control and inspect its real displayed value, separately from these native tests.</td></tr></tbody></table>
+
+<h2 id="a-helper-is-a-local-contract">A helper is a local contract</h2>
+<p>The supplied <code>percentage</code> helper has a deliberately local job. Given used units and capacity, it returns absence for zero capacity, caps an amount above capacity, and floors the percentage otherwise. It widens the intermediate arithmetic to <code>u64</code> before multiplying by 100, so a valid large <code>u32</code> input does not overflow during that calculation.</p>
+<p>Neither integer tells the helper which entity was selected or when a system should execute. That makes its arithmetic easy to test in isolation: if an input produces the wrong percentage, there are few possible causes to inspect. It also explains why those tests cannot establish selection or scheduling behavior. Those relationships need fixtures that actually contain them.</p>
+<p>Your edit belongs in <code>project_selected</code>, where the query requests samples carrying <code>Selected</code>. When exactly one sample matches, the system projects it through the supplied helper. When no sample or several samples match, it must clear the display to <code>None</code>. Leaving 99 untouched would make an unsuccessful selection look like a successful reading retained from the previous run.</p>
+<p>For this exercise, both zero capacity and nonunique selection lead to an unavailable display. A fuller interface could keep their reasons distinct, as the Result lesson did. Our immediate requirement is narrower: the display must contain a newly justified value or explicitly say none is available. That gives the projection a useful contract without adding error wording to the task.</p>
+
+<h2 id="let-the-world-supply-the-result">Let the world supply the result</h2>
+<p>To check that contract in use, install the projection and observer as real Bevy systems and chain them in that order. The integration fixture creates their entities and resources, executes the schedule, and reads the changed display and collected trace. It asks the world for evidence of what ran. Calculating the percentage a second time in a test would only repeat the arithmetic and leave the schedule unexamined.</p>
+<p>Inside the projection body, <code>single</code> asks the query for exactly one matching item. The <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Query.html#method.single">Bevy 0.18.1 Query documentation for single</a> specifies the returned result. Handling its error explicitly lets the system enforce our uniqueness requirement instead of accepting whichever row an iteration happens to visit first.</p>
+<p>Follow the signature and body together. A perfectly correct call to <code>percentage</code> produces 50 if the query gives it the unselected sample. A perfectly correct projection produces nothing if the schedule never calls it. The two-row fixture and installed schedule bring both opportunities for failure within the test's reach.</p>
+<p><a href="12-commands.html">The deferred-command lesson</a> showed why we also retain an observer: a row could exist when the schedule returned yet have been absent at the moment an earlier system looked. Here the display could finish at 37 after the observer already copied 99. Reading final state would miss that mistake, so the trace preserves the earlier moment for an assertion.</p>
+
+<h2 id="predict-two-plausible-defects">Predict two plausible defects</h2>
+<p>Use that distinction to predict two defects before running them. In a world beginning with stale display 99, omit the projection and run only the observer. Then start a fresh world at 99 and run the observer before the projection. For each schedule, predict the final display and the trace separately; follow the writes and copies in order rather than letting the eventual result overwrite your memory of what happened earlier.</p>
+<details><summary>Hint 1: a passing helper does not execute itself</summary><p>The incomplete schedule never calls the projection. No system changes the display before the observer reads it.</p></details>
+<details><summary>Hint 2: later writes cannot refresh an owned trace entry</summary><p>The reversed schedule eventually updates the current display, but the observer already copied its previous value into the trace.</p></details>
+<details><summary>Prediction answer</summary><p>Omitting projection leaves both display and trace at 99. Reversing the systems leaves the final display at 37 but records 99 in the trace. Only the correctly ordered schedule both displays 37 and records 37.</p></details>
+<p>The supplied tests deliberately run those wrong schedules and check the predicted differences. Such a test passes when it exposes the counterexample correctly. The normal installed schedule has its own assertion requiring 37 in both places. Reading which schedule a test built is therefore part of understanding what its green result establishes.</p>
+
+<h2 id="complete-the-projection">Complete the one projection body</h2>
+<p>Now complete <code>project_selected</code> in a separate practice file prepared from the repository root. Its query and helper are supplied, so your body can focus on the two outcomes: project the single selected sample, or clear the old display when there is no unique sample. Keep the edit within that function.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare evidence --dest work/evidence-practice
+python3 learning/scripts/labs.py check evidence --file work/evidence-practice/evidence.rs</code></pre>
+<p>Initially, checks that reach the projection fail at its deliberate <code>todo!</code>. Helper tests and an omitted-system counterexample may already pass because neither needs that unfinished body. Use the whole checkpoint result to judge completion: all six canonical tests must pass and the program must run. Individual green rows tell you which paths already work, not whether the unfinished path can be ignored.</p>
+<details><summary>Complete starter: evidence.rs</summary><pre><code class="language-rust" data-starter="evidence">use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+
+#[derive(Component)]
+struct Selected;
+#[derive(Component)]
+struct Sample { used: u32, capacity: u32 }
+#[derive(Resource)]
+struct DisplayValue(Option&lt;u32&gt;);
+#[derive(Resource, Default)]
+struct Trace(Vec&lt;Option&lt;u32&gt;&gt;);
+
+fn percentage(used: u32, capacity: u32) -&gt; Option&lt;u32&gt; {
+    if capacity == 0 { return None; }
+    Some(((u64::from(used.min(capacity)) * 100) / u64::from(capacity)) as u32)
+}
+
+fn project_selected(
+    samples: Query&lt;&amp;Sample, With&lt;Selected&gt;&gt;,
+    mut display: ResMut&lt;DisplayValue&gt;,
+) {
+    let _ = (samples, &amp;mut display);
+    todo!("project one selected row; clear the display when selection is not unique")
+}
+
+fn observe_display(display: Res&lt;DisplayValue&gt;, mut trace: ResMut&lt;Trace&gt;) {
+    trace.0.push(display.0);
+}
+
+fn installed_schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems((project_selected, observe_display).chain());
+    schedule
+}
+
+fn fixture() -&gt; World {
+    let mut world = World::new();
+    world.insert_resource(DisplayValue(Some(99)));
+    world.init_resource::&lt;Trace&gt;();
+    world.spawn(Sample { used: 1, capacity: 2 });
+    world.spawn((Selected, Sample { used: 3, capacity: 8 }));
+    world
+}
+
+fn main() {
+    let mut world = fixture();
+    installed_schedule().run(&amp;mut world);
+    println!("display={:?} trace={:?}", world.resource::&lt;DisplayValue&gt;().0,
+        world.resource::&lt;Trace&gt;().0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn helper_defines_rounding_bounds_and_zero_capacity() {
+        assert_eq!(percentage(3, 8), Some(37));
+        assert_eq!(percentage(9, 8), Some(100));
+        assert_eq!(percentage(0, 0), None);
+        assert_eq!(percentage(u32::MAX, u32::MAX), Some(100));
+    }
+
+    #[test]
+    fn installed_projection_uses_the_selected_row_before_observation() {
+        let mut world = fixture();
+        installed_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, Some(37));
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![Some(37)]);
+    }
+
+    #[test]
+    fn no_selected_row_clears_a_previous_display_value() {
+        let mut world = fixture();
+        let selected: Vec&lt;_&gt; = world.query_filtered::&lt;Entity, With&lt;Selected&gt;&gt;()
+            .iter(&amp;world).collect();
+        for entity in selected { world.entity_mut(entity).remove::&lt;Selected&gt;(); }
+        installed_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, None);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![None]);
+    }
+
+    #[test]
+    fn multiple_selected_rows_do_not_silently_pick_one() {
+        let mut world = fixture();
+        world.spawn((Selected, Sample { used: 1, capacity: 2 }));
+        installed_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, None);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![None]);
+    }
+
+    #[test]
+    fn a_green_helper_does_not_detect_an_omitted_system() {
+        assert_eq!(percentage(3, 8), Some(37));
+        let mut world = fixture();
+        let mut incomplete = Schedule::default();
+        incomplete.set_executor_kind(ExecutorKind::SingleThreaded);
+        incomplete.add_systems(observe_display);
+        incomplete.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, Some(99));
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![Some(99)]);
+        assert_ne!(world.resource::&lt;Trace&gt;().0, vec![Some(37)]);
+    }
+
+    #[test]
+    fn correct_final_display_can_hide_an_early_observer() {
+        let mut world = fixture();
+        let mut reversed = Schedule::default();
+        reversed.set_executor_kind(ExecutorKind::SingleThreaded);
+        reversed.add_systems((observe_display, project_selected).chain());
+        reversed.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, Some(37));
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![Some(99)]);
+        assert_ne!(world.resource::&lt;Trace&gt;().0, vec![Some(37)]);
+    }
+}</code></pre></details>
+<details><summary>Complete worked answer: evidence.rs</summary><pre><code class="language-rust" data-runnable="evidence">use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+
+#[derive(Component)]
+struct Selected;
+#[derive(Component)]
+struct Sample { used: u32, capacity: u32 }
+#[derive(Resource)]
+struct DisplayValue(Option&lt;u32&gt;);
+#[derive(Resource, Default)]
+struct Trace(Vec&lt;Option&lt;u32&gt;&gt;);
+
+fn percentage(used: u32, capacity: u32) -&gt; Option&lt;u32&gt; {
+    if capacity == 0 { return None; }
+    Some(((u64::from(used.min(capacity)) * 100) / u64::from(capacity)) as u32)
+}
+
+fn project_selected(
+    samples: Query&lt;&amp;Sample, With&lt;Selected&gt;&gt;,
+    mut display: ResMut&lt;DisplayValue&gt;,
+) {
+    display.0 = match samples.single() {
+        Ok(sample) =&gt; percentage(sample.used, sample.capacity),
+        Err(_) =&gt; None,
+    };
+}
+
+fn observe_display(display: Res&lt;DisplayValue&gt;, mut trace: ResMut&lt;Trace&gt;) {
+    trace.0.push(display.0);
+}
+
+fn installed_schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.add_systems((project_selected, observe_display).chain());
+    schedule
+}
+
+fn fixture() -&gt; World {
+    let mut world = World::new();
+    world.insert_resource(DisplayValue(Some(99)));
+    world.init_resource::&lt;Trace&gt;();
+    world.spawn(Sample { used: 1, capacity: 2 });
+    world.spawn((Selected, Sample { used: 3, capacity: 8 }));
+    world
+}
+
+fn main() {
+    let mut world = fixture();
+    installed_schedule().run(&amp;mut world);
+    println!("display={:?} trace={:?}", world.resource::&lt;DisplayValue&gt;().0,
+        world.resource::&lt;Trace&gt;().0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn helper_defines_rounding_bounds_and_zero_capacity() {
+        assert_eq!(percentage(3, 8), Some(37));
+        assert_eq!(percentage(9, 8), Some(100));
+        assert_eq!(percentage(0, 0), None);
+        assert_eq!(percentage(u32::MAX, u32::MAX), Some(100));
+    }
+
+    #[test]
+    fn installed_projection_uses_the_selected_row_before_observation() {
+        let mut world = fixture();
+        installed_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, Some(37));
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![Some(37)]);
+    }
+
+    #[test]
+    fn no_selected_row_clears_a_previous_display_value() {
+        let mut world = fixture();
+        let selected: Vec&lt;_&gt; = world.query_filtered::&lt;Entity, With&lt;Selected&gt;&gt;()
+            .iter(&amp;world).collect();
+        for entity in selected { world.entity_mut(entity).remove::&lt;Selected&gt;(); }
+        installed_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, None);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![None]);
+    }
+
+    #[test]
+    fn multiple_selected_rows_do_not_silently_pick_one() {
+        let mut world = fixture();
+        world.spawn((Selected, Sample { used: 1, capacity: 2 }));
+        installed_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, None);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![None]);
+    }
+
+    #[test]
+    fn a_green_helper_does_not_detect_an_omitted_system() {
+        assert_eq!(percentage(3, 8), Some(37));
+        let mut world = fixture();
+        let mut incomplete = Schedule::default();
+        incomplete.set_executor_kind(ExecutorKind::SingleThreaded);
+        incomplete.add_systems(observe_display);
+        incomplete.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, Some(99));
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![Some(99)]);
+        assert_ne!(world.resource::&lt;Trace&gt;().0, vec![Some(37)]);
+    }
+
+    #[test]
+    fn correct_final_display_can_hide_an_early_observer() {
+        let mut world = fixture();
+        let mut reversed = Schedule::default();
+        reversed.set_executor_kind(ExecutorKind::SingleThreaded);
+        reversed.add_systems((observe_display, project_selected).chain());
+        reversed.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, Some(37));
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![Some(99)]);
+        assert_ne!(world.resource::&lt;Trace&gt;().0, vec![Some(37)]);
+    }
+}</code></pre></details>
+<p>Check the printed reference with <code>python3 learning/scripts/labs.py check evidence</code>. The command with <code>--file</code> checks your body against the course's reference tests. For a direct native run, save a full block as <code>src/main.rs</code> in a fresh scratch package with this manifest:</p>
+<pre><code class="language-toml">[package]
+name = "moss-evidence-lab"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+bevy_ecs = { version = "=0.18.1", default-features = false, features = ["std"] }</code></pre>
+<p>Run these commands from the scratch package, retaining its generated lockfile:</p>
+<pre><code class="language-sh">cargo +1.93.1 generate-lockfile
+CARGO_TARGET_DIR=target cargo +1.93.1 test --locked
+CARGO_TARGET_DIR=target cargo +1.93.1 run --locked</code></pre>
+<p>Expect six passed tests and the literal program output <code>display=Some(37) trace=[Some(37)]</code>. The pair now connects the selected sample to the installed projection and its downstream observer. It resolves the two different stale-value failures from the opening, within this miniature world.</p>
+
+<h2 id="know-which-kind-of-red-you-see">Know which kind of red you see</h2>
+<p>When a check fails, first locate how far execution got. A missing toolchain prevents the intended compilation; a compiler diagnostic prevents the test assertion from running. An assertion failure means the program did run and its observation disagreed with the expected result. The starter's <code>todo!</code> is another runtime failure with a known cause: you reached an unfinished body. These cases call for different repairs, even though they can all appear as a failed command.</p>
+<p>A successful exit also needs interpretation. If a filter selects zero tests, none of the intended assertions ran. For a focused manual check, list the available test names before selecting the complete name with <code>--exact</code>. The following commands identify and run one precise integration check in this package:</p>
+<pre><code class="language-sh">cargo +1.93.1 test --locked -- --list
+cargo +1.93.1 test --locked tests::installed_projection_uses_the_selected_row_before_observation -- --exact</code></pre>
+<p>That focused command should report one passed test. The course runner similarly checks that the canonical named tests were discovered and passed, so an empty selection cannot count as completion. The <a href="https://doc.rust-lang.org/book/ch11-02-running-tests.html">Rust Book's test-running chapter</a> explains the filtering rules and harness output when you need to interpret another selection.</p>
+
+<h2 id="write-the-evidence-yourself">Write evidence that the broken program cannot satisfy</h2>
+<p>So far, the course supplied the assertions and you repaired the implementation. Now keep the implementation fixed and choose the evidence yourself. The starting test checks <code>percentage(1, 2) == Some(50)</code>. It accepts the correct program, but it also accepts six deliberately defective versions, including one whose schedule never projects anything. That result gives us a concrete question for test design: what observation would make each wrong program disagree with the right one?</p>
+<p>The test-design command runs your actual test file, so it differs from the implementation checker that substitutes canonical tests. It first requires your tests to pass against the correct program. It then compiles each of six wrong programs and runs the same tests against them. A defect counts as detected only when its program compiles and a named test fails. A compiler error, ignored test, or empty selection cannot show that an assertion distinguished the behavior.</p>
+<pre><code class="language-sh">python3 learning/scripts/evidence_practice.py prepare --dest work/evidence-test-design
+python3 learning/scripts/evidence_practice.py check --file work/evidence-test-design/evidence_tests.rs</code></pre>
+<p>Prepare the file, then edit <code>evidence_tests.rs</code> by adding or changing ordinary <code>#[test]</code> functions. The runner places them in a test module beside the exact reference implementation above, where <code>fixture</code>, <code>installed_schedule</code>, <code>DisplayValue</code>, and <code>Trace</code> are already available. You can exercise those pieces directly without copying an implementation or <code>main</code> into the file. Preparation refuses an existing directory so a new attempt preserves your earlier tests.</p>
+<details><summary>Complete initial test file: evidence_tests.rs</summary><pre><code class="language-rust" data-practice-starter="evidence-tests-starter">#[test]
+fn an_exact_half_looks_reassuring() {
+    assert_eq!(percentage(1, 2), Some(50));
+}</code></pre></details>
+<p>On the first run, the correct reference should pass and all six defects should <em>survive</em>. Every executed assertion can be green while the command exits unsuccessfully, because the test suite has not yet distinguished any of the wrong programs. This is useful feedback about the question your test asked. Unlike the starter's unfinished <code>todo!</code>, the test body ran; its one half-capacity example simply allowed all seven implementations to agree.</p>
+<table><caption>Six stated defects your tests should reject</caption><thead><tr><th scope="col">Defect</th><th scope="col">What a weak check misses</th></tr></thead><tbody><tr><td>Round a fractional percentage upward.</td><td>An exact half has no rounding decision.</td></tr><tr><td>Multiply inside <code>u32</code>, wrapping before division.</td><td>Small samples fit the intermediate calculation.</td></tr><tr><td>Project the unselected row.</td><td>A helper test has no selection or entity membership.</td></tr><tr><td>Omit projection from the installed schedule.</td><td>The helper remains correct when nothing calls it.</td></tr><tr><td>Observe before projection.</td><td>The final display can be correct after the observer already recorded stale data.</td></tr><tr><td>Keep the old display when selection is absent or ambiguous.</td><td>A fixture with exactly one selected row never reaches the error branch.</td></tr></tbody></table>
+<p>Begin separating them by choosing a fractional input and writing its literal expected percentage. Then choose a large valid input that exercises the widened arithmetic. To investigate the installed behavior, run the real schedule in the supplied two-row fixture and inspect the observer's trace as well as current display. Finally change which rows carry the selection marker and decide what must replace stale 99 when there is no unique sample. Write each expectation before running it. Calling <code>percentage</code> to calculate the expected display would let the same arithmetic mistake supply both the actual result and its supposed check.</p>
+<details><summary>Hint: why final state alone lets the ordering defect survive</summary><p>The reversed schedule records 99 and then updates the current display to 37. If your test checks only the final display, the wrong order passes. The trace is the evidence that the dependent observer saw the current value. Keep the stale starting value distinct from the expected result.</p></details>
+<details><summary>Complete worked test file</summary><pre><code class="language-rust" data-practice-answer="evidence-tests-answer">#[test]
+fn a_fraction_requires_flooring() {
+    assert_eq!(percentage(3, 8), Some(37));
+}
+
+#[test]
+fn a_large_full_sample_is_still_full() {
+    assert_eq!(percentage(u32::MAX, u32::MAX), Some(100));
+}
+
+#[test]
+fn the_installed_observer_sees_the_selected_projection() {
+    let mut world = fixture();
+    installed_schedule().run(&amp;mut world);
+    assert_eq!(world.resource::&lt;DisplayValue&gt;().0, Some(37));
+    assert_eq!(world.resource::&lt;Trace&gt;().0, vec![Some(37)]);
+}
+
+#[test]
+fn unavailable_selection_clears_the_display_and_observation() {
+    for selected_count in [0, 2] {
+        let mut world = fixture();
+        if selected_count == 0 {
+            let selected: Vec&lt;_&gt; = world
+                .query_filtered::&lt;Entity, With&lt;Selected&gt;&gt;()
+                .iter(&amp;world)
+                .collect();
+            assert_eq!(selected.len(), 1);
+            for entity in selected {
+                world.entity_mut(entity).remove::&lt;Selected&gt;();
+            }
+        } else {
+            world.spawn((Selected, Sample { used: 1, capacity: 2 }));
+        }
+        installed_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;DisplayValue&gt;().0, None);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![None]);
+    }
+}</code></pre></details>
+<p>The worked answer groups these distinctions into four tests. Your tests can use other names and groupings, provided they accept the correct behavior and produce an observable disagreement with every one of the six defects. To run the printed answer separately, use <code>python3 learning/scripts/evidence_practice.py check --answer</code>. Its output says <strong>WORKED ANSWER</strong> so you can distinguish that demonstration from evidence about your own saved file.</p>
+<p>Read the result as a mapping from each defect to the named test that caught it. When one survives, the feedback identifies a distinction your current tests have not established. If the tests reject the correct reference, fix their expectation or setup first; the runner stops there before counting defects. Adding <code>--report work/evidence-test-design/result.json</code> retains the selected file, source digest, and named outcomes for your field note. This records an actual local run separately from your reading-progress checkmarks.</p>
+<p>Catching all six gives us evidence against these six mistakes, not an exhaustive guarantee. Add a zero-capacity case and a used-above-capacity case as a transfer exercise, even though the current defects do not require them. Explain which additional wrong behaviors they would expose. This habit becomes especially useful for a meal involving two owners: checking only the creature's plausible reserve increase could miss a transfer that removed too much patch biomass.</p>
+
+<h2 id="a-browser-claim-needs-browser-evidence">A browser claim needs browser evidence</h2>
+<p>We have followed the value as far as a native observer. A browser adds another consumer, with its own opportunities to show stale text, wire a control incorrectly, or retain a previous run's display. The optional panel below lets you inspect that next boundary. Its projection and schedule execute a WebAssembly build of the exact Rust program checked by the local runner.</p>
+<section class="experiment" data-evidence-preview aria-label="Compiled Rust evidence experiment"><div>Enable JavaScript and build the optional Rust preview to operate this panel. The reference outcome is current display 37 and observer 37. With the observer first, those values are 37 and 99.</div></section>
+<p>Once your projection body passes, use this command from the repository root to compile your practice file and rebuild the pages. The panel will then let you follow the same selected value through an actual browser display:</p>
+<pre><code class="language-sh">python3 learning/scripts/preview.py evidence --file work/evidence-practice/evidence.rs
+python3 learning/scripts/build.py</code></pre>
+<p>The command runs all six canonical tests and the native program before compiling that checked source with a small browser host. Reload the lesson and look for the <em>Learner file</em> build label, which identifies the source being demonstrated. A prebuilt panel labeled <em>Printed reference</em> is the answer's behavior; to reproduce it, omit <code>--file</code>. Distinguishing the two matters because a correct reference panel cannot verify an unfinished practice copy.</p>
+<p>Start with one selected row and inputs 3 / 8. With projection before observation, both readings should be 37. Reversing the order should leave the current display at 37 while the observer reports 99; omitting projection should leave both at 99. Restore the correct order, then choose no selected rows and expect both readings to become unavailable. These contrasts come from Rust resources read by the host, rather than a percentage recalculated in JavaScript.</p>
+<p>Record the build label together with the inputs, schedule choice, and displayed pair so the observation can be tied to the program you ran. After editing the implementation, rerun the preview command and rebuild: an already compiled program cannot pick up that source change on its own. A failed check or build does not publish a replacement, and the course builder omits a preview whose checked source changed. An already open page still represents its displayed build until reloaded. As in the native implementation checker, canonical tests replace test edits in the practice copy during this build.</p>
+<p>The same discipline applies when you return to current Moss. Pause, reset, and press Step three times at the maintenance-only checkpoint; the paired expectation is tick 3 and reserve 57. Record what that particular browser build actually shows. A still creature in a screenshot does not reveal whether its reserve was charged correctly, just as this native projection test cannot certify a separate Moss browser build.</p>
+<p>If the browser result disagrees, trace the value inward from the displayed text to the projected resource, installed schedule, and helper inputs. Find the first boundary where expected and observed values diverge. That keeps the repair tied to evidence: rewriting correct arithmetic before discovering that its system never ran could add another defect while leaving the original one in place.</p>
+
+<h2 id="carry-a-counterexample">Carry a counterexample into the next review</h2>
+<p>Look once more at the fixture and name the wrong program each feature can expose. Why did we include an unselected sample, begin with stale 99, and preserve the observer's trace instead of checking only the final display? This is the reasoning you can carry into the next test you design.</p>
+<details><summary>Recall answer</summary><p>The unselected sample exposes incorrect query selection or “take the first row.” The stale initial value exposes omitted projection and failure to clear unavailable data. The trace exposes an observer that ran before the update even when final state is correct.</p></details>
+<p>The selected-query and schedule APIs were checked against Bevy ECS 0.18.1. The native lab now distinguishes helper arithmetic, projection, and observation for these cases; integration into real Moss and its browser still need their own evidence. <a href="14-movement.html">The next bridge</a> applies that separation to the canonical affordable-movement task, where a returned distance, a changed reserve, and a visible journey must agree.</p>
+
+<p>For that browser boundary, the course includes <a href="terrarium.html">a precompiled Rust terrarium</a> at the current maintenance checkpoint. Its displayed readings let you make an observation about that specific host, alongside the native practice you completed here.</p>

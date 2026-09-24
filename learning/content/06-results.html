@@ -1,0 +1,249 @@
+<p class="lesson-lead">Suppose an inspector form asks for a report beginning at tick 12 and covering three ticks. We can turn that into a window containing 12, 13, and 14. Now change the count to zero. The text still parses as a number, but the request no longer satisfies the report's rules. We'll build a small validation boundary that can tell the caller why a request failed and return a usable value when it succeeds.</p>
+<aside class="scope-note"><p>You'll implement a constructor in the isolated <code>results.rs</code> lab, then compare it with Moss's existing configuration code. The 4,096-tick limit is an illustrative reporting policy. This exercise doesn't add a live form or change the movement task in <code>NOW.md</code>.</p></aside>
+
+<h2 id="valid-text-is-not-valid-configuration">Follow a request from text to meaning</h2>
+<p>A form begins with strings, so our first question is whether each input can be read as the integer type we've chosen. “Three” can't be parsed as a <code>u64</code>; “3” can. But parsing only gives us a representable number. It doesn't know what our report considers a useful count, which is why “0” gets through this first step.</p>
+<p>We'll give the report an explicit policy: a requested window must contain at least one tick and at most 4,096. Its stored endpoints will be an inclusive start and an exclusive end. Starting at 12 with a count of 3 therefore produces an end of 15, describing ticks 12, 13, and 14. This convention makes the count equal to end minus start and lets adjacent windows meet without sharing a tick.</p>
+<p>The field name <code>end_tick_exclusive</code> keeps that convention visible in code. It also belongs in the explanation a reader sees. Two unlabeled endpoints would leave us wondering whether 15 was included, and a correct calculation wouldn't prevent the resulting off-by-one misunderstanding.</p>
+<p>There's one more numerical constraint: the exclusive end must fit in <code>u64</code>. Even a valid count of one can overflow if the start is already the maximum. We'll check the count first and the addition second, giving each failure its own explanation.</p>
+<p>A value that passes these checks means “this is a well-formed requested window.” It doesn't establish that its ticks have happened or that observations were retained for all of them. When we build history, we'll compare the request with available coverage. Keeping those questions separate continues the previous lesson's distinction between a valid identity and an available reading.</p>
+
+<h2 id="put-the-reason-in-the-type">Give the caller enough information to respond</h2>
+<p><a href="05-options.html">The target lesson</a> used <code>Option</code> when asking whether a selected ID was present. For a rejected form request, the caller also needs a reason. <code>Result&lt;ReadingWindow, WindowError&gt;</code> describes the two outcomes: <code>Ok(window)</code> carries the accepted value, and <code>Err(reason)</code> carries an explanation of failure.</p>
+<p>We'll make <code>WindowError</code> an enum, using the same data-bearing alternatives we used for target status. An invalid-integer error identifies the field. A count-range error keeps the rejected count. An end-overflow error keeps the start and count that couldn't be combined. The caller can match the variant and decide what to show beside the input.</p>
+<table><caption>How four requests move through validation</caption><thead><tr><th scope="col">Request</th><th scope="col">Outcome</th></tr></thead><tbody><tr><td>Start “12”, count “3”</td><td>An accepted window containing 12, 13, and 14.</td></tr><tr><td>Start “12”, count “three”</td><td>The tick-count field can't be parsed as the required integer.</td></tr><tr><td>Start “12”, count “0”</td><td>Parsing succeeds, then the count-range check rejects zero.</td></tr><tr><td>Start at the maximum <code>u64</code>, count 1</td><td>The count is valid, but its exclusive endpoint can't be represented.</td></tr></tbody></table>
+<p>The integer error deliberately groups malformed text, negative values, and text larger than the unsigned type can hold. That is enough detail for this lab to identify the field that needs attention. It doesn't retain the original text or the parser's full diagnostic. A form could keep the entered text separately; an import tool might preserve the underlying error as well. <code>Result</code> can carry whichever error type the caller needs.</p>
+<p>The <a href="https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html">Rust Book's recoverable-error chapter</a> explains how these unsuccessful outcomes travel as values. That fits a form naturally: invalid input is something to report so the user can revise it, rather than a reason to pretend a report was successfully created.</p>
+
+<h2 id="one-constructor-owns-the-invariant">Make accepted windows dependable</h2>
+<p>We want the same rules to apply whether numbers come from a form, a file, or a test. We'll put them in <code>ReadingWindow::new</code>, a constructor that accepts numeric inputs. It validates the count, checks the endpoint addition, and constructs the window only when both succeed. A failed check returns an error without supplying a partially validated value.</p>
+<p>This gives the later getters a useful fact to rely on. In a window produced by the constructor, the end is greater than the start and their difference is between 1 and 4,096. The <code>tick_count</code> getter can therefore subtract them directly. It doesn't need to repeat the count and overflow checks whenever someone asks how many ticks were requested.</p>
+<p>The fields are private, but Rust's privacy boundary needs a precise reading here. Code outside the owning module and its descendants can't directly access private fields. In this single-file lab, code in the defining module or a descendant module still could construct them itself. Using the constructor is therefore a local convention here; the next lesson will use modules to make the intended path enforceable for callers across that boundary.</p>
+<p>Keeping fields unchanged through the getter interface preserves the relationship established at construction. Direct construction inside the allowed module still carries responsibility for that relationship. “Private” doesn't mean that one particular method is the only code capable of touching a field.</p>
+<p>We also need to decide what rejection means. Clamping a request for 4,097 ticks to 4,096 would silently change what the caller asked for. This constructor rejects the unsupported count instead. An interface could offer a suggested correction afterward, but the accepted value should describe a request the caller actually agreed to make.</p>
+
+<h2 id="follow-the-error-path">Read the validation pipeline</h2>
+<p>The supplied <code>parse_window</code> function connects text inputs to the constructor. It parses the start, then the count, and finally calls <code>ReadingWindow::new</code>. Keeping that final call matters: successfully parsing two integers mustn't bypass the report's range policy.</p>
+<p>After each parse, <code>map_err</code> converts the parser's error into our field-specific <code>WindowError</code>. The following question mark either yields the successful integer for continued work or returns the error from <code>parse_window</code>. It saves us an explicit match for propagation. It doesn't log a message, retry, or decide which correction the user should make.</p>
+<p>Inside the constructor, <code>checked_add</code> presents a slightly different shape: it returns an <code>Option</code>, because its failed result carries no reason of its own. We know what failure means at this point, so <code>ok_or</code> turns <code>None</code> into <code>EndOverflow</code> with the relevant inputs. A question mark then propagates that error in the same way as the parsing failures.</p>
+<p>The <a href="https://doc.rust-lang.org/std/option/enum.Option.html#method.ok_or">Option conversion reference</a> and <a href="https://doc.rust-lang.org/std/result/enum.Result.html#method.map_err">Result error-mapping reference</a> describe these transformations. In this example, they let several operations speak the same error language. The final constructor call already returns the right <code>Result</code>, so <code>parse_window</code> returns it directly.</p>
+
+<h2 id="implement-the-boundary">Write the constructor's checks</h2>
+<p>Try the accepted and rejected edges before implementing them. Starting at 12, counts of 1 and 4,096 should succeed, while 4,097 should fail. For the endpoint, compare a count of one starting at <code>u64::MAX - 1</code> with the same count starting at <code>u64::MAX</code>. Only the first can represent its exclusive end.</p>
+<details><summary>Hint 1: include both supported count endpoints</summary><p>Check the inclusive range from 1 through <code>MAX_WINDOW_TICKS</code>. Outside it, return <code>CountOutOfRange</code> carrying the rejected count.</p></details>
+<details><summary>Hint 2: construct only after successful addition</summary><p>Use <code>checked_add</code> for the endpoint. Convert its missing result into <code>EndOverflow</code> and return that error before constructing the window.</p></details>
+<details><summary>Prediction answer</summary><p>Counts 1 and 4,096 are accepted, while 4,097 is rejected. Maximum minus one plus one reaches the exact representable endpoint and succeeds. Maximum plus one doesn't fit. Accepting the exact boundary matters just as much as rejecting the value beyond it.</p></details>
+<p>From the repository root, prepare a new practice directory and run the first check. Choose a different destination if this path already holds your work.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare results --dest work/results-practice
+python3 learning/scripts/labs.py check results --file work/results-practice/results.rs</code></pre>
+<p>The initial failure comes from the constructor's intentional <code>todo!</code>. Replace only the body of <code>ReadingWindow::new</code> and repeat the check. Parsing and tests are supplied so you can concentrate on when construction is allowed.</p>
+<details><summary>Complete starter file: results.rs</summary><pre><code class="language-rust" data-starter="results">const MAX_WINDOW_TICKS: u64 = 4096;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReadingWindow {
+    start_tick: u64,
+    end_tick_exclusive: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum WindowError {
+    InvalidInteger { field: &amp;'static str },
+    CountOutOfRange { tick_count: u64 },
+    EndOverflow { start_tick: u64, tick_count: u64 },
+}
+
+impl ReadingWindow {
+    fn new(start_tick: u64, tick_count: u64) -&gt; Result&lt;Self, WindowError&gt; {
+        let _ = (start_tick, tick_count);
+        todo!("validate the count, check the end, then construct the window")
+    }
+
+    fn start_tick(self) -&gt; u64 { self.start_tick }
+    fn end_tick_exclusive(self) -&gt; u64 { self.end_tick_exclusive }
+    fn tick_count(self) -&gt; u64 { self.end_tick_exclusive - self.start_tick }
+}
+
+fn parse_window(start: &amp;str, count: &amp;str) -&gt; Result&lt;ReadingWindow, WindowError&gt; {
+    let start_tick = start.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "start tick" })?;
+    let tick_count = count.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "tick count" })?;
+    ReadingWindow::new(start_tick, tick_count)
+}
+
+fn main() {
+    let window = parse_window("12", "3").expect("the example window is valid");
+    println!("ticks {}..{} ({} ticks)",
+        window.start_tick(), window.end_tick_exclusive(), window.tick_count());
+    match parse_window("12", "0") {
+        Ok(_) =&gt; println!("accepted"),
+        Err(error) =&gt; println!("rejected: {error:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn both_supported_count_boundaries_are_accepted() {
+        for count in [1, MAX_WINDOW_TICKS] {
+            let window = ReadingWindow::new(12, count).unwrap();
+            assert_eq!(window.start_tick(), 12);
+            assert_eq!(window.end_tick_exclusive(), 12 + count);
+            assert_eq!(window.tick_count(), count);
+        }
+    }
+
+    #[test]
+    fn zero_and_oversized_counts_are_rejected_not_clamped() {
+        for count in [0, MAX_WINDOW_TICKS + 1] {
+            assert_eq!(ReadingWindow::new(12, count),
+                Err(WindowError::CountOutOfRange { tick_count: count }));
+        }
+    }
+
+    #[test]
+    fn exact_end_limit_is_valid_but_overflow_is_not() {
+        let window = ReadingWindow::new(u64::MAX - 1, 1).unwrap();
+        assert_eq!(window.end_tick_exclusive(), u64::MAX);
+        assert_eq!(ReadingWindow::new(u64::MAX, 1),
+            Err(WindowError::EndOverflow { start_tick: u64::MAX, tick_count: 1 }));
+    }
+
+    #[test]
+    fn parse_errors_identify_the_field_that_failed() {
+        assert_eq!(parse_window("fern", "3"),
+            Err(WindowError::InvalidInteger { field: "start tick" }));
+        for text in ["three", "-1", "18446744073709551616"] {
+            assert_eq!(parse_window("12", text),
+                Err(WindowError::InvalidInteger { field: "tick count" }));
+        }
+    }
+
+    #[test]
+    fn parsed_integers_still_pass_through_domain_validation() {
+        assert_eq!(parse_window("12", "0"),
+            Err(WindowError::CountOutOfRange { tick_count: 0 }));
+        assert_eq!(parse_window("12", "4097"),
+            Err(WindowError::CountOutOfRange { tick_count: 4097 }));
+        assert_eq!(parse_window("12", "3").unwrap().end_tick_exclusive(), 15);
+    }
+}</code></pre></details>
+<details><summary>Complete worked answer: results.rs</summary><pre><code class="language-rust" data-runnable="results">const MAX_WINDOW_TICKS: u64 = 4096;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReadingWindow {
+    start_tick: u64,
+    end_tick_exclusive: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum WindowError {
+    InvalidInteger { field: &amp;'static str },
+    CountOutOfRange { tick_count: u64 },
+    EndOverflow { start_tick: u64, tick_count: u64 },
+}
+
+impl ReadingWindow {
+    fn new(start_tick: u64, tick_count: u64) -&gt; Result&lt;Self, WindowError&gt; {
+        if !(1..=MAX_WINDOW_TICKS).contains(&amp;tick_count) {
+            return Err(WindowError::CountOutOfRange { tick_count });
+        }
+        let end_tick_exclusive = start_tick.checked_add(tick_count)
+            .ok_or(WindowError::EndOverflow { start_tick, tick_count })?;
+        Ok(Self { start_tick, end_tick_exclusive })
+    }
+
+    fn start_tick(self) -&gt; u64 { self.start_tick }
+    fn end_tick_exclusive(self) -&gt; u64 { self.end_tick_exclusive }
+    fn tick_count(self) -&gt; u64 { self.end_tick_exclusive - self.start_tick }
+}
+
+fn parse_window(start: &amp;str, count: &amp;str) -&gt; Result&lt;ReadingWindow, WindowError&gt; {
+    let start_tick = start.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "start tick" })?;
+    let tick_count = count.parse::&lt;u64&gt;()
+        .map_err(|_| WindowError::InvalidInteger { field: "tick count" })?;
+    ReadingWindow::new(start_tick, tick_count)
+}
+
+fn main() {
+    let window = parse_window("12", "3").expect("the example window is valid");
+    println!("ticks {}..{} ({} ticks)",
+        window.start_tick(), window.end_tick_exclusive(), window.tick_count());
+    match parse_window("12", "0") {
+        Ok(_) =&gt; println!("accepted"),
+        Err(error) =&gt; println!("rejected: {error:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn both_supported_count_boundaries_are_accepted() {
+        for count in [1, MAX_WINDOW_TICKS] {
+            let window = ReadingWindow::new(12, count).unwrap();
+            assert_eq!(window.start_tick(), 12);
+            assert_eq!(window.end_tick_exclusive(), 12 + count);
+            assert_eq!(window.tick_count(), count);
+        }
+    }
+
+    #[test]
+    fn zero_and_oversized_counts_are_rejected_not_clamped() {
+        for count in [0, MAX_WINDOW_TICKS + 1] {
+            assert_eq!(ReadingWindow::new(12, count),
+                Err(WindowError::CountOutOfRange { tick_count: count }));
+        }
+    }
+
+    #[test]
+    fn exact_end_limit_is_valid_but_overflow_is_not() {
+        let window = ReadingWindow::new(u64::MAX - 1, 1).unwrap();
+        assert_eq!(window.end_tick_exclusive(), u64::MAX);
+        assert_eq!(ReadingWindow::new(u64::MAX, 1),
+            Err(WindowError::EndOverflow { start_tick: u64::MAX, tick_count: 1 }));
+    }
+
+    #[test]
+    fn parse_errors_identify_the_field_that_failed() {
+        assert_eq!(parse_window("fern", "3"),
+            Err(WindowError::InvalidInteger { field: "start tick" }));
+        for text in ["three", "-1", "18446744073709551616"] {
+            assert_eq!(parse_window("12", text),
+                Err(WindowError::InvalidInteger { field: "tick count" }));
+        }
+    }
+
+    #[test]
+    fn parsed_integers_still_pass_through_domain_validation() {
+        assert_eq!(parse_window("12", "0"),
+            Err(WindowError::CountOutOfRange { tick_count: 0 }));
+        assert_eq!(parse_window("12", "4097"),
+            Err(WindowError::CountOutOfRange { tick_count: 4097 }));
+        assert_eq!(parse_window("12", "3").unwrap().end_tick_exclusive(), 15);
+    }
+}</code></pre></details>
+<p>Expect five passing tests. A failure at 4,096 often points to an exclusive upper bound; a failure at the maximum start points to unchecked addition. The parsing tests also make sure representable but unsupported counts still go through the constructor. You can check the printed reference separately with <code>python3 learning/scripts/labs.py check results</code>, or use these commands from your saved file's directory:</p>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 --test results.rs -o results-tests
+./results-tests
+rustc +1.93.1 --edition=2024 results.rs -o results
+./results</code></pre>
+<p>The expected result is five passed tests and this program output:</p>
+<pre><code class="language-text">ticks 12..15 (3 ticks)
+rejected: CountOutOfRange { tick_count: 0 }</code></pre>
+<p>The rejected line prints the error's debug representation so you can see its variant and payload. A form would translate that value into wording appropriate for its reader. The fixed valid example uses <code>expect</code> to assert our authored input; the other path demonstrates matching the result and reporting a rejected request.</p>
+
+<h2 id="recognize-the-live-pattern">Find the same boundary in Moss</h2>
+<p>For a read-only comparison, open <code>crates/moss-sim/src/config.rs</code>. Its <code>WorldConfig::new</code> accepts world dimensions from 8 through 256 cells and returns a configuration error with the rejected dimensions otherwise. Getters expose the accepted values. The domain is different, but the reasoning is familiar: validate once at construction, then let code using the value rely on that boundary.</p>
+<p>Run the following focused native test from the repository root to check the existing constructor. Expect one passed library test.</p>
+<pre><code class="language-sh">scripts/with-toolchain.sh cargo test -p moss-sim --locked --lib config::tests::configuration_rejects_dimensions_outside_the_supported_range -- --exact</code></pre>
+<p>This command doesn't resize a running world or exercise a browser form. It checks the actual dimension constructor, just as our isolated tests check the window calculation. Following an entered value through a real form would add another question: did the interface send the intended input and display the resulting acceptance or error?</p>
+
+<h2 id="a-value-you-can-rely-on">Carry the accepted value forward</h2>
+<p>The request for zero ticks now has a useful outcome. Parsing recognizes the number, the constructor rejects its meaning for this report, and the caller receives the count-range reason. For a valid request, the caller instead receives a window whose getters can rely on the checks already performed.</p>
+<details><summary>Recall why the getter can subtract directly</summary><p>The constructor establishes an end greater than the start, with a supported difference. Keeping those fields unchanged preserves the relationship. Parsing alone wouldn't establish it, and code that directly constructs fields inside the owning module must still uphold it.</p></details>
+<p>We have one remaining design task: make this construction path the one other parts of the program actually use. <a href="07-modules.html">Put the boundary in the code</a> follows the same contract into modules and visibility, where the layout of the program can help preserve the promises we've just tested.</p>

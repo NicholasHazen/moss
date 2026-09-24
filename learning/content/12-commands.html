@@ -1,0 +1,306 @@
+<p class="lesson-lead">The enqueue system has just saved a handle for a new row, but the next observer cannot find the row's components. Later in the same schedule, another observer finds application ID 7. To explain both results, we need to follow the spawn through two moments: when the system requests the change and when Bevy applies it to the world.</p>
+<aside class="scope-note"><p><strong>Isolated Bevy ECS 0.18.1 lab.</strong> The entities are report rows in a separate world. No creature is born or removed, and no biological behavior is installed. You will wire one schedule around deferred commands; the live assignment remains in <code>NOW.md</code>.</p></aside>
+
+<h2 id="a-request-is-not-yet-a-component">A request is not yet a component</h2>
+<p><a href="11-schedules.html">The previous lesson</a> placed observers around an ordinary resource mutation. Once the increment system returned, that changed resource was available to the next reader. Structural work can take a different route: <code>Commands</code> records operations such as spawning, inserting components, and despawning for later application with exclusive world access. Ordering a reader after the system that requested a change is therefore only part of the visibility question.</p>
+<p>A queued spawn can reserve an entity handle before its components are query-visible. That allows further commands to refer to the intended entity while the structural work is pending. The <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Commands.html">versioned Commands reference</a> describes this queue and its application; when following our example, keep the handle reservation separate from the later insertion of the row's components.</p>
+<p>Our enqueue system makes the distinction observable by doing some ordinary resource work alongside the queued spawn. It advances the application-ID counter and saves the reserved entity handle immediately. A later system can read those resources even while the row's component insertion remains pending. Seeing one effect of the enqueue system therefore does not tell us that every effect has reached the world yet.</p>
+<p>This explains the apparently contradictory log: “I have an entity handle, but the query finds nothing.” The saved handle shows that the request was made. The query answers whether matching components are available at the time it runs. Before changing its filter, follow the schedule far enough to find where the queued insertion is applied.</p>
+
+<h2 id="make-the-application-point-explicit">Make the application point explicit</h2>
+<p>There is a detail of Bevy 0.18.1 we need to control before making that experiment. Bevy can automatically insert deferred-application systems along ordering dependencies, so an ordinary chain following a command-producing system may already make the change visible. If we left that behavior implicit, our intended “pending” observer might run after an application we had not shown in the lesson.</p>
+<p>The supplied <code>manual_schedule</code> disables <code>auto_insert_apply_deferred</code> so the intermediate application point is ours to place. It also selects a single-threaded executor and explicitly enables final deferred application when the schedule ends. Inside that controlled sequence, your schedule will put <code>ApplyDeferred</code> between the pending observer and the visible observer.</p>
+<p>With those settings, we can distinguish three moments: before the chosen application point, immediately after it, and after the whole run returns. That is why this experiment changes the defaults. A different schedule configuration could have different visibility, so carrying the expected readings to another application requires checking its settings as well; there is no general need to disable automatic application throughout Moss.</p>
+<table><caption>First execution in an initially empty lab world</caption><thead><tr><th scope="col">Phase</th><th scope="col">What the observer can establish</th></tr></thead><tbody><tr><td>Enqueue the row</td><td>An entity handle is saved and AppId(7) is queued for insertion.</td></tr><tr><td>Observe pending work</td><td>The AppId query still yields no rows under the explicit manual settings.</td></tr><tr><td>Run ApplyDeferred</td><td>The queued structural work is applied to the world.</td></tr><tr><td>Observe visible rows</td><td>The AppId query yields AppId(7).</td></tr></tbody></table>
+<p>Notice that <code>ApplyDeferred</code> occupies its own place in the schedule. Bevy's executor recognizes that system and applies buffered work from systems that have already run. Merely putting the two observers in order would not perform that application under our manual settings. The schedule needs both the relationship between the readers and the operation that changes what the second reader can see.</p>
+
+<h2 id="separate-identity-from-a-handle">Separate application identity from an ECS handle</h2>
+<p>The saved handle and the reported ID also serve different purposes. <code>Entity</code> is the handle this world uses to locate its current ECS entity. <code>AppId(7)</code> is application data we allocate and copy into an observation. After removal, that copied ID can still say which report row was observed, even though the handle no longer resolves to a living entity.</p>
+<p>That historical meaning depends on how we allocate IDs. The lab's <code>NextId</code> resource advances monotonically with checked arithmetic, preserving uniqueness during the run. If we reset the allocator but keep old records, another row could receive 7. We would then need a run identifier or another uniqueness policy to distinguish them. Moss includes a run context in retained identities for this reason.</p>
+<p>The trace can retain ID 7 because its vectors own copied values rather than references to components. Despawning the row removes those components from the world; it does not reach into a separate vector and erase an earlier observation. This is the ownership boundary we have used for reports, now applied to something whose current existence can end.</p>
+<p>Owning the records solves their lifetime problem, but it also makes us responsible for how long to keep them. This test runs only once or twice, so its small trace has no retention limit. A browser history needs a limit and visible coverage so the reader can tell which part of the past remains available.</p>
+
+<h2 id="predict-two-boundaries">Predict two visibility boundaries</h2>
+<p>Try removing the explicit <code>ApplyDeferred</code> step in your prediction, while leaving final application enabled. Follow the schedule to the visible observer first: has anything applied the queued insertion by then? Next follow it to the return from <code>schedule.run</code>. Separating those two moments should let you explain how an empty recorded observation and a current row can both be correct.</p>
+<details><summary>Hint 1: keep the build settings in view</summary><p>Automatic intermediate application is disabled. Without the explicit step, neither scheduled observer runs after an application point.</p></details>
+<details><summary>Hint 2: a saved observation is not updated afterward</summary><p>The final application can insert the row before the schedule call returns. It cannot change the earlier vector of IDs already copied into the trace.</p></details>
+<details><summary>Prediction answer</summary><p>Both observers record empty vectors, but the row exists after the run returns because final application is enabled. The word “Visible” is only the observer's label; it does not create visibility. Its placement determines what it sees.</p></details>
+
+<h2 id="wire-one-schedule">Wire one schedule</h2>
+<p>Now express the sequence in <code>command_schedule</code>, the only unfinished function. Use the supplied manual settings, then chain enqueue, pending observation, explicit application, and visible observation in that order. Prepare a separate practice file from the repository root so you can change this schedule without touching the live world.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare commands --dest work/commands-practice
+python3 learning/scripts/labs.py check commands --file work/commands-practice/commands.rs</code></pre>
+<p>The starter initially reaches its deliberate <code>todo!</code>. Once you complete the schedule, expect four named tests to pass. If the pending observer already sees ID 7, look for an automatic application point. If the visible observer sees nothing even though the row exists after the run, look for the missing intermediate application. Those two failures tell you about different parts of the configuration.</p>
+<details><summary>Complete starter: commands.rs</summary><pre><code class="language-rust" data-starter="commands">use bevy_ecs::{prelude::*, schedule::{ExecutorKind, ScheduleBuildSettings}};
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct AppId(u64);
+#[derive(Resource)]
+struct NextId(u64);
+#[derive(Resource, Default)]
+struct Handles(Vec&lt;Entity&gt;);
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Seen { phase: &amp;'static str, ids: Vec&lt;AppId&gt; }
+#[derive(Resource, Default)]
+struct Trace(Vec&lt;Seen&gt;);
+
+fn enqueue_row(mut commands: Commands, mut next: ResMut&lt;NextId&gt;, mut handles: ResMut&lt;Handles&gt;) {
+    let id = AppId(next.0);
+    next.0 = next.0.checked_add(1).expect("application ID overflow");
+    handles.0.push(commands.spawn(id).id());
+}
+
+fn observe_pending(rows: Query&lt;&amp;AppId&gt;, mut trace: ResMut&lt;Trace&gt;) {
+    let mut ids: Vec&lt;_&gt; = rows.iter().copied().collect();
+    ids.sort();
+    trace.0.push(Seen { phase: "Pending", ids });
+}
+
+fn observe_visible(rows: Query&lt;&amp;AppId&gt;, mut trace: ResMut&lt;Trace&gt;) {
+    let mut ids: Vec&lt;_&gt; = rows.iter().copied().collect();
+    ids.sort();
+    trace.0.push(Seen { phase: "Visible", ids });
+}
+
+fn manual_schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.set_build_settings(ScheduleBuildSettings {
+        auto_insert_apply_deferred: false,
+        ..Default::default()
+    });
+    schedule.set_apply_final_deferred(true);
+    schedule
+}
+
+fn command_schedule() -&gt; Schedule {
+    todo!("queue, observe pending, explicitly apply, then observe visible")
+}
+
+fn empty_world() -&gt; World {
+    let mut world = World::new();
+    world.insert_resource(NextId(7));
+    world.init_resource::&lt;Handles&gt;();
+    world.init_resource::&lt;Trace&gt;();
+    world
+}
+
+fn main() {
+    let mut world = empty_world();
+    command_schedule().run(&amp;mut world);
+    for seen in &amp;world.resource::&lt;Trace&gt;().0 {
+        println!("{}: {:?}", seen.phase, seen.ids);
+    }
+    let handle = world.resource::&lt;Handles&gt;().0[0];
+    assert!(world.despawn(handle));
+    let count = world.query::&lt;&amp;AppId&gt;().iter(&amp;world).count();
+    println!("after removal: entities={} retained={:?}", count, world.resource::&lt;Trace&gt;().0[1].ids);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn queued_row_becomes_queryable_at_explicit_application() {
+        let mut world = empty_world();
+        command_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![
+            Seen { phase: "Pending", ids: vec![] },
+            Seen { phase: "Visible", ids: vec![AppId(7)] },
+        ]);
+        let handle = world.resource::&lt;Handles&gt;().0[0];
+        assert_eq!(world.get::&lt;AppId&gt;(handle), Some(&amp;AppId(7)));
+    }
+
+    #[test]
+    fn final_application_does_not_rewrite_an_earlier_observation() {
+        let mut world = empty_world();
+        let mut schedule = manual_schedule();
+        schedule.add_systems((enqueue_row, observe_pending, observe_visible).chain());
+        schedule.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![
+            Seen { phase: "Pending", ids: vec![] },
+            Seen { phase: "Visible", ids: vec![] },
+        ]);
+        let handle = world.resource::&lt;Handles&gt;().0[0];
+        assert_eq!(world.get::&lt;AppId&gt;(handle), Some(&amp;AppId(7)));
+    }
+
+    #[test]
+    fn retained_application_id_survives_entity_removal() {
+        let mut world = empty_world();
+        command_schedule().run(&amp;mut world);
+        let handle = world.resource::&lt;Handles&gt;().0[0];
+        assert!(world.despawn(handle));
+        assert!(world.get_entity(handle).is_err());
+        assert_eq!(world.query::&lt;&amp;AppId&gt;().iter(&amp;world).count(), 0);
+        assert_eq!(world.resource::&lt;Trace&gt;().0[1].ids, vec![AppId(7)]);
+    }
+
+    #[test]
+    fn another_execution_preserves_old_rows_and_allocates_a_new_id() {
+        let mut world = empty_world();
+        let mut schedule = command_schedule();
+        schedule.run(&amp;mut world);
+        schedule.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Trace&gt;().0[2..], [
+            Seen { phase: "Pending", ids: vec![AppId(7)] },
+            Seen { phase: "Visible", ids: vec![AppId(7), AppId(8)] },
+        ]);
+        assert_eq!(world.resource::&lt;NextId&gt;().0, 9);
+    }
+}</code></pre></details>
+<details><summary>Complete worked answer: commands.rs</summary><pre><code class="language-rust" data-runnable="commands">use bevy_ecs::{prelude::*, schedule::{ExecutorKind, ScheduleBuildSettings}};
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct AppId(u64);
+#[derive(Resource)]
+struct NextId(u64);
+#[derive(Resource, Default)]
+struct Handles(Vec&lt;Entity&gt;);
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Seen { phase: &amp;'static str, ids: Vec&lt;AppId&gt; }
+#[derive(Resource, Default)]
+struct Trace(Vec&lt;Seen&gt;);
+
+fn enqueue_row(mut commands: Commands, mut next: ResMut&lt;NextId&gt;, mut handles: ResMut&lt;Handles&gt;) {
+    let id = AppId(next.0);
+    next.0 = next.0.checked_add(1).expect("application ID overflow");
+    handles.0.push(commands.spawn(id).id());
+}
+
+fn observe_pending(rows: Query&lt;&amp;AppId&gt;, mut trace: ResMut&lt;Trace&gt;) {
+    let mut ids: Vec&lt;_&gt; = rows.iter().copied().collect();
+    ids.sort();
+    trace.0.push(Seen { phase: "Pending", ids });
+}
+
+fn observe_visible(rows: Query&lt;&amp;AppId&gt;, mut trace: ResMut&lt;Trace&gt;) {
+    let mut ids: Vec&lt;_&gt; = rows.iter().copied().collect();
+    ids.sort();
+    trace.0.push(Seen { phase: "Visible", ids });
+}
+
+fn manual_schedule() -&gt; Schedule {
+    let mut schedule = Schedule::default();
+    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+    schedule.set_build_settings(ScheduleBuildSettings {
+        auto_insert_apply_deferred: false,
+        ..Default::default()
+    });
+    schedule.set_apply_final_deferred(true);
+    schedule
+}
+
+fn command_schedule() -&gt; Schedule {
+    let mut schedule = manual_schedule();
+    schedule.add_systems((enqueue_row, observe_pending, ApplyDeferred, observe_visible).chain());
+    schedule
+}
+
+fn empty_world() -&gt; World {
+    let mut world = World::new();
+    world.insert_resource(NextId(7));
+    world.init_resource::&lt;Handles&gt;();
+    world.init_resource::&lt;Trace&gt;();
+    world
+}
+
+fn main() {
+    let mut world = empty_world();
+    command_schedule().run(&amp;mut world);
+    for seen in &amp;world.resource::&lt;Trace&gt;().0 {
+        println!("{}: {:?}", seen.phase, seen.ids);
+    }
+    let handle = world.resource::&lt;Handles&gt;().0[0];
+    assert!(world.despawn(handle));
+    let count = world.query::&lt;&amp;AppId&gt;().iter(&amp;world).count();
+    println!("after removal: entities={} retained={:?}", count, world.resource::&lt;Trace&gt;().0[1].ids);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn queued_row_becomes_queryable_at_explicit_application() {
+        let mut world = empty_world();
+        command_schedule().run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![
+            Seen { phase: "Pending", ids: vec![] },
+            Seen { phase: "Visible", ids: vec![AppId(7)] },
+        ]);
+        let handle = world.resource::&lt;Handles&gt;().0[0];
+        assert_eq!(world.get::&lt;AppId&gt;(handle), Some(&amp;AppId(7)));
+    }
+
+    #[test]
+    fn final_application_does_not_rewrite_an_earlier_observation() {
+        let mut world = empty_world();
+        let mut schedule = manual_schedule();
+        schedule.add_systems((enqueue_row, observe_pending, observe_visible).chain());
+        schedule.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Trace&gt;().0, vec![
+            Seen { phase: "Pending", ids: vec![] },
+            Seen { phase: "Visible", ids: vec![] },
+        ]);
+        let handle = world.resource::&lt;Handles&gt;().0[0];
+        assert_eq!(world.get::&lt;AppId&gt;(handle), Some(&amp;AppId(7)));
+    }
+
+    #[test]
+    fn retained_application_id_survives_entity_removal() {
+        let mut world = empty_world();
+        command_schedule().run(&amp;mut world);
+        let handle = world.resource::&lt;Handles&gt;().0[0];
+        assert!(world.despawn(handle));
+        assert!(world.get_entity(handle).is_err());
+        assert_eq!(world.query::&lt;&amp;AppId&gt;().iter(&amp;world).count(), 0);
+        assert_eq!(world.resource::&lt;Trace&gt;().0[1].ids, vec![AppId(7)]);
+    }
+
+    #[test]
+    fn another_execution_preserves_old_rows_and_allocates_a_new_id() {
+        let mut world = empty_world();
+        let mut schedule = command_schedule();
+        schedule.run(&amp;mut world);
+        schedule.run(&amp;mut world);
+        assert_eq!(world.resource::&lt;Trace&gt;().0[2..], [
+            Seen { phase: "Pending", ids: vec![AppId(7)] },
+            Seen { phase: "Visible", ids: vec![AppId(7), AppId(8)] },
+        ]);
+        assert_eq!(world.resource::&lt;NextId&gt;().0, 9);
+    }
+}</code></pre></details>
+<p>Use <code>python3 learning/scripts/labs.py check commands</code> for the printed reference. For a manual Cargo check, save a full block as <code>src/main.rs</code> in a fresh scratch package and use this manifest:</p>
+<pre><code class="language-toml">[package]
+name = "moss-command-lab"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+bevy_ecs = { version = "=0.18.1", default-features = false, features = ["std"] }</code></pre>
+<p>Run these commands from that package, retaining its generated lockfile:</p>
+<pre><code class="language-sh">cargo +1.93.1 generate-lockfile
+CARGO_TARGET_DIR=target cargo +1.93.1 test --locked
+CARGO_TARGET_DIR=target cargo +1.93.1 run --locked</code></pre>
+<p>The expected test result is four passed tests. The literal expected program output is:</p>
+<pre><code class="language-text">Pending: []
+Visible: [AppId(7)]
+after removal: entities=0 retained=[AppId(7)]</code></pre>
+
+<h2 id="read-the-retained-record">Read the retained record carefully</h2>
+<p>After the schedule finishes, the program calls <code>World::despawn</code> directly. This immediate operation lets the removal test ask two questions independently: does the old handle still resolve, and does the trace still contain ID 7? It should find no current row and still find the recorded ID. Because this removal is direct, the test is about retained observation rather than the timing of a queued despawn.</p>
+<p>The last test keeps the first row and executes the same schedule again. This time the pending observer already sees ID 7, while the visible observer sees IDs 7 and 8. “Pending” describes the new insertion waiting to be applied; it does not imply an otherwise empty world. Starting the second run with existing state makes that distinction visible.</p>
+<p>Within each observation, we sort the copied IDs so membership can be compared without relying on query iteration order. Across observations, we preserve the outer vector's execution order. Sorting that outer sequence would erase the timing we are investigating, even though sorting the members of each individual snapshot makes the result easier to read.</p>
+
+<h2 id="do-not-treat-a-queued-removal-as-a-lock">Do not treat queued removal as a lock</h2>
+<p>Keep this visibility boundary in mind when we later resolve competing consumers. Suppose the first consumer queues removal of a food entity, then a second queries that food before the queue is applied. The components may still be available, so the pending despawn alone has not prevented a second reward. Our missing-row puzzle has become a question about who is still allowed to act.</p>
+<p>A resolver needs an authoritative availability change at the point where it accepts the outcome, followed by tests in which consumers compete for the same resource. Cleanup can then follow under the chosen command-application policy. We have not implemented that biological rule here, but we have established why acceptance and pending cleanup cannot be treated as the same event.</p>
+<p>Use the opening row to explain both boundaries back to yourself. Why can the application retain ID 7 after its entity is removed? And why can the row exist after the schedule returns even though an earlier observer recorded an empty result? In each answer, identify the state being read and the moment it was read.</p>
+<details><summary>Recall answer</summary><p>The retained ID is owned application data whose identity policy survives removal of this ECS entity. A snapshot copies what was visible at its observation time. Later structural application or removal changes the current world, not the contents of an earlier snapshot.</p></details>
+<p>The manual build settings, final-application control, and <code>ApplyDeferred</code> behavior were checked against cached Bevy ECS 0.18.1 source. Our tests establish the readings for this particular configuration. We can now explain the opening result by following the queued request to its application, rather than assuming a query lost a row. Continue to <a href="13-evidence.html">choosing evidence that can disagree with your implementation</a> to turn that kind of explanation into checks that expose incorrect helpers, wiring, and presentation.</p>

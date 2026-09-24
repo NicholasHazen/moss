@@ -1,0 +1,392 @@
+{
+  "edition": "Moss \u00b7 Fieldnotes 0.2.1",
+  "description": "Learn Rust by making a small world explain itself.",
+  "modules": [
+    {
+      "id": "01-observe",
+      "title": "A tick is a promise",
+      "part": "Start with evidence",
+      "minutes": 25,
+      "concepts": [
+        "values",
+        "mutation",
+        "tests",
+        "simulation ticks"
+      ],
+      "summary": "Follow one reserve through a tick, then separate the world's state from the way it is drawn.",
+      "lab": "observe"
+    },
+    {
+      "id": "02-ownership",
+      "title": "Who owns the next change?",
+      "part": "Start with evidence",
+      "minutes": 35,
+      "concepts": [
+        "ownership",
+        "Copy",
+        "borrowing",
+        "structs"
+      ],
+      "summary": "Predict which value changes when you move, copy, or borrow it. Make the compiler part of the experiment.",
+      "lab": "ownership"
+    },
+    {
+      "id": "03-queries",
+      "title": "Ask the world a typed question",
+      "part": "Start with evidence",
+      "minutes": 35,
+      "concepts": [
+        "components",
+        "queries",
+        "resources",
+        "filters"
+      ],
+      "summary": "Use a query signature to say which entities matter and which data the system may change.",
+      "lab": "queries"
+    },
+    {
+      "id": "04-units",
+      "title": "Give the number a unit",
+      "part": "Everyday Rust",
+      "minutes": 30,
+      "concepts": [
+        "newtypes",
+        "arithmetic",
+        "bounds",
+        "invariants"
+      ],
+      "summary": "Separate a requested cost, an actual payment, and the reserve left. Let types and boundary tests keep the distinction visible.",
+      "lab": "units"
+    },
+    {
+      "id": "05-options",
+      "title": "Missing is a different state",
+      "part": "Everyday Rust",
+      "minutes": 30,
+      "concepts": [
+        "enums",
+        "Option",
+        "match",
+        "identity"
+      ],
+      "summary": "Describe an absent choice, an unresolved identity, and a present zero without turning them into the same result.",
+      "lab": "options"
+    },
+    {
+      "id": "06-results",
+      "title": "A rejected request has a reason",
+      "part": "Everyday Rust",
+      "minutes": 35,
+      "concepts": [
+        "Result",
+        "constructors",
+        "errors",
+        "validation"
+      ],
+      "summary": "Carry a form input through parsing and domain validation. Return a useful error instead of a misleading default."
+    },
+    {
+      "id": "07-modules",
+      "title": "Put the boundary in the code",
+      "part": "Everyday Rust",
+      "minutes": 30,
+      "concepts": [
+        "modules",
+        "visibility",
+        "re-exports",
+        "packages"
+      ],
+      "summary": "Give callers an honest public interface while keeping construction rules close to the values they protect."
+    },
+    {
+      "id": "08-collections",
+      "title": "Collect a report, release the world",
+      "part": "Everyday Rust",
+      "minutes": 35,
+      "concepts": [
+        "Vec",
+        "slices",
+        "iterators",
+        "closures"
+      ],
+      "summary": "Turn borrowed observations into owned report rows, with explicit ordering and honest missing data."
+    },
+    {
+      "id": "09-traits",
+      "title": "A trait is a promise you can use",
+      "part": "Everyday Rust",
+      "minutes": 35,
+      "concepts": [
+        "traits",
+        "derives",
+        "generics",
+        "ordering"
+      ],
+      "summary": "Give identities meaningful comparison and reporting capabilities, then let a generic function state the capability it needs."
+    },
+    {
+      "id": "10-borrows",
+      "title": "Prove that the borrows cannot meet",
+      "part": "The ECS contract",
+      "minutes": 35,
+      "concepts": [
+        "disjoint queries",
+        "borrowing",
+        "filters",
+        "identity"
+      ],
+      "summary": "Make read and write sets explicit, then use a dual-role entity to test the boundary."
+    },
+    {
+      "id": "11-schedules",
+      "title": "Give the observations an order",
+      "part": "The ECS contract",
+      "minutes": 35,
+      "concepts": [
+        "schedules",
+        "ordering",
+        "resources",
+        "integration tests"
+      ],
+      "summary": "Bracket one real mutation with two observations. Explain how identical final values can hide different execution histories."
+    },
+    {
+      "id": "12-commands",
+      "title": "Change structure at a known boundary",
+      "part": "The ECS contract",
+      "minutes": 40,
+      "concepts": [
+        "Commands",
+        "deferred visibility",
+        "Entity",
+        "stable identity"
+      ],
+      "summary": "Follow a queued row across an explicit application point, then retain an observation after its entity is gone."
+    },
+    {
+      "id": "13-evidence",
+      "title": "Make a test disagree with a plausible mistake",
+      "part": "The ECS contract",
+      "minutes": 40,
+      "concepts": [
+        "testing",
+        "counterexamples",
+        "integration",
+        "diagnostics"
+      ],
+      "summary": "Separate a correct helper from correct selection, schedule wiring, and the value an observer actually saw."
+    },
+    {
+      "id": "14-movement",
+      "title": "Connect one affordable action to the world",
+      "part": "The ECS contract",
+      "minutes": 35,
+      "concepts": [
+        "movement bridge",
+        "transactions",
+        "activation",
+        "browser evidence"
+      ],
+      "summary": "Return to the canonical learner-owned movement task and connect its one edit to a reviewed, visible consequence."
+    },
+    {
+      "id": "15-meals",
+      "title": "A finite meal has two sides",
+      "part": "Ecosystem depth",
+      "minutes": 40,
+      "concepts": [
+        "finite transfers",
+        "capacity",
+        "competition",
+        "transactions"
+      ],
+      "summary": "Resolve two consumers against one finite patch and keep requested intake separate from actual gain.",
+      "lab": "meals"
+    },
+    {
+      "id": "16-targets",
+      "title": "Choose, then revalidate a target",
+      "part": "Ecosystem depth",
+      "minutes": 40,
+      "concepts": [
+        "local observations",
+        "tie breaking",
+        "target validity",
+        "action boundaries"
+      ],
+      "summary": "Choose from a bounded snapshot, then check the live target again before committing a meal."
+    },
+    {
+      "id": "17-variation",
+      "title": "Compare individuals fairly",
+      "part": "Ecosystem depth",
+      "minutes": 40,
+      "concepts": [
+        "authored populations",
+        "individual rates",
+        "controls",
+        "confounding"
+      ],
+      "summary": "Give individuals different costs while holding the starting conditions fixed, then separate that comparison from a density change."
+    },
+    {
+      "id": "18-growth",
+      "title": "Let environmental input change supply",
+      "part": "Ecosystem depth",
+      "minutes": 45,
+      "concepts": [
+        "bounded growth",
+        "daylight",
+        "phase timing",
+        "accounting"
+      ],
+      "summary": "Trace lit and dark ticks and show how the selected growth-and-meal order changes a patch at capacity.",
+      "lab": "growth"
+    },
+    {
+      "id": "19-history",
+      "title": "Keep a disappearance explainable",
+      "part": "Ecosystem depth",
+      "minutes": 45,
+      "concepts": [
+        "lifecycle",
+        "bounded history",
+        "coverage",
+        "retained identity"
+      ],
+      "summary": "Record one terminal transition and distinguish a complete zero count from history that no longer covers the question."
+    },
+    {
+      "id": "20-predation",
+      "title": "Consume once, even before removal",
+      "part": "Ecosystem depth",
+      "minutes": 45,
+      "concepts": [
+        "predation",
+        "deferred removal",
+        "stable ordering",
+        "owned events"
+      ],
+      "summary": "Let two hunters compete for one prey and make its immediate availability authoritative before deferred despawn."
+    },
+    {
+      "id": "21-rest",
+      "title": "Make rest a commitment you can inspect",
+      "part": "Ecosystem depth",
+      "minutes": 40,
+      "concepts": [
+        "state machines",
+        "commitment",
+        "fatigue",
+        "target cancellation"
+      ],
+      "summary": "Keep fatigue separate from energy and compare a reactive choice with an activity that lasts for a stated number of ticks."
+    },
+    {
+      "id": "22-births",
+      "title": "Commit both parents before creating a child",
+      "part": "Ecosystem depth",
+      "minutes": 45,
+      "concepts": [
+        "paired transactions",
+        "cooldowns",
+        "deferred births",
+        "first eligible tick"
+      ],
+      "summary": "Validate and charge a pair atomically, then give a deferred newborn an explicit first action boundary."
+    },
+    {
+      "id": "23-inheritance",
+      "title": "Keep inheritance distinct from selection",
+      "part": "Ecosystem depth",
+      "minutes": 45,
+      "concepts": [
+        "inheritance",
+        "bounded mutation",
+        "provenance",
+        "reproducibility"
+      ],
+      "summary": "Copy and vary an offspring trait while preserving parents, units, identity, and enough provenance to replay the proposal."
+    },
+    {
+      "id": "24-experiments",
+      "title": "Make a comparison explain its denominator",
+      "part": "Ecosystem depth",
+      "minutes": 45,
+      "concepts": [
+        "controlled comparisons",
+        "paired seeds",
+        "distributions",
+        "coverage"
+      ],
+      "summary": "Compare a declared intervention across matched cohorts, retaining losses and missing coverage in the report."
+    },
+    {
+      "id": "25-lifetimes",
+      "title": "Let a view borrow exactly what it needs",
+      "part": "A selective Rust survey",
+      "minutes": 40,
+      "concepts": [
+        "lifetimes",
+        "borrowed views",
+        "owned snapshots",
+        "API boundaries"
+      ],
+      "summary": "Relate a journal view to its actual owner without tying it to a temporary search term."
+    },
+    {
+      "id": "26-indirection",
+      "title": "Choose the owner before the abstraction",
+      "part": "A selective Rust survey",
+      "minutes": 45,
+      "concepts": [
+        "Box",
+        "Rc and Arc",
+        "trait objects",
+        "interior mutability"
+      ],
+      "summary": "Compare concrete report formats with dynamic dispatch and distinguish shared ownership from permission to mutate."
+    },
+    {
+      "id": "27-async",
+      "title": "Accept asynchronous results at a tick boundary",
+      "part": "A selective Rust survey",
+      "minutes": 45,
+      "concepts": [
+        "concurrency",
+        "futures",
+        "request identity",
+        "cancellation"
+      ],
+      "summary": "Let native workers finish out of order while run and request identities keep stale work out of the authoritative tick."
+    },
+    {
+      "id": "28-macros",
+      "title": "Read the code a macro asks Rust to check",
+      "part": "A selective Rust survey",
+      "minutes": 40,
+      "concepts": [
+        "macro_rules",
+        "single evaluation",
+        "derives",
+        "diagnostics"
+      ],
+      "summary": "Build a small diagnostic assertion, inspect what it expands into, and keep functions and concrete types as the default."
+    }
+  ],
+  "guides": {
+    "index": "A small world, understood.",
+    "roadmap": "A path through a living world",
+    "setup": "Open the workbench",
+    "about": "Read, listen, investigate",
+    "shelf": "Good company for the next question",
+    "terrarium": "The Rust world, in the page",
+    "fieldwork": "One meadow, several consequences",
+    "returns": "Return with a different question",
+    "population": "Let the next generation enter the same world",
+    "mobile": "A patch in sight is not a meal",
+    "resting": "A pause still has a cost",
+    "hunting": "One capture changes the rest of the tick",
+    "refuge": "Give shelter a rule you can test"
+  }
+}

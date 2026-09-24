@@ -1,0 +1,362 @@
+<p class="lesson-lead">Two parents have stride values of two and six cells per action. One child ends up with a stride of one; another has seven. To explain those children, we need to know more than their final numbers: which parent supplied the starting value, what change was proposed, and whether the trait's limits altered that proposal. We'll build an inheritance function that keeps this little history with each result, so variation remains something we can inspect.</p>
+<aside class="scope-note"><p>This standard-library exercise isolates one authored inheritance rule: choose a bounded integer trait from one of two parents, then optionally change it by one. It is a toy game model rather than real genetics, and it leaves live Moss and the current assignment in <code>NOW.md</code> unchanged.</p></aside>
+
+<h2 id="copying-is-one-part-of-a-birth">Copying is one part of a birth</h2>
+<p>In <a href="22-births.html">the previous lesson</a>, we made an accepted birth pay both parents, allocate one child identity and set the child's first eligible tick. That transaction gives us somewhere to put a new individual. Here we'll examine one decision inside that larger process: given the child and two known parents, how should we calculate a trait and remember where it came from?</p>
+<p>We'll keep the parents fixed while exploring that calculation. They belong to run seven, with parent one carrying stride two and parent two carrying stride six. Stride means cells per completed action, with permitted values from one through eight. This file only generates the value; it doesn't run movement or charge energy for a stride. We'll be able to explain a child's seven without yet knowing whether seven helps that child in a world.</p>
+<p>The function can make this decision through a shared reference to the parent pair. It reads their identities and traits, then returns an owned origin record for the child. There's no reason for inheritance to change the parents' stored traits, so the signature doesn't lend it mutable access to those values. The result also owns the information it needs, allowing us to keep the explanation after the borrowed parent data is no longer available.</p>
+<p>The caller provides the child's already allocated identity. Our function can check that it is nonzero, differs from the parents and belongs to the same run, as well as rejecting duplicate parent identities. It can't see unrelated animals elsewhere in the world, though, so it cannot establish global uniqueness on its own. That responsibility stays with the birth allocator, which has the wider context.</p>
+
+<h2 id="separate-the-four-processes">Follow the change from parent to child</h2>
+<p>Start by separating the two operations that produced the child. Choosing parent one's stride copies an existing value of two. Proposing minus one then changes that inherited value to one. We call the second operation mutation, and we'll preserve both stages in the record so the final value doesn't hide the path that produced it.</p>
+<p>Those operations generate variation at creation time. Growth would change the same individual during its lifetime, while learning would change its behavior through experience; neither happens in this function. Selection asks another question again: which variants contribute to later populations under the world's rules? We aren't running survival trials or reproducing descendants here, so the resulting table can explain inheritance without establishing an evolutionary advantage.</p>
+<p>A mutation proposal can be minus one, zero or plus one. To apply it safely, we widen the inherited value to a signed integer, add the proposal, clamp the result to the trait's bounds, and convert the bounded result back to <code>u8</code>. That order lets us reason about a negative change before returning to the unsigned representation used for a valid stride.</p>
+<p>At the lower bound, proposing minus one leaves a stride of one. That outcome looks identical to copying one with a zero proposal, but the two calculations tell different stories. Record both the proposed delta and the applied delta so we can distinguish them. Clamping is also part of the chosen variation policy: near a boundary, several proposals can lead to the same result, which changes the distribution of expressed values.</p>
+
+<h2 id="make-the-draw-protocol-explicit">Make the draw protocol explicit</h2>
+<p>We also need an agreed way to choose a parent. If a generated index of zero means “the first array element,” simply reversing the caller's array could give the same seed a different meaning. The function therefore copies the pair and sorts it by stable key before making a choice. It leaves the caller's array untouched while giving our calculation a canonical order.</p>
+<p>For the choices themselves, this lab uses a small integer generator whose entire calculation is visible in the file. It starts from the supplied seed, multiplies its 64-bit state by a fixed constant, adds a fixed increment and returns the upper 32 bits. Multiplication and addition deliberately wrap; the <a href="https://doc.rust-lang.org/std/primitive.u64.html#method.wrapping_mul">integer documentation</a> defines those operations independently of whether overflow checks are enabled in a build. Here wrapping belongs to the algorithm, rather than being an accident we hope the compiler will tolerate.</p>
+<p>The first output, reduced modulo two, chooses a parent from our sorted pair. The second, reduced modulo three, chooses the mutation proposal. We'll consume both outputs even when mutation is disabled, then use zero as the proposal in that copy-only mode. Making the draw sequence explicit keeps parent choice and the mutation setting from becoming unintentionally entangled.</p>
+<p>The generator is useful here because a reader can reproduce every step without depending on a random-number library. That small scope comes with limits: remainder mapping can introduce bias, and the example doesn't promise independently uniform mutations. Use it to understand a repeatable protocol, rather than taking it as a recommended generator for scientific sampling, security or a larger simulation.</p>
+
+<h2 id="a-seed-is-not-a-complete-replay">A seed is not a complete replay</h2>
+<p>Once the calculation works, imagine coming back to one of its children much later. A final stride of three wouldn't tell you whether it was inherited unchanged or produced by a mutation. Our origin record therefore keeps the parent keys and values, the selected parent, the inherited value, the proposal, the applied change and the expressed result. It also keeps the child key, seed, mutation setting and algorithm label, giving the calculation enough context to explain itself.</p>
+<p>The label <code>moss-traits-lcg64-v1</code> names the complete procedure: recurrence, output extraction, two-draw order, mapping and bounds. A seed only has meaning within such a procedure. Feeding the same integer to another library's generator, or changing our mapping while retaining the old label, wouldn't establish the same replay contract.</p>
+<p>The tests make that contract concrete at two levels. A literal generator-output test checks selected points in its sequence, while the inheritance tests check complete child records for meaningful inputs. Together they support repeatability for this specified function and its validated inputs. They don't promise identical outcomes after an arbitrary dependency change or a redesigned world schedule.</p>
+<p>In a larger simulation, generator ownership would become part of the design too. If every system shared one generator, an extra draw elsewhere could shift all later birth results. This exercise instead starts a local generator from each explicitly supplied seed, keeping that wider scheduling question outside the function. Whoever allocates birth-specific seeds must still decide how they are chosen; repeatedly supplying one seed won't create diverse siblings by itself.</p>
+<table><caption>Specified examples with parents one/two carrying strides two/six</caption><thead><tr><th scope="col">Seed</th><th scope="col">Source and proposal</th><th scope="col">Expressed stride</th></tr></thead><tbody><tr><td>3</td><td>Parent one, inherited two, proposal minus one.</td><td>One cell per action.</td></tr><tr><td>5</td><td>Parent two, inherited six, proposal plus one.</td><td>Seven cells per action.</td></tr><tr><td>6</td><td>Parent one, inherited two, proposal plus one.</td><td>Three cells per action; copy-only mode gives two.</td></tr></tbody></table>
+
+<h2 id="predict-the-provenance">Predict the provenance before editing</h2>
+<p>Use the table to predict seed six with mutation enabled and then disabled. After that, reverse the parent array and decide which parts of the origin record should change. Finally, give both parents stride eight and consider a plus-one proposal. Follow the record through each case, rather than checking only the final stride.</p>
+<details><summary>Hint 1: separate choice from mutation</summary><p>Sorting fixes what the first draw's parent index means. The mutation setting then determines whether to use the second draw's proposal; it doesn't change which parent supplied the inherited value. That lets the enabled and copy-only records be compared directly.</p></details>
+<details><summary>Hint 2: record the requested and actual changes</summary><p>A plus-one proposal at stride eight reaches the upper bound. The expressed value stays eight, so the applied delta is zero even though the proposal is one. Keep both pieces of information in the result.</p></details>
+<details><summary>Prediction answer</summary><p>Seed six chooses parent one and inherits two. With mutation enabled, the plus-one proposal produces three; copy-only mode leaves two. Reversing the input order produces the same records because the function sorts its copy first. At stride eight, a plus-one proposal instead keeps expressed eight and records an applied delta of zero.</p></details>
+<p>Prepare the practice file below and replace <code>inherit</code>. Its job is to validate the inputs, establish the canonical parent order, perform the two draws and assemble the complete origin record. The supplied generator and bounded-value helper let you focus on how those steps fit together.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare inheritance --dest work/inheritance-practice
+python3 learning/scripts/labs.py check inheritance --file work/inheritance-practice/inheritance.rs</code></pre>
+<p>The starter compiles and then reaches its unfinished <code>todo!</code>; after your edit, all eight tests should pass. If reversing the parents changes the result, inspect the order before the first draw. If only a boundary case differs, compare the inherited, proposed and applied values before changing the generator. Those intermediate fields are useful diagnostics as well as a historical explanation.</p>
+<details><summary>Complete starter: inheritance.rs</summary><pre><code class="language-rust" data-starter="inheritance">const ALGORITHM: &amp;str = &quot;moss-traits-lcg64-v1&quot;;
+const MIN_STRIDE: u8 = 1;
+const MAX_STRIDE: u8 = 8;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Key { run: u32, id: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Parent { key: Key, stride_cells_per_action: u8 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Origin {
+    child: Key,
+    parents: [Key; 2],
+    parent_strides: [u8; 2],
+    mutation_enabled: bool,
+    source_parent: Key,
+    inherited: u8,
+    proposed_delta: i8,
+    applied_delta: i8,
+    expressed: u8,
+    seed: u64,
+    algorithm: &amp;&#x27;static str,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Rejected { Identity, ParentTrait }
+struct Rng { state: u64 }
+impl Rng {
+    fn new(seed: u64) -&gt; Self { Self { state: seed } }
+    fn next_u32(&amp;mut self) -&gt; u32 {
+        self.state = self.state.wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        (self.state &gt;&gt; 32) as u32
+    }
+}
+fn bounded_stride(inherited: u8, delta: i8) -&gt; u8 {
+    (i16::from(inherited) + i16::from(delta))
+        .clamp(i16::from(MIN_STRIDE), i16::from(MAX_STRIDE)) as u8
+}
+
+fn inherit(parents: &amp;[Parent; 2], child: Key, seed: u64, mutate: bool)
+    -&gt; Result&lt;Origin, Rejected&gt;
+{
+    let _ = (parents, child, seed, mutate);
+    todo!(&quot;validate the parents, draw in a fixed order, and retain the child trait origin&quot;)
+}
+
+fn parents() -&gt; [Parent; 2] {
+    [Parent { key: Key { run: 7, id: 2 }, stride_cells_per_action: 6 },
+     Parent { key: Key { run: 7, id: 1 }, stride_cells_per_action: 2 }]
+}
+fn main() {
+    let parents = parents();
+    for (index, seed) in [3, 5, 6].into_iter().enumerate() {
+        let origin = inherit(&amp;parents, Key { run: 7, id: 100 + index as u32 }, seed, true).unwrap();
+        println!(&quot;seed={} child={} source={} inherited={} proposed={} applied={} expressed={}&quot;,
+            seed, origin.child.id, origin.source_parent.id, origin.inherited,
+            origin.proposed_delta, origin.applied_delta, origin.expressed);
+    }
+    let copied = inherit(&amp;parents, Key { run: 7, id: 103 }, 6, false).unwrap();
+    println!(&quot;copy-only={} algorithm={}&quot;, copied.expressed, copied.algorithm);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn child_origin_records_copy_mutation_and_independent_identity() {
+        let origin = inherit(&amp;parents(), Key { run: 7, id: 100 }, 6, true).unwrap();
+        assert_eq!(origin, Origin { child: Key { run: 7, id: 100 },
+            parents: [Key { run: 7, id: 1 }, Key { run: 7, id: 2 }],
+            parent_strides: [2, 6], mutation_enabled: true, source_parent: Key { run: 7, id: 1 }, inherited: 2,
+            proposed_delta: 1, applied_delta: 1, expressed: 3,
+            seed: 6, algorithm: &quot;moss-traits-lcg64-v1&quot; });
+    }
+    #[test]
+    fn parents_are_unchanged_and_input_order_does_not_change_inheritance() {
+        let original = parents();
+        let before = original;
+        let a = inherit(&amp;original, Key { run: 7, id: 100 }, 3, true).unwrap();
+        let b = inherit(&amp;[original[1], original[0]], Key { run: 7, id: 100 }, 3, true).unwrap();
+        assert_eq!(original, before);
+        assert_eq!(a, b);
+    }
+    #[test]
+    fn mutation_disabled_preserves_the_selected_parent_value() {
+        let copied = inherit(&amp;parents(), Key { run: 7, id: 100 }, 6, false).unwrap();
+        let changed = inherit(&amp;parents(), Key { run: 7, id: 100 }, 6, true).unwrap();
+        assert_eq!((copied.inherited, copied.expressed, copied.proposed_delta, copied.applied_delta),
+            (2, 2, 0, 0));
+        assert_eq!(copied.source_parent, changed.source_parent);
+        assert_ne!(copied.expressed, changed.expressed);
+    }
+    #[test]
+    fn literal_generator_outputs_pin_the_algorithm_and_draw_order() {
+        let mut rng = Rng::new(0);
+        assert_eq!([rng.next_u32(), rng.next_u32(), rng.next_u32()],
+            [335_903_614, 436_792_849, 2_599_843_874]);
+    }
+    #[test]
+    fn clamping_records_the_effective_delta_at_both_bounds() {
+        assert_eq!(bounded_stride(1, -1), 1);
+        assert_eq!(bounded_stride(8, 1), 8);
+        for stride in [MIN_STRIDE, MAX_STRIDE] {
+            let p = [Parent { key: Key { run: 7, id: 1 }, stride_cells_per_action: stride },
+                Parent { key: Key { run: 7, id: 2 }, stride_cells_per_action: stride }];
+            for seed in 0..64 {
+                let origin = inherit(&amp;p, Key { run: 7, id: 100 }, seed, true).unwrap();
+                assert!((MIN_STRIDE..=MAX_STRIDE).contains(&amp;origin.expressed));
+                assert_eq!(i16::from(origin.inherited) + i16::from(origin.applied_delta),
+                    i16::from(origin.expressed));
+                if (stride == 1 &amp;&amp; origin.proposed_delta == -1)
+                    || (stride == 8 &amp;&amp; origin.proposed_delta == 1) {
+                    assert_eq!(origin.applied_delta, 0);
+                }
+            }
+        }
+    }
+    #[test]
+    fn invalid_identity_and_out_of_bounds_parents_are_rejected() {
+        let p = parents();
+        assert_eq!(inherit(&amp;p, Key { run: 7, id: 1 }, 0, true), Err(Rejected::Identity));
+        assert_eq!(inherit(&amp;p, Key { run: 8, id: 100 }, 0, true), Err(Rejected::Identity));
+        assert_eq!(inherit(&amp;[p[0], p[0]], Key { run: 7, id: 100 }, 0, true), Err(Rejected::Identity));
+        let mut invalid = p; invalid[0].stride_cells_per_action = 0;
+        assert_eq!(inherit(&amp;invalid, Key { run: 7, id: 100 }, 0, true), Err(Rejected::ParentTrait));
+    }
+    #[test]
+    fn repeated_inputs_repeat_but_different_seeds_need_not_make_unique_children() {
+        let p = parents();
+        for seed in 0..64 {
+            assert_eq!(inherit(&amp;p, Key { run: 7, id: 100 }, seed, true),
+                inherit(&amp;p, Key { run: 7, id: 100 }, seed, true));
+        }
+        let traits: std::collections::BTreeSet&lt;_&gt; = (0..64).map(|seed|
+            inherit(&amp;p, Key { run: 7, id: 100 }, seed, true).unwrap().expressed).collect();
+        assert!(traits.len() &lt; 64);
+    }
+    #[test]
+    fn specified_seeds_can_decrease_or_increase_the_inherited_trait() {
+        let lower = inherit(&amp;parents(), Key { run: 7, id: 100 }, 3, true).unwrap();
+        let higher = inherit(&amp;parents(), Key { run: 7, id: 101 }, 5, true).unwrap();
+        assert_eq!((lower.inherited, lower.proposed_delta, lower.expressed), (2, -1, 1));
+        assert_eq!((higher.inherited, higher.proposed_delta, higher.expressed), (6, 1, 7));
+    }
+
+}
+</code></pre></details>
+
+<h2 id="the-complete-inheritance-record">The complete inheritance record</h2>
+<p>The complete answer keeps the calculation independent of live birth mutation. It borrows the parents for reading, works with small copied values and returns an owned record. If validation fails, no parent or child state has been partially changed. Compare that boundary with the birth planner: both functions describe a proposed result that a caller can accept as a whole.</p>
+<details><summary>Complete worked answer: inheritance.rs</summary><pre><code class="language-rust" data-runnable="inheritance">const ALGORITHM: &amp;str = &quot;moss-traits-lcg64-v1&quot;;
+const MIN_STRIDE: u8 = 1;
+const MAX_STRIDE: u8 = 8;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Key { run: u32, id: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Parent { key: Key, stride_cells_per_action: u8 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Origin {
+    child: Key,
+    parents: [Key; 2],
+    parent_strides: [u8; 2],
+    mutation_enabled: bool,
+    source_parent: Key,
+    inherited: u8,
+    proposed_delta: i8,
+    applied_delta: i8,
+    expressed: u8,
+    seed: u64,
+    algorithm: &amp;&#x27;static str,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Rejected { Identity, ParentTrait }
+struct Rng { state: u64 }
+impl Rng {
+    fn new(seed: u64) -&gt; Self { Self { state: seed } }
+    fn next_u32(&amp;mut self) -&gt; u32 {
+        self.state = self.state.wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        (self.state &gt;&gt; 32) as u32
+    }
+}
+fn bounded_stride(inherited: u8, delta: i8) -&gt; u8 {
+    (i16::from(inherited) + i16::from(delta))
+        .clamp(i16::from(MIN_STRIDE), i16::from(MAX_STRIDE)) as u8
+}
+
+fn inherit(parents: &amp;[Parent; 2], child: Key, seed: u64, mutate: bool)
+    -&gt; Result&lt;Origin, Rejected&gt;
+{
+    if child.id == 0 || parents[0].key.id == 0 || parents[1].key.id == 0
+        || parents[0].key == parents[1].key
+        || parents.iter().any(|parent| parent.key.run != child.run || parent.key == child) {
+        return Err(Rejected::Identity);
+    }
+    if parents.iter().any(|parent| !(MIN_STRIDE..=MAX_STRIDE)
+        .contains(&amp;parent.stride_cells_per_action)) { return Err(Rejected::ParentTrait); }
+    let mut ordered = *parents;
+    ordered.sort_by_key(|parent| parent.key);
+    let mut rng = Rng::new(seed);
+    let source = ordered[(rng.next_u32() % 2) as usize];
+    let mutation_draw = (rng.next_u32() % 3) as i8 - 1;
+    let proposed_delta = if mutate { mutation_draw } else { 0 };
+    let inherited = source.stride_cells_per_action;
+    let expressed = bounded_stride(inherited, proposed_delta);
+    Ok(Origin { child, parents: [ordered[0].key, ordered[1].key],
+        parent_strides: [ordered[0].stride_cells_per_action, ordered[1].stride_cells_per_action],
+        mutation_enabled: mutate, source_parent: source.key, inherited, proposed_delta,
+        applied_delta: expressed as i8 - inherited as i8, expressed,
+        seed, algorithm: ALGORITHM })
+}
+fn parents() -&gt; [Parent; 2] {
+    [Parent { key: Key { run: 7, id: 2 }, stride_cells_per_action: 6 },
+     Parent { key: Key { run: 7, id: 1 }, stride_cells_per_action: 2 }]
+}
+fn main() {
+    let parents = parents();
+    for (index, seed) in [3, 5, 6].into_iter().enumerate() {
+        let origin = inherit(&amp;parents, Key { run: 7, id: 100 + index as u32 }, seed, true).unwrap();
+        println!(&quot;seed={} child={} source={} inherited={} proposed={} applied={} expressed={}&quot;,
+            seed, origin.child.id, origin.source_parent.id, origin.inherited,
+            origin.proposed_delta, origin.applied_delta, origin.expressed);
+    }
+    let copied = inherit(&amp;parents, Key { run: 7, id: 103 }, 6, false).unwrap();
+    println!(&quot;copy-only={} algorithm={}&quot;, copied.expressed, copied.algorithm);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn child_origin_records_copy_mutation_and_independent_identity() {
+        let origin = inherit(&amp;parents(), Key { run: 7, id: 100 }, 6, true).unwrap();
+        assert_eq!(origin, Origin { child: Key { run: 7, id: 100 },
+            parents: [Key { run: 7, id: 1 }, Key { run: 7, id: 2 }],
+            parent_strides: [2, 6], mutation_enabled: true, source_parent: Key { run: 7, id: 1 }, inherited: 2,
+            proposed_delta: 1, applied_delta: 1, expressed: 3,
+            seed: 6, algorithm: &quot;moss-traits-lcg64-v1&quot; });
+    }
+    #[test]
+    fn parents_are_unchanged_and_input_order_does_not_change_inheritance() {
+        let original = parents();
+        let before = original;
+        let a = inherit(&amp;original, Key { run: 7, id: 100 }, 3, true).unwrap();
+        let b = inherit(&amp;[original[1], original[0]], Key { run: 7, id: 100 }, 3, true).unwrap();
+        assert_eq!(original, before);
+        assert_eq!(a, b);
+    }
+    #[test]
+    fn mutation_disabled_preserves_the_selected_parent_value() {
+        let copied = inherit(&amp;parents(), Key { run: 7, id: 100 }, 6, false).unwrap();
+        let changed = inherit(&amp;parents(), Key { run: 7, id: 100 }, 6, true).unwrap();
+        assert_eq!((copied.inherited, copied.expressed, copied.proposed_delta, copied.applied_delta),
+            (2, 2, 0, 0));
+        assert_eq!(copied.source_parent, changed.source_parent);
+        assert_ne!(copied.expressed, changed.expressed);
+    }
+    #[test]
+    fn literal_generator_outputs_pin_the_algorithm_and_draw_order() {
+        let mut rng = Rng::new(0);
+        assert_eq!([rng.next_u32(), rng.next_u32(), rng.next_u32()],
+            [335_903_614, 436_792_849, 2_599_843_874]);
+    }
+    #[test]
+    fn clamping_records_the_effective_delta_at_both_bounds() {
+        assert_eq!(bounded_stride(1, -1), 1);
+        assert_eq!(bounded_stride(8, 1), 8);
+        for stride in [MIN_STRIDE, MAX_STRIDE] {
+            let p = [Parent { key: Key { run: 7, id: 1 }, stride_cells_per_action: stride },
+                Parent { key: Key { run: 7, id: 2 }, stride_cells_per_action: stride }];
+            for seed in 0..64 {
+                let origin = inherit(&amp;p, Key { run: 7, id: 100 }, seed, true).unwrap();
+                assert!((MIN_STRIDE..=MAX_STRIDE).contains(&amp;origin.expressed));
+                assert_eq!(i16::from(origin.inherited) + i16::from(origin.applied_delta),
+                    i16::from(origin.expressed));
+                if (stride == 1 &amp;&amp; origin.proposed_delta == -1)
+                    || (stride == 8 &amp;&amp; origin.proposed_delta == 1) {
+                    assert_eq!(origin.applied_delta, 0);
+                }
+            }
+        }
+    }
+    #[test]
+    fn invalid_identity_and_out_of_bounds_parents_are_rejected() {
+        let p = parents();
+        assert_eq!(inherit(&amp;p, Key { run: 7, id: 1 }, 0, true), Err(Rejected::Identity));
+        assert_eq!(inherit(&amp;p, Key { run: 8, id: 100 }, 0, true), Err(Rejected::Identity));
+        assert_eq!(inherit(&amp;[p[0], p[0]], Key { run: 7, id: 100 }, 0, true), Err(Rejected::Identity));
+        let mut invalid = p; invalid[0].stride_cells_per_action = 0;
+        assert_eq!(inherit(&amp;invalid, Key { run: 7, id: 100 }, 0, true), Err(Rejected::ParentTrait));
+    }
+    #[test]
+    fn repeated_inputs_repeat_but_different_seeds_need_not_make_unique_children() {
+        let p = parents();
+        for seed in 0..64 {
+            assert_eq!(inherit(&amp;p, Key { run: 7, id: 100 }, seed, true),
+                inherit(&amp;p, Key { run: 7, id: 100 }, seed, true));
+        }
+        let traits: std::collections::BTreeSet&lt;_&gt; = (0..64).map(|seed|
+            inherit(&amp;p, Key { run: 7, id: 100 }, seed, true).unwrap().expressed).collect();
+        assert!(traits.len() &lt; 64);
+    }
+    #[test]
+    fn specified_seeds_can_decrease_or_increase_the_inherited_trait() {
+        let lower = inherit(&amp;parents(), Key { run: 7, id: 100 }, 3, true).unwrap();
+        let higher = inherit(&amp;parents(), Key { run: 7, id: 101 }, 5, true).unwrap();
+        assert_eq!((lower.inherited, lower.proposed_delta, lower.expressed), (2, -1, 1));
+        assert_eq!((higher.inherited, higher.proposed_delta, higher.expressed), (6, 1, 7));
+    }
+
+}
+</code></pre></details>
+<p>You can also run the printed reference with the commands below. This checks the authored answer separately from the practice file you selected with <code>--file</code>.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py check inheritance</code></pre>
+<p>The reference prints the following records. Read each as an account of a calculation: the selected parent gives the starting value, and the proposal and bounds explain how it becomes the expressed stride.</p>
+<pre><code class="language-text">seed=3 child=100 source=1 inherited=2 proposed=-1 applied=-1 expressed=1
+seed=5 child=101 source=2 inherited=6 proposed=1 applied=1 expressed=7
+seed=6 child=102 source=1 inherited=2 proposed=1 applied=1 expressed=3
+copy-only=2 algorithm=moss-traits-lcg64-v1</code></pre>
+
+<h2 id="recall-and-evidence">Recall the distinction before interpreting a population</h2>
+<p>Return to the children that opened the lesson and explain how one acquired stride one while another acquired seven. Then consider why two different seeds might still produce the same stride, and what information would disappear if we retained only that final value. Those questions will matter when a chart summarizes many children at once.</p>
+<details><summary>Recall answers</summary><p>Many seeds are being mapped into a small set of bounded values, so different seeds can produce the same trait. The final stride alone omits the source parent and hides whether copying, mutation or clamping produced it. To call one stride an improvement, we'd also need an outcome and world rules connecting that trait to the outcome; this function supplies the variation without running that comparison.</p></details>
+<p>The native tests check the specified outputs, parent-order independence, immutable inputs, identity checks and bounded results. Connecting the record to actual ECS births or a browser lineage inspector would require another integration step. Keeping it available later also raises the retention question from <a href="19-history.html">terminal history</a>: which earlier events can our stored evidence still explain?</p>
+<p>We now have an explanation for each child's value without having to call any child better adapted. In the <a href="population.html">continuing population guide</a>, inherited upkeep affects an actual cost in a world with food, births and deaths; that gives a trait's consequences somewhere to unfold. The next investigation turns to comparisons between matched scenarios, where we'll keep enough distribution and coverage information to question an appealing aggregate result.</p>

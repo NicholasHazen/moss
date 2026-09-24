@@ -1,0 +1,187 @@
+<p class="lesson-lead">Our grazer can see food two cells ahead, and it still has enough reserve to reach it. Instead, it stops. For the next two ticks its fatigue falls, but so does its reserve: resting has interrupted the journey without removing the cost of staying alive. In this chapter we'll add that interruption to your meadow, then investigate why recovering quickly doesn't necessarily mean the grazer is ready to leave.</p>
+<aside class="scope-note"><p>Continue your saved course project from <a href="mobile.html#continue-the-same-world">the mobile guide</a>, normally <code>work/fieldwork</code>. This chapter adds an authored rest policy to that isolated world; it doesn't activate rest in live Moss or change <code>NOW.md</code>. The traces below were checked against the complete resting checkpoint.</p></aside>
+
+<h2 id="interrupt-the-same-journey">Give the journey a reason to pause</h2>
+<p>So far, a grazer with food in sight can keep walking as long as it can pay for the next step. We already have the machinery for that journey: a local observation, a chosen patch, paid movement, and a meal after arrival. Rest will fit around those decisions by introducing a second question before the grazer acts: is it still foraging, or has it committed to a pause?</p>
+<p>You'll make that distinction in your existing project, keeping the observation system, population rules and investigations you've already written. The new work asks you to choose a representation for activity, write a complete ECS system that performs a rest action, and design a test that catches an early wake. We'll first follow a small journey so those implementation decisions have a concrete behavior to explain. If you'd like a gentler introduction to the idea of fatigue, <a href="21-rest.html#two-stores-two-meanings">the isolated rest lesson</a> is a useful preparation.</p>
+<details><summary>Use the worked checkpoint alongside your project</summary><p><a href="reference/resting/changes.patch">The review-only change map</a> shows where this extension touches the mobile checkpoint. Because your own files may have diverged, use it to find the relevant changes rather than applying it as an automatic upgrade. <a href="downloads/resting-reference.zip">The complete resting checkpoint</a> provides full files to compare with your work. Keep your saved directory and its tests; those earlier investigations still have something to say about the expanded world.</p></details>
+
+<h2 id="name-the-two-stores">A rest restores capacity for effort, but doesn't feed the grazer</h2>
+<p>Reserve already has a clear job in our world: it pays upkeep, movement and birth contributions. We'll keep that meaning and give fatigue a separate one. Every cell the grazer actually travels adds two fatigue points, while a rest action removes up to two. These rules allow a tired grazer to recover even as its reserve falls, which is the tradeoff we want to investigate.</p>
+<p>Charging actual travel matters here. A grazer that can't afford a step hasn't done the work of moving, so an attempted journey shouldn't add fatigue. Neither should observing a patch, choosing it, or eating a stationary meal. The isolated rest lesson charged each abstract foraging tick; now that we have real movement to measure, we can attach effort to that specific outcome instead.</p>
+<p>For the first policy, fatigue has a maximum of ten points. A grazer enters rest when a decision finds it at six or more, and it can leave only when fatigue is two or less and it has completed at least two rest actions. The two conditions happen to finish together in the ordinary journey. Later we'll change recovery so we can see why both are needed.</p>
+<p>Keep these quantities recognizable in your code. Reserve units pay for an action, fatigue points describe its effort, and the rest commitment counts executed actions. They're related by our rules, but they aren't interchangeable merely because each can be represented by an integer.</p>
+
+<h2 id="follow-the-interruption">Follow one grazer from departure to arrival</h2>
+<p><code>MobileScenario::resting_journey()</code> places a grazer at cell zero and a food patch at cell five. The grazer can see the patch, walks one cell per tick, and starts with twenty reserve units. Each tick costs one unit of upkeep, and each travelled cell costs another. On arrival it can request a two-unit meal, up to its reserve capacity of twenty-four. The patch starts with twenty units and doesn't grow; there are no competitors or potential partners to complicate this first journey.</p>
+<p>With the policy above, the first three steps bring the grazer to cell three with six fatigue points. The next decision therefore starts a rest, even though food is still visible and movement is affordable. Before reading the table, carry that story through ticks four, five and six: consider the remaining commitment as well as fatigue, and remember that upkeep continues throughout the pause.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Default journey observations"><table class="observations"><caption>Observed native default journey: end-of-tick values; y remains zero</caption><thead><tr><th scope="col">Tick</th><th scope="col">Cell x</th><th scope="col">Reserve</th><th scope="col">Fatigue</th><th scope="col">Activity / actions owed</th><th scope="col">Meal units</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>18</td><td>2</td><td>Foraging</td><td>0</td></tr><tr><td>2</td><td>2</td><td>16</td><td>4</td><td>Foraging</td><td>0</td></tr><tr><td>3</td><td>3</td><td>14</td><td>6</td><td>Foraging</td><td>0</td></tr><tr><td>4</td><td>3</td><td>13</td><td>4</td><td>Resting / 1</td><td>0</td></tr><tr><td>5</td><td>3</td><td>12</td><td>2</td><td>Resting / 0</td><td>0</td></tr><tr><td>6</td><td>4</td><td>10</td><td>4</td><td>Foraging</td><td>0</td></tr><tr><td>7</td><td>5</td><td>10</td><td>6</td><td>Foraging</td><td>2</td></tr></tbody></table></div>
+<p>The rest actions on ticks four and five reduce fatigue from six to two, while reserve drops from fourteen to twelve. On tick six, a new decision sees that both exit conditions are satisfied and lets the grazer resume its journey. It finally reaches food on tick seven, when a two-unit meal replaces exactly that tick's upkeep and travel payments. Reserve stays at ten even though several things happened. Reading the flows alongside the ending value makes those events visible.</p>
+
+<h2 id="separate-a-choice-from-an-action">Remember what the grazer has committed to</h2>
+<p>We need the state of a resting grazer to explain what it can do next. Fatigue alone can't do that: an animal might have recovered enough while still owing an action, or finished its minimum pause while remaining too tired to leave. Sketch a representation that can express both situations before opening the answer.</p>
+<p>The reference uses <code>Activity::Foraging</code> and <code>Activity::Resting { remaining_ticks }</code>. This is a useful job for an enum because the countdown belongs only to the resting state. With two separate booleans such as <code>resting</code> and <code>ready</code>, we'd have to explain which combinations are meaningful and keep them synchronized. The enum gives the countdown a home in the state that needs it. If that pattern is unfamiliar, the <a href="https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html">Rust Book's enum chapter</a> develops it, and <a href="https://doc.rust-lang.org/book/ch06-02-match.html">its match chapter</a> shows how to access a variant's data.</p>
+<p>In this API, <code>remaining_ticks</code> means executed rest actions still owed. Merely calling a decision system, waiting in the browser, or reading a report doesn't reduce it. Zero is also a valid resting state: the minimum commitment is complete, but the next decision still needs to check whether fatigue is low enough.</p>
+<p>That distinction suggests two systems. The decision system enters rest with a full commitment, stays with the current activity when its exit conditions aren't met, or wakes the grazer when they are. The action system then performs the chosen rest by reducing fatigue and spending one owed action. Keeping these jobs separate prevents a decision from accidentally doing the work it was only meant to authorize.</p>
+<figure><svg viewBox="0 0 390 425" role="img" aria-labelledby="rest-transition-title rest-transition-desc" style="display:block;width:min(100%,390px);height:auto;margin:auto"><title id="rest-transition-title">A rest commitment advances through executed actions</title><desc id="rest-transition-desc">A decision enters resting with two actions owed. An action reduces fatigue and leaves one action owed. The next action leaves zero owed. A later decision wakes only when fatigue also meets the exit threshold. Reading a report advances none of these stages.</desc><g fill="#edf2e6" stroke="#526b48" stroke-width="2"><rect x="15" y="10" width="360" height="70" rx="8"/><rect x="15" y="110" width="360" height="70" rx="8"/><rect x="15" y="210" width="360" height="70" rx="8"/><rect x="15" y="310" width="360" height="70" rx="8"/></g><g fill="#243e2b" font-family="sans-serif" text-anchor="middle"><text x="195" y="39" font-size="18">Decision: enter rest</text><text x="195" y="64" font-size="16">Two actions owed</text><text x="195" y="139" font-size="18">Execute one rest action</text><text x="195" y="164" font-size="16">Recover · one action owed</text><text x="195" y="239" font-size="18">Execute the next rest action</text><text x="195" y="264" font-size="16">Recover · zero actions owed</text><text x="195" y="339" font-size="18">Later decision: check both conditions</text><text x="195" y="364" font-size="16">Zero owed AND fatigue low enough</text><text x="195" y="410" font-size="14">A report read executes no action.</text></g><g fill="none" stroke="#526b48" stroke-width="2"><path d="M195 83v24m-6-6 6 6 6-6M195 183v24m-6-6 6 6 6-6M195 283v24m-6-6 6 6 6-6"/></g></svg><figcaption>With unusually fast recovery, fatigue can reach zero in the first action while one action remains owed. The investigation below makes that distinction observable.</figcaption></figure>
+<p>The diagram follows a fast recovery, where fatigue reaches zero after the first rest action. The grazer still owes another action, so it remains resting through the next tick and wakes only at a later decision. That later decision also gives it a fresh look at the world. Entering rest clears the current target through the choice phase; an old observation may remain in the inspector as history, but it cannot authorize movement or feeding. When the grazer wakes, observation runs before choice, even if it ends up choosing the same patch again.</p>
+<details><summary>Add the optional policy without breaking earlier callers</summary><p>Expose <code>RestPolicy</code> through <code>MobileScenario::with_rest(policy)</code>, leaving earlier scenario literals and mobile reports usable. With no policy, travel behaves as before and <code>CourseWorld::rest_snapshot()</code> returns <code>None</code>. With a policy, the tick-zero report contains initialized state and zero executed actions. This distinction lets callers tell disabled rest from enabled rest that hasn't happened yet. Keep these public names and report shapes for the course checks while choosing your private organization.</p></details>
+<details><summary>Configuration hint</summary><p>Require <code>exit_at_points &lt; enter_at_points &lt;= maximum_fatigue_points</code>, positive effort no larger than the maximum, positive recovery, and a positive minimum commitment. A history limit of zero is valid: it intentionally retains no events. Recovery can exceed current fatigue; charge only the actual decrease.</p></details>
+<details><summary>Complete policy and representation answer</summary><p><a href="reference/resting/src/mobile/rest.rs">The rest module</a> defines policy, actor state, counters, and owned readings. <a href="reference/resting/src/mobile/config.rs">The mobile configuration module</a> validates the optional policy before installation or reset. Invalid policy must leave the existing world and its stored reset configuration intact; a zero commitment is an error, not an invitation to repair user input silently.</p></details>
+
+<h2 id="write-the-rest-system">Write the system that performs a rest</h2>
+<p>Now implement <code>execute</code> in <code>src/mobile/rest/systems.rs</code>, including its parameters and iteration. Start by asking what information the job needs. It must read the executed clock, stable identity and grazer eligibility so it knows who may act. It must change the mobile actor's rest state and update the rest accounting resource. Position and reserve aren't part of that mutation: recovery changes neither, so the system doesn't need mutable access to them.</p>
+<p>Use the ordering pattern you've already met in the action systems: collect entity handles together with stable IDs, sort the pairs, then visit the actors through the query. Recoveries don't compete for a shared food store, but their event order still matters once a bounded journal begins discarding old entries. A stable processing order keeps that evidence reproducible.</p>
+<p>Before applying recovery, check whether this actor can perform a rest action now. Dead grazers, foragers, children before their first eligible tick and actors that already rested this tick must all be skipped. For an eligible resting actor, the actual recovery is the smaller of its current fatigue and the policy's recovery amount. Subtract that amount, then reduce a positive commitment without allowing it to underflow.</p>
+<p>Notice what happens when fatigue is already zero. Recovery contributes zero points, but the actor may still be completing an owed action. It must therefore spend that commitment and record a <code>Rested</code> event. If you skip the whole action when recovery is zero, a fast-recovering grazer can remain committed forever. Prepare the counter additions before changing the actor, including the eviction counter if recording this action displaces an old event. This keeps state and evidence together without making a full journal prevent recovery.</p>
+<p>If you're listening, this is a useful place to pause and write the system. Narration follows the reasoning, while the code and hidden answers remain available to read. Compare your access choices with the signature hint before consulting the complete module.</p>
+<details><summary>System hint 1: a typed signature</summary><pre><code class="language-rust">// Parameters for execute; write the complete function body.
+clock: Res&lt;Clock&gt;,
+mut actors: Query&lt;(Entity, &amp;Identity, &amp;Grazer, &amp;mut MobileActor)&gt;,
+state: Option&lt;ResMut&lt;RestState&gt;&gt;,</code></pre><p><code>Option&lt;ResMut&lt;RestState&gt;&gt;</code> permits the shared mobile schedule to run when rest is disabled. Return immediately when the resource is absent. An enabled world installs matching actor state; the internal expectation checks that installation invariant.</p></details>
+<details><summary>System hint 2: guard both kinds of repetition</summary><p><code>last_rest_tick</code> prevents duplicate recovery and countdown spending. <code>last_transition_tick</code> belongs to the decision system and prevents repeated activity transitions. A wake decision must also reject an actor that already rested this tick, so a second late decision cannot grant travel after recovery.</p></details>
+<details><summary>Complete activity systems and accounting answer</summary><p><a href="reference/resting/src/mobile/rest/systems.rs">The complete systems module</a> contains both <code>decide</code> and <code>execute</code>. <a href="reference/resting/src/mobile/rest.rs">The supporting module</a> checks counter additions, including history eviction arithmetic, before commitment. Compare your guard placement as carefully as the arithmetic: a correct subtraction in an ineligible phase still implements the wrong behavior.</p></details>
+
+<h2 id="keep-the-journeys-costs">Put rest where it can affect the next action</h2>
+<p>The new decision must run early enough to stop an otherwise valid journey. Install it before observation, then keep observation, choice, travel, rest execution, contact and meals in that order. Upkeep and growth have already happened; starvation and birth resolution follow the actions. <a href="reference/resting/src/simulation.rs">The complete schedule</a> shows how this fits around the existing deferred boundaries. Even a single-threaded schedule needs these dependencies, because a different order would describe a different rule.</p>
+<p>Upkeep remains a cost for every eligible living grazer, including one that is resting beside food. Rest blocks travel, feeding and reproduction, and this policy has no hunger override. A grazer can therefore starve while its fatigue is recovering. That's an uncomfortable consequence of the chosen behavior, but it gives us a reason to investigate the policy rather than quietly crediting reserve during recovery.</p>
+<p>Movement also needs to respect the available fatigue capacity. At fatigue nine, with a maximum of ten and a cost of two points per cell, there isn't room for even one whole step. Accepting the step and clipping its fatigue charge afterward would make position, energy payment and effort disagree about what happened. Extend the movement plan to limit accepted cells before committing any of those changes; <a href="reference/resting/src/mobile/movement.rs">the complete movement module</a> shows how the two accounting resources are prepared together.</p>
+<p>Crossing the rest threshold during travel doesn't undo that travel or start a second decision. The current foraging action may still finish with a meal at valid contact, and the next tick's decision will see the new fatigue. The same separation works in the other direction: completing recovery doesn't grant an extra foraging action later in the same tick. Each tick follows the activity chosen for it.</p>
+<details><summary>Prediction answer: could a stationary grazer rest forever?</summary><p>If a forager never travels, its fatigue remains zero under this effort rule. It does not enter rest just because ticks pass. Once an actor is resting, it may execute extra recovery actions after its minimum reaches zero if fatigue remains above the exit threshold. These are different reasons for staying in the current activity.</p></details>
+
+<h2 id="test-a-faster-recovery">Make the test distinguish recovery from permission to leave</h2>
+<p>Our ordinary journey demonstrates a pause, but it can't tell us whether the minimum commitment works. Recovering from six points to two already takes two actions, so an implementation that ignores the countdown could produce the same trace. To expose that shortcut, change only recovery to six. The first rest action now removes all fatigue, leaving the commitment as the only reason to stay for another tick.</p>
+<p>Create <code>tests/rest_investigation.rs</code> beside your existing tests and write this case before opening the answer. Step the real <code>CourseWorld</code> and compare the base, mobile and rest reports at ticks three through six. You're looking for a specific distinction: tick five must complete the second rest action even though it recovers zero points, and tick six must begin a fresh observation before movement resumes. Include a repeated report read along the way to check that inspecting the countdown doesn't spend it.</p>
+<p>The worked file also keeps a matched two-versus-three-action comparison. That second test checks whether an extra committed action delays the same journey; we'll return to its consequences when comparing the full meadow below.</p>
+<details><summary>Investigation hint 1: a counterexample to early waking</summary><p>After tick four, expect zero fatigue and one action owed. Tick five must remain at cell three, spend one upkeep unit, recover zero points, and complete the second action. A test checking only fatigue would accept an early wake.</p></details>
+<details><summary>Investigation hint 2: a counterexample to stale continuation</summary><p>The target should be absent during rest. At tick six, expect a new observation from cell three stamped tick six, a newly selected patch, and paid travel to cell four. The old tick-three observation cannot authorize that step.</p></details>
+<details><summary>Complete investigation file: tests/rest_investigation.rs</summary><p>Place this complete file beside your existing integration tests. It requires your continuing project's <code>moss_course_ecosystem</code> crate. Run the exact Cargo command following the answer; the resting-stage check also runs this file with your retained tests.</p><pre><code class="language-rust" data-rest-test="minimum-commitment">use moss_course_ecosystem::{Activity, Cell, CourseWorld, MobileScenario, RestPolicy};
+
+fn policy(minimum_rest_ticks: u32, recovery_points_per_tick: u32) -&gt; RestPolicy {
+    RestPolicy {
+        maximum_fatigue_points: 10,
+        effort_points_per_cell: 2,
+        enter_at_points: 6,
+        exit_at_points: 2,
+        minimum_rest_ticks,
+        recovery_points_per_tick,
+        history_limit: 128,
+    }
+}
+
+#[test]
+fn fast_recovery_does_not_cancel_the_second_committed_action() {
+    let scenario = MobileScenario::resting_journey().with_rest(policy(2, 6));
+    let mut world = CourseWorld::new_mobile(scenario).unwrap();
+    for _ in 0..3 { world.step(); }
+    let third = world.rest_snapshot().unwrap();
+    assert_eq!(third.grazers[0].fatigue_points, 6);
+    assert_eq!(third.grazers[0].activity, Activity::Foraging);
+    assert!(world.mobile_snapshot().unwrap().grazers[0].target.is_some());
+
+    world.step();
+    let fourth = world.rest_snapshot().unwrap();
+    let fourth_mobile = world.mobile_snapshot().unwrap();
+    assert_eq!((fourth.tick, fourth.grazers[0].fatigue_points), (4, 0));
+    assert_eq!(fourth.grazers[0].activity, Activity::Resting { remaining_ticks: 1 });
+    assert_eq!((fourth.ledger.rest_actions, fourth.ledger.recovered_points), (1, 6));
+    assert_eq!(fourth_mobile.grazers[0].cell, Cell { x: 3, y: 0 });
+    assert!(fourth_mobile.grazers[0].target.is_none());
+    assert_eq!(fourth_mobile.base.grazers[0].reserve_units, 13);
+    assert_eq!((fourth_mobile.ledger.travel_cells, fourth_mobile.base.ledger.eaten_units), (0, 0));
+    assert_eq!(fourth_mobile.base.ledger.maintenance_units, 1);
+    assert_eq!(world.rest_snapshot().unwrap(), fourth);
+    assert_eq!(world.mobile_snapshot().unwrap(), fourth_mobile);
+
+    world.step();
+    let fifth = world.rest_snapshot().unwrap();
+    let fifth_mobile = world.mobile_snapshot().unwrap();
+    assert_eq!(fifth.grazers[0].activity, Activity::Resting { remaining_ticks: 0 });
+    assert_eq!((fifth.grazers[0].fatigue_points, fifth.ledger.recovered_points), (0, 0));
+    assert_eq!((fifth.ledger.rest_actions, fifth.totals.rest_actions), (1, 2));
+    assert_eq!(fifth_mobile.grazers[0].cell, Cell { x: 3, y: 0 });
+    assert!(fifth_mobile.grazers[0].target.is_none());
+    assert_eq!(fifth_mobile.base.grazers[0].reserve_units, 12);
+    assert_eq!((fifth_mobile.ledger.travel_cells, fifth_mobile.base.ledger.eaten_units), (0, 0));
+
+    world.step();
+    let sixth = world.rest_snapshot().unwrap();
+    let sixth_mobile = world.mobile_snapshot().unwrap();
+    assert_eq!(sixth.grazers[0].activity, Activity::Foraging);
+    assert_eq!(sixth.grazers[0].fatigue_points, 2);
+    assert_eq!((sixth.ledger.woke, sixth.ledger.rest_actions), (1, 0));
+    assert_eq!(sixth.grazers[0].last_rest_tick, Some(5));
+    assert_eq!(sixth.grazers[0].last_transition_tick, Some(6));
+    assert_eq!(sixth_mobile.grazers[0].observed_cell, Some(Cell { x: 3, y: 0 }));
+    assert_eq!(sixth_mobile.grazers[0].observed_tick, Some(6));
+    assert_eq!(sixth_mobile.grazers[0].target.unwrap().observed_tick, 6);
+    assert_eq!(sixth_mobile.grazers[0].cell, Cell { x: 4, y: 0 });
+    assert_eq!(sixth_mobile.base.grazers[0].reserve_units, 10);
+}
+
+#[test]
+fn two_and_three_actions_change_arrival_and_later_opportunities() {
+    let mut two = CourseWorld::new_mobile(
+        MobileScenario::resting_journey().with_rest(policy(2, 2)),
+    ).unwrap();
+    let mut three = CourseWorld::new_mobile(
+        MobileScenario::resting_journey().with_rest(policy(3, 2)),
+    ).unwrap();
+    for _ in 0..6 { two.step(); three.step(); }
+    let two_mobile = two.mobile_snapshot().unwrap();
+    let three_mobile = three.mobile_snapshot().unwrap();
+    assert_eq!((two_mobile.tick, three_mobile.tick), (6, 6));
+    assert_eq!((two_mobile.grazers[0].cell.x, two_mobile.base.grazers[0].reserve_units), (4, 10));
+    assert_eq!((three_mobile.grazers[0].cell.x, three_mobile.base.grazers[0].reserve_units), (3, 11));
+    assert_eq!(two.rest_snapshot().unwrap().grazers[0].activity, Activity::Foraging);
+    assert_eq!(three.rest_snapshot().unwrap().grazers[0].activity, Activity::Resting { remaining_ticks: 0 });
+
+    two.step(); three.step();
+    let two_mobile = two.mobile_snapshot().unwrap();
+    let three_mobile = three.mobile_snapshot().unwrap();
+    assert_eq!((two_mobile.grazers[0].cell.x, two_mobile.base.ledger.eaten_units), (5, 2));
+    assert_eq!((three_mobile.grazers[0].cell.x, three_mobile.base.ledger.eaten_units), (4, 0));
+    assert_eq!(three_mobile.base.patches[0].biomass_units, 20);
+
+    two.step(); three.step();
+    let two_mobile = two.mobile_snapshot().unwrap();
+    let three_mobile = three.mobile_snapshot().unwrap();
+    assert_eq!((two_mobile.grazers[0].cell.x, two_mobile.base.grazers[0].reserve_units), (5, 9));
+    assert_eq!((three_mobile.grazers[0].cell.x, three_mobile.base.grazers[0].reserve_units), (5, 9));
+    assert_eq!(three_mobile.base.ledger.eaten_units, 2);
+    assert_eq!(two.rest_snapshot().unwrap().grazers[0].activity, Activity::Resting { remaining_ticks: 1 });
+    assert_eq!(three.rest_snapshot().unwrap().grazers[0].activity, Activity::Foraging);
+
+    two.step(); three.step();
+    assert_eq!(two.snapshot().grazers[0].reserve_units, 8);
+    assert_eq!(three.snapshot().grazers[0].reserve_units, 10);
+}
+</code></pre></details>
+<pre><code class="language-sh">cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test rest_investigation</code></pre>
+<p>Run both investigations and use the first differing observation to locate the problem. Travel on tick five suggests that waking ignores the commitment; a countdown that gets stuck at zero fatigue suggests that the action was skipped when there was nothing left to recover. If reserve rises while resting, recovery has probably become entangled with energy accounting. The answer's separate assertions let you distinguish those failures instead of treating the final position as the only evidence.</p>
+
+<h2 id="keep-birth-and-history-honest">Carry the rule into births and retained observations</h2>
+<p>A newborn needs a sensible rest state even though it can't act yet. Install it with zero fatigue, <code>Foraging</code>, no rest markers, and the same empty target and observation used in the mobile checkpoint. Its first eligible tick remains the tick after birth. The normal rest phases occur before births, but explicit eligibility checks also protect this rule if you later add a phase or rearrange a schedule.</p>
+<p>The parents need an additional check too. Reproduction is available only while foraging, so current activity belongs alongside maturity, reserve, cooldown, contact and location in the birth validation. Check it before either parent pays for the child. <a href="reference/resting/src/reproduction.rs">The birth integration</a> and <a href="reference/resting/src/mobile.rs">mobile installation and contact</a> show how these guards extend the earlier transaction without changing its meaning.</p>
+<p>To inspect these interactions, the rest report owns readings and keeps a separate bounded journal of entry, waking, travel effort and rest actions. Join a rest reading to its mobile reading by stable ID, within the same run and tick. Be careful when comparing a lifetime total with the current roster: fatigue belonging to an animal that has died no longer appears in its living row. The current fatigue sum therefore can't explain every point of effort accumulated during the run.</p>
+<p>History has a similar limit. A call to <code>rest_actions_between(first, last)</code> returns <code>None</code> when the journal can't cover that interval; a known interval with no actions returns zero. An explanation that connects rest, travel, food and births needs a period covered by all four journals. The <a href="reference/resting/src/mobile/rest/history.rs">history module</a> makes that boundary explicit, while lifetime counters continue to retain totals after individual events have been evicted.</p>
+
+<h2 id="compare-a-policy-that-can-change-the-run">Does a longer rest help this meadow?</h2>
+<p>Return recovery to two and compare minimum commitments of two and three actions. This choice of comparison is deliberate. A one-action minimum and a two-action minimum would both take two actions to reduce fatigue from six to two, so the shorter commitment wouldn't actually change behavior. To learn about a constraint, we need a case in which that constraint can affect what the grazer does.</p>
+<p>In the short journey, the difference appears at tick six. The two-action grazer can move to cell four, while the three-action grazer must finish resting at cell three. The latter has spent less on travel so far, but it will also arrive at food later. Those consequences pull in different directions, so a larger reserve at one intermediate tick wouldn't by itself tell us which policy supports the longer run.</p>
+<p>Choose a horizon and make a note of what you expect to change: arrival time, meals, travel payments, rest actions, births or the living census. Keep starting reserves, placement, sensing, supply and birth rules identical between the two policies, then record both outcomes, including extinction. For the full meadow, retain the configuration and journal coverage with each result, as in <a href="24-experiments.html#match-the-starting-conditions">the matched-experiment lesson</a>. Repeating the same deterministic run checks reproducibility; changing a matched scenario asks a new question about the policy.</p>
+<details><summary>Comparison reasoning</summary><p>An extra rest action can remove more fatigue, delay a meal, and change later contact or birth opportunities. Those effects can oppose one another. The same final reserve can conceal different activity and therefore different next-tick possibilities. State the measured horizon and rule set rather than calling one policy better for the ecosystem.</p></details>
+<p>The <a href="reference/resting/examples/resting.rs">complete native example</a> runs the recovery variations from our short journey and then follows the meadow for 120 ticks under each minimum. Its starting conditions are declared in <a href="reference/resting/src/mobile/scenarios.rs">the scenario fixtures</a>. Save it as <code>examples/resting.rs</code> in your project and run:</p>
+<pre><code class="language-sh">cargo +1.93.1 run --offline --locked --manifest-path work/fieldwork/Cargo.toml --example resting</code></pre>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Matched meadow observations"><table class="observations"><caption>Observed native meadow at tick 120; only minimum rest actions differ</caption><thead><tr><th scope="col">Minimum</th><th scope="col">Living</th><th scope="col">Births / starvations</th><th scope="col">Travel cells / rest actions</th><th scope="col">Actual growth / upkeep / birth cost</th></tr></thead><tbody><tr><td>2</td><td>0</td><td>7 / 11</td><td>36 / 21</td><td>98 / 108 / 14</td></tr><tr><td>3</td><td>1</td><td>10 / 13</td><td>71 / 53</td><td>308 / 258 / 20</td></tr></tbody></table></div>
+<p>In this authored meadow, the two-action population is extinct by tick forty, while the three-action population still has grazer one at tick 120. The longer pause has changed a whole chain of opportunities, so treat this as a result to explain under these inputs, rather than a generally superior rest policy. Even admitted growth differs: full patches reject excess growth, whereas feeding makes room for more. Equal configured supply doesn't guarantee equal energy entering the world.</p>
+
+<h2 id="check-and-observe-your-resting-build">Bring your saved implementation into the browser</h2>
+<p>Once your investigation passes, run the resting-stage check and compile the saved project for the browser. The stage check keeps your tests and adds the earlier course contracts alongside the new rest cases, so a correct pause must still coexist with correct travel, meals and births.</p>
+<pre><code class="language-sh">python3 learning/scripts/fieldwork.py check --project work/fieldwork --stage resting
+python3 learning/scripts/fieldwork_preview.py --project work/fieldwork --resting
+python3 learning/scripts/build.py</code></pre>
+<section class="experiment" data-resting-preview aria-label="Cumulative course resting"></section>
+<p>Start with the interrupted journey and inspect activity, fatigue, reserve and position at the same completed tick. Then select fast recovery and start a new run. You should be able to point to the moment when fatigue is zero but another rest action is still owed. Selecting a different animal or pausing to read leaves the simulation tick unchanged; an animal rests only when the Rust simulation executes that action.</p>
+<p>The source label identifies the compiled project being observed. Your native tests establish behavior in its Rust schedule, while this view lets you check how the compiled reports appear and how the controls operate. The <a href="reference/resting/README.md">checkpoint notes</a> describe the policies and verification in more detail.</p>
+<p>We can now account for the grazer that stopped short of food. Its earlier steps accumulated enough fatigue to trigger a commitment, and the next two actions fulfilled that commitment while upkeep continued. Only a later decision reopened the journey. Keep the fast-recovery test as you change the policy: it captures the moment when being recovered and being free to leave become two different things.</p>

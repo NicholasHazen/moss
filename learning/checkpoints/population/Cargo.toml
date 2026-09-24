@@ -1,0 +1,11 @@
+[package]
+name = "moss-course-ecosystem"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93.1"
+publish = false
+
+[workspace]
+
+[dependencies]
+bevy_ecs = { version = "=0.18.1", default-features = false, features = ["std"] }

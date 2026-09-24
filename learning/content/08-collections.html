@@ -1,0 +1,244 @@
+<p class="lesson-lead">Flint appears first in one report and Fern appears first in the next, even though neither animal changed. If you're comparing the two reports, that rearrangement makes you do extra work to discover that the world is the same. We'll collect a report whose rows own their observations and appear in a deliberate identity order, while keeping an unavailable measurement distinct from a measured zero.</p>
+<aside class="scope-note"><p><strong>Isolated collection lab.</strong> This continues <a href="07-modules.html">the inspector boundary</a> and <a href="02-ownership.html">owned readings</a>. The inputs are plain structs, not a second ECS or a new population system. Complete one function in a separate file. The live movement assignment remains unchanged.</p></aside>
+<h2 id="three-questions-for-a-report">Choose membership, ownership, then order</h2>
+<p>Our input arrives as Flint, Fern, Meadow, and Unmeasured. It contains three creatures and one display source: Meadow isn't a creature, so it shouldn't become a report row. Among the creatures, Fern has 57 reserve units, Flint has a measured zero, and Unmeasured has no collected reserve. The finished report should keep all three creatures and order them by numeric ID: 3, 5, then 9.</p>
+<p>To produce that result, we need to make three decisions. We first select which sources belong in the report, then construct an owned <code>Row</code> for each selected source, and finally put those rows in display order. Keeping the stages visible gives us a useful way to diagnose a wrong result. Meadow appearing in the report points to membership; a historical name changing later points to ownership; shuffled rows point to ordering.</p>
+<p>The collector only needs to inspect the caller's existing sequence, so its input is a borrowed slice, <code>&amp;[Source]</code>. A vector, an array, or a smaller contiguous view can supply that slice without handing over ownership or letting the collector grow the source sequence. The output has a different job: an owned <code>Vec&lt;Row&gt;</code> gathers the selected rows into a growable sequence that the caller can keep after collection ends.</p>
+<p>Owning the vector alone wouldn't make the report independent. A <code>Vec&lt;&amp;Source&gt;</code> owns the sequence of references, but every reference still borrows a source value. We need each row to own its <code>String</code> and contain copied numeric data instead. Then dropping the source vector removes the original observations without removing the information saved in the report.</p>
+<h2 id="read-the-iterator">Read an iterator as a sequence of decisions</h2>
+<p>We can express those first two decisions as an iterator chain. Start with <code>sources.iter()</code>, which yields shared references to the source values. <code>filter</code> keeps the sources marked as creatures, and <code>map</code> describes how each one becomes a row. Those adapters describe work; <code>collect</code> is what asks the chain for results and builds the output vector. As it consumes the iterator, each source is examined and each selected source becomes an owned row. Without a consuming operation, constructing the chain wouldn't produce a completed report.</p>
+<p>The small expression <code>|source| source.creature</code> tells <code>filter</code> how to make its decision. It is a closure: a function expression whose argument is supplied by the iterator and whose result is the creature flag. The compiler can infer the argument type from that surrounding use. At the other end of the chain, the <code>Vec&lt;Row&gt;</code> annotation tells <code>collect</code> which kind of collection should receive the results.</p>
+<p>Inside <code>map</code>, cloning <code>source.name</code> gives the row its own text storage. The ID and <code>Option&lt;u32&gt;</code> can be copied directly. Notice what copying the option preserves: <code>None</code> is still absence, and <code>Some(0)</code> is still an available measurement whose value is zero. We don't have to invent a number for Unmeasured to keep that creature in the report.</p>
+<p>You might reach for <code>filter_map</code> when an input contains an option. That adapter transforms each item and discards results that are <code>None</code>, which would suit a request for only available measurements. Our question is different: which creatures were present, and what did we know about their reserves? Filtering on the reserve option would remove Unmeasured entirely. Select on the creature flag and carry the option into the row so its absence remains visible.</p>
+<h2 id="make-order-an-explicit-output">Make order part of the output contract</h2>
+<p>After collection, sort the rows by numeric ID. Fern then occupies the same place in the report even if the source sequence was reversed. This order is a presentation choice: it doesn't claim that a lower ID is older, closer, or entitled to food first. A later rule that resolves competition would need its own reason for choosing an order.</p>
+<p>There is a subtle limit to what sorting can guarantee. <code>sort_by_key</code> is stable, meaning equal keys retain their previous relative order. If two different rows share the same ID, reversing the input could therefore reverse those two rows in the output as well. More fundamentally, the report couldn't say which row that ID identifies. Rather than treating a stable sort as a solution to ambiguous identity, this lab rejects duplicate selected IDs.</p>
+<p>Sorting makes that validation easier: every repeated ID must sit beside another equal ID. <code>windows(2)</code> lends each adjacent pair so the function can compare their IDs and return <code>ReportError::DuplicateId(id)</code> on a collision. If no pair collides, return <code>Ok(rows)</code>. An empty input naturally produces an empty vector with no adjacent pairs to inspect.</p>
+<p>Before opening the worked answer, predict where the two optional-reserve cases will appear. Fern comes first with <code>Some(57)</code>, Unmeasured comes second with <code>None</code>, and Flint comes third with <code>Some(0)</code>; Meadow contributes no row. Reverse the fixture mentally and check that every one of those statements remains true. That's the output contract your function needs to preserve.</p>
+<h2 id="build-the-owned-report">Build the owned report</h2>
+<p>The starter leaves <code>collect_report</code> unfinished while supplying the fixture and lookup function. Your function will select the creature rows, give them owned fields, order them, and reject duplicate IDs. Prepare it in a new practice directory and run the first check; reaching its intentional <code>todo!</code> shows that the runner got as far as your unfinished collector.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare collections --dest work/collections-practice
+python3 learning/scripts/labs.py check collections --file work/collections-practice/collections.rs</code></pre>
+<details><summary>Hint 1: make a complete row for each selected source</summary><p>Begin with <code>sources.iter()</code>. Filter using the creature flag, then map to <code>Row</code>. Clone the name, copy the ID, and copy the optional reserve. Collect into an explicitly typed mutable vector so you can sort afterward.</p></details>
+<details><summary>Hint 2: validation follows ordering</summary><p>Sort by <code>row.id</code>, inspect adjacent pairs, and return the duplicate-ID error if either pair shares an ID. Otherwise return the whole vector inside <code>Ok</code>. Do not discard a row merely because its reserve is absent.</p></details>
+<details><summary>Complete starter file: collections.rs</summary>
+<pre><code class="language-rust" data-starter="collections">#[derive(Debug)]
+struct Source {
+    id: u64,
+    name: String,
+    reserve: Option&lt;u32&gt;,
+    creature: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Row { id: u64, name: String, reserve: Option&lt;u32&gt; }
+
+#[derive(Debug, PartialEq, Eq)]
+enum ReportError { DuplicateId(u64) }
+
+fn collect_report(sources: &amp;[Source]) -&gt; Result&lt;Vec&lt;Row&gt;, ReportError&gt; {
+    let _ = sources;
+    todo!(&quot;own the selected readings, sort by ID, and reject duplicate IDs&quot;)
+}
+
+fn find_row(rows: &amp;[Row], id: u64) -&gt; Option&lt;&amp;Row&gt; {
+    rows.iter().find(|row| row.id == id)
+}
+
+fn fixture() -&gt; Vec&lt;Source&gt; {
+    vec![
+        Source { id: 9, name: &quot;Flint&quot;.into(), reserve: Some(0), creature: true },
+        Source { id: 3, name: &quot;Fern&quot;.into(), reserve: Some(57), creature: true },
+        Source { id: 7, name: &quot;Meadow&quot;.into(), reserve: None, creature: false },
+        Source { id: 5, name: &quot;Unmeasured&quot;.into(), reserve: None, creature: true },
+    ]
+}
+
+fn main() {
+    let rows = collect_report(&amp;fixture()).expect(&quot;fixture IDs are unique&quot;);
+    for row in &amp;rows {
+        println!(&quot;#{} {}: {:?}&quot;, row.id, row.name, row.reserve);
+    }
+    assert!(find_row(&amp;rows, 404).is_none());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_input_is_a_valid_empty_report() {
+        assert_eq!(collect_report(&amp;[]), Ok(vec![]));
+    }
+    #[test]
+    fn reordered_input_has_one_canonical_report() {
+        let mut sources = fixture();
+        let first = collect_report(&amp;sources).unwrap();
+        sources.reverse();
+        assert_eq!(collect_report(&amp;sources).unwrap(), first);
+        assert_eq!(first.iter().map(|row| row.id).collect::&lt;Vec&lt;_&gt;&gt;(), vec![3, 5, 9]);
+    }
+    #[test]
+    fn unknown_zero_and_unselected_are_different() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert_eq!(find_row(&amp;rows, 5).unwrap().reserve, None);
+        assert_eq!(find_row(&amp;rows, 9).unwrap().reserve, Some(0));
+        assert!(find_row(&amp;rows, 7).is_none());
+        assert!(find_row(&amp;rows, 404).is_none());
+    }
+    #[test]
+    fn saved_rows_own_their_text_and_measurements() {
+        let mut sources = fixture();
+        let rows = collect_report(&amp;sources).unwrap();
+        sources[0].name.clear();
+        sources[0].reserve = Some(80);
+        drop(sources);
+        let saved = find_row(&amp;rows, 9).unwrap();
+        assert_eq!(saved.name, &quot;Flint&quot;);
+        assert_eq!(saved.reserve, Some(0));
+    }
+    #[test]
+    fn duplicate_identity_is_rejected_instead_of_overwritten() {
+        let mut sources = fixture();
+        sources[0].id = 3;
+        assert_eq!(collect_report(&amp;sources), Err(ReportError::DuplicateId(3)));
+    }
+    #[test]
+    fn lookup_borrows_a_row_already_in_the_report() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert!(std::ptr::eq(find_row(&amp;rows, 3).unwrap(), &amp;rows[0]));
+    }
+}</code></pre>
+</details>
+<details><summary>Complete worked answer: collections.rs</summary>
+<pre><code class="language-rust" data-runnable="collections">#[derive(Debug)]
+struct Source {
+    id: u64,
+    name: String,
+    reserve: Option&lt;u32&gt;,
+    creature: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Row { id: u64, name: String, reserve: Option&lt;u32&gt; }
+
+#[derive(Debug, PartialEq, Eq)]
+enum ReportError { DuplicateId(u64) }
+
+fn collect_report(sources: &amp;[Source]) -&gt; Result&lt;Vec&lt;Row&gt;, ReportError&gt; {
+    let mut rows: Vec&lt;Row&gt; = sources.iter()
+        .filter(|source| source.creature)
+        .map(|source| Row {
+            id: source.id,
+            name: source.name.clone(),
+            reserve: source.reserve,
+        })
+        .collect();
+    rows.sort_by_key(|row| row.id);
+    for pair in rows.windows(2) {
+        if pair[0].id == pair[1].id {
+            return Err(ReportError::DuplicateId(pair[0].id));
+        }
+    }
+    Ok(rows)
+}
+
+fn find_row(rows: &amp;[Row], id: u64) -&gt; Option&lt;&amp;Row&gt; {
+    rows.iter().find(|row| row.id == id)
+}
+
+fn fixture() -&gt; Vec&lt;Source&gt; {
+    vec![
+        Source { id: 9, name: &quot;Flint&quot;.into(), reserve: Some(0), creature: true },
+        Source { id: 3, name: &quot;Fern&quot;.into(), reserve: Some(57), creature: true },
+        Source { id: 7, name: &quot;Meadow&quot;.into(), reserve: None, creature: false },
+        Source { id: 5, name: &quot;Unmeasured&quot;.into(), reserve: None, creature: true },
+    ]
+}
+
+fn main() {
+    let rows = collect_report(&amp;fixture()).expect(&quot;fixture IDs are unique&quot;);
+    for row in &amp;rows {
+        println!(&quot;#{} {}: {:?}&quot;, row.id, row.name, row.reserve);
+    }
+    assert!(find_row(&amp;rows, 404).is_none());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_input_is_a_valid_empty_report() {
+        assert_eq!(collect_report(&amp;[]), Ok(vec![]));
+    }
+    #[test]
+    fn reordered_input_has_one_canonical_report() {
+        let mut sources = fixture();
+        let first = collect_report(&amp;sources).unwrap();
+        sources.reverse();
+        assert_eq!(collect_report(&amp;sources).unwrap(), first);
+        assert_eq!(first.iter().map(|row| row.id).collect::&lt;Vec&lt;_&gt;&gt;(), vec![3, 5, 9]);
+    }
+    #[test]
+    fn unknown_zero_and_unselected_are_different() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert_eq!(find_row(&amp;rows, 5).unwrap().reserve, None);
+        assert_eq!(find_row(&amp;rows, 9).unwrap().reserve, Some(0));
+        assert!(find_row(&amp;rows, 7).is_none());
+        assert!(find_row(&amp;rows, 404).is_none());
+    }
+    #[test]
+    fn saved_rows_own_their_text_and_measurements() {
+        let mut sources = fixture();
+        let rows = collect_report(&amp;sources).unwrap();
+        sources[0].name.clear();
+        sources[0].reserve = Some(80);
+        drop(sources);
+        let saved = find_row(&amp;rows, 9).unwrap();
+        assert_eq!(saved.name, &quot;Flint&quot;);
+        assert_eq!(saved.reserve, Some(0));
+    }
+    #[test]
+    fn duplicate_identity_is_rejected_instead_of_overwritten() {
+        let mut sources = fixture();
+        sources[0].id = 3;
+        assert_eq!(collect_report(&amp;sources), Err(ReportError::DuplicateId(3)));
+    }
+    #[test]
+    fn lookup_borrows_a_row_already_in_the_report() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert!(std::ptr::eq(find_row(&amp;rows, 3).unwrap(), &amp;rows[0]));
+    }
+}</code></pre>
+</details>
+<p>Check the printed reference with <code>python3 learning/scripts/labs.py check collections</code>. Its expected result is six passing tests and the three lines below. Use the earlier <code>--file</code> command for your own copy. These checks concern a native reporting function; they do not establish browser rendering or an installed ECS system.</p>
+<pre><code class="language-text">#3 Fern: Some(57)
+#5 Unmeasured: None
+#9 Flint: Some(0)</code></pre>
+<h2 id="see-the-same-work-in-a-loop">A loop can express the same ownership decision</h2>
+<p>The iterator chain is useful when you can read it as those collection decisions. If it still feels dense, try the following <strong>alternative fragment inside the completed function</strong>, keeping sorting and validation afterwards. The loop performs the same temporary borrow of each source and the same construction of an owned row. Comparing the two forms can make it easier to see where selection ends and ownership of the output begins.</p>
+<pre><code class="language-rust">let mut rows = Vec::new();
+for source in sources {
+    if source.creature {
+        rows.push(Row {
+            id: source.id,
+            name: source.name.clone(),
+            reserve: source.reserve,
+        });
+    }
+}</code></pre>
+<p>Use the same six assertions after substituting the loop. They should pass because the report's contract hasn't changed. Reordering the input checks that sorting still happens, while absence versus zero checks that selection hasn't erased missing measurements. The ownership test goes further: it edits the source nickname and reserve, then drops the whole source vector. The saved row can remain usable because it contains its own fields rather than borrowed links into that vector.</p>
+<h2 id="lookup-is-a-different-question">Lookup is a different question from display order</h2>
+<p>Once we have a report, a caller may want one creature's row rather than the whole ordered display. <code>find_row</code> returns <code>Option&lt;&amp;Row&gt;</code>, where the outer option answers whether that ID appears in the report. The row's reserve is a separate option. ID 404 has no row at all; ID 5 has a row that records an unavailable reserve. Those are different answers, even though both involve absence.</p>
+<p>A successful lookup lends a row already stored in the report. It doesn't clone the name or collect another snapshot, and the pointer-identity assertion checks that it returns the existing row. While the caller continues using that reference, it can't make a conflicting change to the vector that owns it. If the caller only needs the small reserve value, copying that value lets the borrow end sooner.</p>
+<p>A linear search is enough for this small report. If a consumer repeatedly looks up many IDs, a map can provide an index after the collector has validated uniqueness. The following <strong>separate exploration fragment</strong> builds a borrowed index: the map owns its keys and references, while the vector continues owning the rows they point to.</p>
+<pre><code class="language-rust">use std::collections::HashMap;
+let by_id: HashMap&lt;_, _&gt; = rows.iter().map(|row| (row.id, row)).collect();
+assert_eq!(by_id.get(&amp;9).unwrap().reserve, Some(0));</code></pre>
+<p>The index answers where to find an ID, but it doesn't inherit the vector's display order. Iterating that <code>HashMap</code> need not reproduce the sorted report. Keep using the vector for presentation and the map for lookup, or choose a collection with the ordering contract you need. Since a borrowed index also has a lifetime and a cost to rebuild, add one when an actual consumer benefits from those repeated lookups.</p>
+<h2 id="retain-the-right-evidence">Retain a reading without freezing the world</h2>
+<p>We started with a display that changed when its input order changed. The completed collector makes the output order deliberate and owns enough information for the report to survive its sources. A later lookup can borrow from that report for as long as the caller needs a row. These two ownership choices let the world continue changing while a user reads or sorts a saved panel.</p>
+<details><summary>Recall answer: why not replace every None with zero?</summary><p>A zero reserve is an observed number. An absent reserve is a gap in the observation. Replacing absence with zero would turn the unmeasured creature into evidence of depletion, even though the collector never recorded such a measurement. The row's identity survives both cases; the measurement's meaning does not.</p></details>
+<p>Reverse the inputs once more, then change their names and drop them: the saved report should keep the same ordered rows and the same distinction between zero and absence. <a href="09-traits.html">The next lesson</a> takes a closer look at the ID those rows rely on. We'll give identity its own type and decide what equality, copying, and ordering should mean for it.</p>
+<p class="source-note">Optional references: <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html">Iterator</a> documents the adapters; <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.sort_by_key">slice sorting</a> specifies stability; <a href="https://doc.rust-lang.org/std/collections/struct.HashMap.html">HashMap</a> explains lookup and iteration contracts. This original example targets Rust 1.93.1 with edition 2024 and uses only the standard library.</p>

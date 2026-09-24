@@ -1,0 +1,40 @@
+<p class="lede">Step the Rust world, then inspect what changed.</p>
+<p>Here you can run the existing <code>moss-sim</code> crate through a small WebAssembly host. Fern, Flint, Meadow, their stores, and the tick counter belong to one Bevy ECS world. JavaScript requests a step or reset and draws the returned readings; the maintenance calculation still runs in Rust. Start by comparing a change to that world with a change to its presentation.</p>
+<section class="experiment rust-terrarium" data-rust-terrarium aria-labelledby="runtime-heading">
+<h2 id="runtime-heading">One world, two ways to inspect it</h2>
+<p>Predict Fern's reserve after three Steps. Then resize the labels and redraw the view. Read the table to decide whether either presentation change spent any energy.</p>
+<div class="rust-world" aria-hidden="true"><span data-actor="1" class="rust-hare">Fern</span><span data-actor="2" class="rust-fox">Flint</span><span data-actor="3" class="rust-grass">Meadow</span></div>
+<div class="button-row"><button type="button" data-runtime-step disabled>Step Rust world</button><button type="button" data-runtime-ten disabled>Execute 10 Rust ticks</button><button type="button" data-runtime-redraw disabled>Redraw only</button><button type="button" data-runtime-reset disabled>Reset Rust world</button></div>
+<label for="runtime-scale">Label size: <output id="runtime-scale-value">100%</output></label><input id="runtime-scale" type="range" min="80" max="140" value="100" disabled>
+<p class="readout" data-runtime-status role="status">Loading the optional Rust runtime…</p>
+<table><caption>Readings from the same Rust world</caption><thead><tr><th scope="col">Individual</th><th scope="col">Cell (x, y)</th><th scope="col">Reserve units</th><th scope="col">Biomass units</th></tr></thead><tbody>
+<tr data-row="1"><th scope="row">Fern · Hare · ID 1</th><td data-position>Awaiting runtime</td><td data-reserve>Awaiting runtime</td><td data-biomass>Awaiting runtime</td></tr>
+<tr data-row="2"><th scope="row">Flint · Fox · ID 2</th><td data-position>Awaiting runtime</td><td data-reserve>Awaiting runtime</td><td data-biomass>Awaiting runtime</td></tr>
+<tr data-row="3"><th scope="row">Meadow · Grass · ID 3</th><td data-position>Awaiting runtime</td><td data-reserve>Awaiting runtime</td><td data-biomass>Awaiting runtime</td></tr>
+</tbody></table>
+<p class="model-caption">Precompiled Rust runtime, built locally from the repository. This page is an independent run; it does not control the other Moss browser tab or compile your edits in the browser. Reloading starts a fresh instance. Time advances only when you request ticks.</p>
+<p class="quiet" data-runtime-version></p>
+</section>
+<h2 id="follow-three-ticks">Follow three ticks through the boundary</h2>
+<p>In a fresh run, Fern and Flint each have 60 reserve units. The installed maintenance rule spends one per animal on every executed tick, so three single Steps should produce tick 3 with both reserves at 57. Meadow keeps biomass 80, and Fern stays at cell (10, 10). The current live checkpoint has not scheduled the unfinished movement exercise, so losing reserve doesn't yet make Fern approach the grass.</p>
+<p>Now use <strong>Redraw only</strong> several times and change the label size. Redrawing reads the components and rebuilds the display without calling Rust's tick function; label size changes the styling. The next reading should still show tick 3 and reserve 57. Watching those values stay fixed checks this host's request boundary, which is the distinction you predicted before clicking. It doesn't by itself check every camera and timing path in the main application.</p>
+<p>The table gives absence a visible meaning too. Meadow has biomass but no reserve component, so its reserve cell says “Not present.” A depleted animal instead has a reserve whose value is zero. The named shapes and the table let you identify individuals without relying on color, and the table retains the meaningful readings if the diagram isn't useful to you.</p>
+<details><summary>Why do both animals remain at zero?</summary><p>The installed maintenance system uses saturating subtraction without implementing death, eating, or movement. From a fresh run, seven batches of ten ticks reach tick 70 with both animals still present at zero and Meadow still at 80. That result describes the current lifecycle boundary. The ecology lessons and continuing course meadow explore explicit terminal rules separately from this live schedule.</p></details>
+<h2 id="build-real-runtime">Build the same runtime locally</h2>
+<p>The static lessons remain readable without a Rust build. To include this executable view, follow the pinned toolchain and dependency setup in the <a href="setup.html">local workbench</a>, then run the commands below from the repository root. The WebAssembly target needs installing only if it is missing:</p>
+<pre><code class="language-sh">rustup target add wasm32-unknown-unknown --toolchain 1.93.1
+python3 learning/scripts/runtime.py check
+python3 learning/scripts/runtime.py build
+python3 learning/scripts/build.py
+python3 learning/scripts/serve.py</code></pre>
+<p>If the course server is already running, keep it and reload after the build. The runtime has its own Cargo lockfile and output under <code>learning/work</code>, but depends directly on <code>crates/moss-sim</code>. Its native checks therefore exercise the installed schedule you'll observe here, without adding another rule to that schedule.</p>
+<details><summary>How the page identifies a current build</summary><p>The builder fingerprints the simulation, host sources, and relevant manifests. If those inputs change, rebuilding the pages omits the stale binary and asks for another runtime build. An older binary therefore isn't presented as the result of your new sources. After an intentional simulation change, review the expected trace in this page too: the build can establish source freshness without establishing that the explanation still describes the new behavior.</p></details>
+<h2 id="three-distinct-claims">Give each check a question it can answer</h2>
+<p>The three-step trace connects a small arithmetic rule with an installed system and a visible control. Each layer gives you evidence for a different part of that connection:</p>
+<table><caption>Evidence for the maintenance example</caption><thead><tr><th scope="col">Check</th><th scope="col">Question it answers</th><th scope="col">What to inspect</th></tr></thead><tbody>
+<tr><td>Lesson 01's small Rust reference</td><td>Does the isolated subtraction obey its stated boundary cases?</td><td>The exact reference tests and printed trace.</td></tr>
+<tr><td>The runtime host's native tests</td><td>Does the installed Moss schedule change real components and complete ticks?</td><td>Both animals, the unchanged patch and position, reset identity, and repeated reads.</td></tr>
+<tr><td>This browser view</td><td>Can this WebAssembly build accept a click and present the resulting readings?</td><td>Three Steps, redraw, label size, depletion and reset.</td></tr>
+</tbody></table>
+<p>A passing helper test explains its subtraction cases, but can't establish which schedule ran in the browser. An animation alone doesn't identify the source of its numbers. Following the dependency to the actual simulation and checking the native schedule alongside this view makes the result easier to explain when one layer differs from your expectation.</p>
+<p>Return to <a href="01-observe.html">A tick is a promise</a> to connect the observation with its smaller Rust example. In <a href="11-schedules.html">the scheduling lesson</a>, the next complication is timing within the tick: a correct final value can coexist with an earlier observation that saw the wrong state.</p>

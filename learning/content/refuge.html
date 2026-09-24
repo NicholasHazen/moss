@@ -1,0 +1,239 @@
+<p class="lesson-lead">A hunter sees a grazer outside shelter. By the time the hunt resolves, the grazer has moved into a refuge in the hunter's own cell. The earlier observation was valid, and contact is real, but this capture should now fail. Build the rule that makes that outcome possible, then investigate what protection changes for the rest of the meadow.</p>
+<aside class="scope-note"><p><strong>Independent capstone, native extension.</strong> Continue the same saved project from <a href="hunting.html">the hunting guide</a>, preserving your earlier systems and tests. Refuge is an authored game rule, separate from live Moss and <code>NOW.md</code>. The worked scenarios and exact investigation have been checked both in the reference and in a continuing saved project. Run your own tests and comparison to establish what your implementation does.</p></aside>
+
+<h2 id="begin-with-a-claim">Begin with a claim you could be wrong about</h2>
+<p>So far, each continuing guide has given you a new interaction and a fairly specific question to pursue. This time you'll choose how to represent the feature and what you want to learn from it. Keep those jobs separate. First make a refuge obey an explicit contract in the existing world. Then decide whether a particular placement produces the outcome you predicted. A correct implementation may give an unwelcome experimental result, and that result can still teach you something.</p>
+<p>Before opening a module answer, write a short claim in your field note. For example: “Protecting the feeding patch will leave more grazers alive at tick 120 than protecting a cell away from food.” Explain the mechanism you expect, name an observation that would contradict it, and choose which individuals or events you would follow if the ending surprised you. You can choose another claim, but make it specific enough that the comparison can disagree with you.</p>
+<p>Keep the existing initial population, reserves, and comparison horizon the same across your treatments. A refuge introduces permission to avoid capture, not another energy store. If a protected run starts with more reserve, you would have changed two causes at once. You will also need more than the survivor count: protected grazers can still starve, compete for finite food, produce children, and encounter the living cap.</p>
+<details><summary>A possible hypothesis and what would challenge it</summary><p>Protection at a feeding patch could preserve grazers that already reach food. It could also leave more consumers sharing that food, change births, or allow hunters to starve earlier. An equal or smaller final grazer census would contradict the predicts-more claim, but would not identify its cause. Retain capture and starvation totals, accepted food input, births, and at least one individual trace so those alternatives can be examined.</p></details>
+
+<h2 id="state-the-refuge-rule">Decide exactly what shelter promises</h2>
+<p>For the worked extension, a refuge is a static authored cell. A grazer occupying that cell is protected: hunters omit it from their local prey observations and cannot capture it while it remains there. Hunters can enter the same cell, patches remain visible, and grazing can still occur. This is a change to observation and capture eligibility, rather than a wall or a new pathfinding problem. Protection is assessed at the current cell; crossing a refuge between assessment points does not protect a later capture at an unprotected destination.</p>
+<p>Protection leaves the other accounts alone. A sheltered animal still pays upkeep; resting still prevents meals and births under the rule you already implemented; travel still costs reserve. The feature supplies no recovery, food, or special destination preference. An animal reaches shelter only if its existing movement brings it there, which makes placement part of the experiment instead of quietly giving the grazer a new fleeing strategy.</p>
+<p>Now consider departure. A grazer can leave refuge after the hunters have observed the world. It is no longer protected, but that fact doesn't give a hunter an observation it never made. Keep the existing selected-target contract: another observation opportunity must discover the grazer before a hunt can name it. This creates the opposite test to the opening example. Arrival must withdraw permission from an old target; departure must not invent a new target.</p>
+<details><summary>Keep these boundaries while choosing an implementation</summary><p>Refuges are optional. Disabled and enabled with no sites are different reported capabilities, although neither protects anyone. Sites have no occupancy cap, and this extension adds no random movement, fleeing, injury, refuge resource, or hunter reproduction. Keep the prior rest, funded birth, maturation, and inherited upkeep rules. These choices bound the feature you are transferring into the existing architecture.</p></details>
+
+<h2 id="choose-data-before-code">Choose the data before the system</h2>
+<p>Sketch the public configuration and private per-grazer state before consulting the worked shapes. The configuration needs enough information to locate each static site and reject ambiguous placements. The private state needs to say whether a grazer's current cell belongs to a refuge. Decide which values are authored and which are derived, and what a caller would need in an owned report to understand the answer after the world changes.</p>
+<p>A useful distinction is between a site's identity and an animal's identity. A refuge may persist while many different grazers use it, so it shouldn't borrow a grazer's ID or enter the birth allocator. Likewise, membership should not duplicate the animal's reserve, activity, or terminal state. Those already belong to the shared body and activity components. Your new data should describe the new relationship, leaving those existing owners authoritative.</p>
+<p>Write the rejection cases beside the constructor. What should happen if two sites use one ID, if two IDs name the same cell, or if a site lies outside the grid? What does an empty list mean? Then apply the same questions to reset: a rejected new configuration must leave both the current world and the policy used by its next ordinary reset intact. Validation has to finish before replacement begins.</p>
+<details><summary>Representation hint: a static site and a current membership answer different questions</summary><p>The worked design gives sites a small separate ID type and stores a cell for each. A grazer's private membership stores an optional site ID plus the tick when that cell was assessed. An owned public row includes the grazer ID and current cell as well, so the caller can interpret that assessment. The row is a current reading, not a history of visits.</p></details>
+<details><summary>Worked public adapter contract</summary><p>The worked interface uses <code>RefugeId</code>, <code>RefugeSeed { id, cell }</code>, and <code>RefugeConfig::new</code>, added through <code>MobileScenario::with_refuges</code>. <code>CourseWorld::refuge_snapshot()</code> returns <code>None</code> when disabled and an owned report when enabled. Positive unique site IDs, unique cells, and in-bounds placements are validated together. Site and animal IDs have separate types and namespaces, so <code>RefugeId(1)</code> can coexist with <code>SimId(1)</code> without using the child allocator. Your private component names and layout can differ while this public adapter lets the common experiments and course checks ask the same questions.</p></details>
+
+<h2 id="write-the-whole-membership-system">Write the whole membership system</h2>
+<p>Write the complete ECS system now: its parameters, query membership, per-grazer lookup, state update, and assessment time. Start with the access it needs. Read site configuration, the clock, and the positions of grazer entities; change only their membership. Reserve and life already have authoritative owners, but locating a cell doesn't require borrowing those fields. Choose each access for the question this system answers rather than requesting every component associated with an animal.</p>
+<p>The important branch is the one that finds no refuge. Suppose the previous assessment put a grazer in site seven, then travel moves it elsewhere. Leaving its old value alone would turn a cached observation into permanent protection. Every refresh must write the answer for the current cell, including <code>None</code> outside shelter. Treating absence as an instruction to skip the update would preserve the very state that has become stale.</p>
+<p>Decide how the system finds a site. A linear scan can be enough for a small authored list; a cell-keyed lookup can express the uniqueness established by validation. Either way, the lookup must use current grid cells, not renderer coordinates or the cell from an earlier prey observation. If you keep derived membership, be able to name every boundary at which it can become stale.</p>
+<details><summary>System hint: inspect the permissions before writing the loop</summary><p>Collect configuration access, clock access, and the grazer query on paper first. Read the configuration, clock, and positions through shared access, and request mutable access only for membership. The report projection can read identities separately; this spatial update does not need them. A private helper can answer which site contains a cell, but the exercise also requires the typed adapter that visits the intended entities and writes the result.</p></details>
+<details><summary>Complete system answer</summary><p>The complete <a href="reference/refuge/src/refuge.rs">refuge module</a> defines its private membership, validated site lookup, typed refresh system, and owned report together. Its query reads <code>Position</code>, mutates <code>RefugeMembership</code>, and uses <code>With&lt;Grazer&gt;</code> for membership. The optional refuge resource keeps the existing disabled mode available. Each visited component receives a complete new answer from the current cell and clock, including <code>None</code> outside a site. Initial installation and newborn setup use that same lookup.</p></details>
+<p>If you're listening, pause to write the full system and compare its access declaration with the module answer when you need help. Resume once you can explain why it clears departed membership.</p>
+<p>Use the same lookup contract when installing the initial population and placing a child. A newborn can be visible in a completed report before its first eligible action tick. Its position and membership should already describe where it is; protection must not be delayed merely because upkeep and hunting still exclude it on its birth tick. This is another reason not to infer membership from whether an animal happened to act.</p>
+
+<h2 id="refresh-where-the-answer-changes">Refresh where the answer can change</h2>
+<p>The opening encounter tells us where to place the system. First assess membership before hunter perception so a protected grazer is absent from the local prey list. Then let the existing movement systems execute. Assess membership again before capture, because the travel just performed may have moved a selected grazer into shelter or an unobserved one out of it. These two assessments answer the same spatial question at different moments.</p>
+<p>Read the diagram from top to bottom. The first assessment constrains what the hunter may observe. Travel changes positions. The second assessment constrains what the selected interaction may do now. Capture must use that current answer while keeping the target from the earlier observation. Neither assessment executes a meal or adds a cost.</p>
+<figure>
+<svg viewBox="0 0 480 545" role="img" aria-labelledby="refuge-boundary-title refuge-boundary-desc">
+<title id="refuge-boundary-title">Refuge membership across observation and travel</title>
+<desc id="refuge-boundary-desc">Assess current grazer membership, then observe locally and choose targets. Travel changes cells. Assess membership again before the selected capture. A target observed outside shelter can enter refuge and reject capture; an unseen grazer leaving shelter needs a later observation.</desc>
+<g fill="none" stroke="currentColor" stroke-width="2"><rect x="75" y="15" width="330" height="65" rx="10"/><rect x="75" y="100" width="330" height="65" rx="10"/><rect x="75" y="185" width="330" height="65" rx="10"/><rect x="75" y="270" width="330" height="65" rx="10"/><rect x="75" y="355" width="330" height="65" rx="10"/><path d="M240 80v20m-6-6 6 6 6-6M240 165v20m-6-6 6 6 6-6M240 250v20m-6-6 6 6 6-6M240 335v20m-6-6 6 6 6-6"/></g>
+<g fill="currentColor" font-size="22" text-anchor="middle"><text x="240" y="55">Assess membership</text><text x="240" y="140">Observe and choose</text><text x="240" y="225">Travel</text><text x="240" y="310">Assess membership again</text><text x="240" y="395">Revalidate selected capture</text><text x="240" y="464">Observation supplies a target.</text><text x="240" y="499">Current protection can reject it.</text></g>
+</svg>
+<figcaption>Membership is current only relative to a known assessment boundary. A stored target does not preserve an earlier permission.</figcaption>
+</figure>
+<p>Connect both consumers of membership deliberately. Filtering the prey observation prevents a hidden grazer from becoming a target, but cannot handle the arrival case by itself. Checking only the capture prevents a protected kill, but would still let hunters select and pursue prey the observation policy says they cannot see. Those are separate promises, so give each an assertion that can fail independently.</p>
+<details><summary>Ordering hint: test the two uses of membership</summary><p>A fixture starting in refuge can expose a missing perception filter; a fixture entering refuge during travel can expose missing current revalidation. Inspect the copied prey list and its observation tick as well as the final membership. These tests distinguish two uses of the state, rather than proving that removing either refresh call must change a normal run.</p><p>With static sites, initial and newborn setup already assign membership, and the prior post-travel assessment can leave it current for the next observation. Deleting only the pre-observation refresh may therefore leave these public outcomes unchanged. That refresh explicitly reassesses the state at the declared boundary, while these two fixtures establish the filtering and capture contracts.</p></details>
+
+<h2 id="design-your-own-investigation">Choose a test that exposes the mistake</h2>
+<p>Once the feature is connected, switch from construction to investigation. Choose one claim from your field note and design a public integration test around it before opening the worked file. Use <code>CourseWorld</code> and owned reports, keeping private components behind their adapter. Write down the inputs that make the assertion discriminating: what other rejection might make a broken refuge appear to work?</p>
+<p>For the opening arrival case, an ordinary moving hunter can be a poor test. It travels toward the prey's observed old cell while the grazer moves somewhere new, so they may fail contact even if protection is broken. A stationary hunter already at the grazer's destination removes that alternative explanation. Now both are in the same cell when capture resolves, and refuge membership is the reason the treatment should differ.</p>
+<p>The worked fixture uses a two-by-one grid. Grazer 1 begins at cell zero with reserve six, capacity eight, upkeep one, and a two-unit meal request. It can sense and move one cell, paying one reserve unit for that move. Patch 1000 at cell one holds five units, with no growth. Hunter 100 waits at cell one with reserve four, capacity ten, upkeep one, and attack cost one. It can sense the grazer but has speed zero. There is one founder and no partner; rest is disabled for this short investigation.</p>
+<p>First predict the run without a refuge. After upkeep and travel, the grazer has four reserve units. The hunter has three after upkeep, enough to pay its attack before receiving the prey. Then put a refuge at cell one while keeping every other input the same. Follow not only the capture count but also the grazer's later meal, patch biomass, hunter reserve, and each account's actual cost.</p>
+<details><summary>Worked arrival reasoning and observed native result</summary><p>The native reference confirms the predicted contrast. Without protection, the hunter pays one and receives four, ending at six. The captured grazer gets no meal, so patch biomass stays five. With protection, the hunter remains at three with no attack charge; the grazer eats two, finishes at six, and leaves three biomass. Both runs begin with fifteen stored units. Ending stores plus the appropriate upkeep, travel, and attack costs should account for those same fifteen units.</p></details>
+<p>For the companion test, move the refuge to cell zero. The grazer begins hidden, then leaves shelter and reaches the stationary hunter during tick one. It should still get its meal because the hunter has no selected prey for that action. A fresh tick-two observation can change that. Check the absence of a target on the departure tick as well as the later capture; merely checking current unprotected membership would miss the perception boundary.</p>
+<details><summary>Worked departure reasoning and observed native result</summary><p>The native reference finishes tick one with the grazer at six and the hunter at three, without a capture. Tick-two upkeep leaves five and two. Fresh observation selects the grazer, allowing a funded one-unit attack and five-unit transfer that brings the hunter to six. The investigation asserts the observation and capture ticks alongside these balances, rather than inferring when perception occurred from the final reserve.</p></details>
+<p>If you're listening, pause here to construct your fixture and write the test before reading the complete answer. The answer can be a comparison against your reasoning rather than the first source of the question. Keep the file beside your earlier hunting and rest investigations instead of replacing them.</p>
+<details><summary>Complete public investigation file: tests/refuge_investigation.rs</summary><p>Save this complete file beside your earlier investigations. It checks the worked arrival and departure mechanisms through the public course API; your own hypothesis may need another fixture. The exact decoded reference block passed both native tests. Run it against your saved implementation to compare those reference expectations with your own systems.</p><pre><code class="language-rust" data-refuge-test="arrival-and-departure">// Save as work/fieldwork/tests/refuge_investigation.rs in your continuing project.
+// From the Moss repository root:
+// cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test refuge_investigation
+use moss_course_ecosystem::{
+    Cell, CourseWorld, Daylight, FounderTrait, GrazerPlacement, GrazerSeed,
+    GridBounds, HuntConfig, HunterSeed, MobileScenario, Motion, PatchPlacement,
+    PatchSeed, PopulationConfig, RefugeConfig, RefugeId, RefugeSeed,
+    Scenario, SimId, SpatialConfig, UpkeepTrait,
+};
+
+fn fixture(refuge_cell: Option&lt;Cell&gt;) -&gt; MobileScenario {
+    let start = Cell { x: 0, y: 0 };
+    let destination = Cell { x: 1, y: 0 };
+    let motion = Motion {
+        sensing_radius: 1, max_cells_per_tick: 1, travel_units_per_cell: 1,
+    };
+    let scenario = Scenario {
+        daylight: Daylight::new(1, 0).unwrap(),
+        grazers: vec![GrazerSeed {
+            id: SimId(1), reserve_units: 6, capacity_units: 8,
+            maintenance_units_per_tick: 1, meal_units_per_tick: 2,
+            feeding_site: None,
+        }],
+        patches: vec![PatchSeed {
+            id: SimId(1000), biomass_units: 5, capacity_units: 5,
+            growth_units_per_lit_tick: 0,
+        }],
+        history_limit: 128,
+    };
+    let population = PopulationConfig {
+        founders: vec![FounderTrait {
+            id: SimId(1), upkeep: UpkeepTrait::new(1).unwrap(),
+        }],
+        maturation_ticks: 2, cooldown_ticks: 3,
+        contribution_units_per_parent: 2, birth_cost_units_per_parent: 1,
+        child_capacity_units: 8, child_meal_units_per_tick: 2,
+        max_living: 8, mutation_cycle: vec![0], history_limit: 128,
+    };
+    let space = SpatialConfig {
+        bounds: GridBounds { width_cells: 2, height_cells: 1 },
+        grazers: vec![GrazerPlacement { id: SimId(1), cell: start, motion }],
+        patches: vec![PatchPlacement { id: SimId(1000), cell: destination }],
+        newborn_motion: motion,
+    };
+    let initial = MobileScenario::new(scenario, population, space)
+        .with_hunters(HuntConfig::new(vec![HunterSeed {
+            id: SimId(100), reserve_units: 4, capacity_units: 10,
+            maintenance_units_per_tick: 1, attack_units: 1,
+            attack_effort_points: 2, cell: destination,
+            motion: Motion { max_cells_per_tick: 0, ..motion },
+        }]));
+    match refuge_cell {
+        None =&gt; initial,
+        Some(cell) =&gt; initial.with_refuges(RefugeConfig::new(vec![RefugeSeed {
+            id: RefugeId(7), cell,
+        }])),
+    }
+}
+
+#[test]
+fn entering_refuge_rejects_a_previously_observed_same_cell_capture() {
+    let plain = fixture(None);
+    let protected = fixture(Some(Cell { x: 1, y: 0 }));
+    assert_eq!(plain.scenario(), protected.scenario());
+    assert_eq!(plain.population(), protected.population());
+    assert_eq!(plain.space(), protected.space());
+    assert_eq!(plain.hunters(), protected.hunters());
+    let mut control = CourseWorld::new_mobile(plain).unwrap();
+    control.step();
+    let control_mobile = control.mobile_snapshot().unwrap();
+    let control_hunt = control.hunt_snapshot().unwrap();
+    assert!(control.refuge_snapshot().is_none());
+    assert!(control_mobile.base.grazers.is_empty());
+    assert_eq!(control_mobile.base.patches[0].biomass_units, 5);
+    assert_eq!(control_hunt.hunters[0].reserve_units, 6);
+    assert_eq!((control_hunt.ledger.captures, control_hunt.ledger.attack_units,
+        control_hunt.ledger.transferred_units), (1, 1, 4));
+    assert_eq!(control_mobile.base.ledger.eaten_units, 0);
+
+    let mut world = CourseWorld::new_mobile(protected).unwrap();
+    world.step();
+    let mobile = world.mobile_snapshot().unwrap();
+    let hunt = world.hunt_snapshot().unwrap();
+    let shelter = world.refuge_snapshot().unwrap();
+    assert_eq!((shelter.run, shelter.tick), (mobile.run, 1));
+    assert_eq!((hunt.run, hunt.tick), (mobile.run, 1));
+    assert_eq!(hunt.hunters[0].visible_prey[0].prey, SimId(1));
+    assert_eq!(hunt.hunters[0].visible_prey[0].cell, Cell { x: 0, y: 0 });
+    assert_eq!(hunt.hunters[0].visible_prey[0].reserve_units, 5);
+    let target = hunt.hunters[0].target.unwrap();
+    assert_eq!((target.prey, target.observed_tick), (SimId(1), 1));
+    assert_eq!(target.observed_cell, Cell { x: 0, y: 0 });
+    assert_eq!(hunt.hunters[0].cell, Cell { x: 1, y: 0 });
+    assert_eq!(mobile.grazers[0].cell, hunt.hunters[0].cell);
+    assert_eq!((shelter.grazers[0].id, shelter.grazers[0].refuge,
+        shelter.grazers[0].assessed_tick), (SimId(1), Some(RefugeId(7)), 1));
+    assert_eq!(shelter.grazers[0].cell, Cell { x: 1, y: 0 });
+    assert_eq!(mobile.base.grazers[0].reserve_units, 6);
+    assert_eq!(mobile.base.patches[0].biomass_units, 3);
+    assert_eq!(mobile.base.ledger.eaten_units, 2);
+    assert_eq!(hunt.hunters[0].reserve_units, 3);
+    assert_eq!(hunt.hunters[0].last_capture_tick, None);
+    assert_eq!((hunt.ledger.captures, hunt.ledger.attack_units,
+        hunt.ledger.transferred_units), (0, 0, 0));
+    assert_eq!(hunt.history.captures_between(1, 1), Some(0));
+    assert_eq!((mobile.base.ledger.maintenance_units, mobile.ledger.travel_units,
+        hunt.ledger.maintenance_units, hunt.ledger.travel_units), (1, 1, 1, 0));
+    let stores = u64::from(mobile.base.grazers[0].reserve_units)
+        + u64::from(mobile.base.patches[0].biomass_units)
+        + u64::from(hunt.hunters[0].reserve_units);
+    assert_eq!(stores, 12);
+    assert_eq!(stores + mobile.base.ledger.maintenance_units
+        + hunt.ledger.maintenance_units + mobile.ledger.travel_units
+        + hunt.ledger.travel_units + hunt.ledger.attack_units
+        + mobile.population.ledger.dissipated_units,
+        15 + mobile.base.ledger.added_units);
+}
+
+#[test]
+fn leaving_refuge_needs_a_fresh_observation_before_capture() {
+    let mut world = CourseWorld::new_mobile(fixture(Some(Cell { x: 0, y: 0 }))).unwrap();
+    let initial = world.refuge_snapshot().unwrap();
+    assert_eq!((initial.grazers[0].refuge, initial.grazers[0].assessed_tick),
+        (Some(RefugeId(7)), 0));
+    world.step();
+    let departure = world.refuge_snapshot().unwrap();
+    let mobile = world.mobile_snapshot().unwrap();
+    let hunt = world.hunt_snapshot().unwrap();
+    assert_eq!((departure.grazers[0].refuge, departure.grazers[0].assessed_tick), (None, 1));
+    assert_eq!(departure.grazers[0].cell, Cell { x: 1, y: 0 });
+    assert_eq!(hunt.hunters[0].observed_tick, Some(1));
+    assert!(hunt.hunters[0].visible_prey.is_empty());
+    assert_eq!(hunt.hunters[0].target, None);
+    assert_eq!(mobile.grazers[0].cell, hunt.hunters[0].cell);
+    assert_eq!(mobile.base.grazers[0].reserve_units, 6);
+    assert_eq!(hunt.hunters[0].reserve_units, 3);
+    assert_eq!(hunt.ledger.captures, 0);
+    assert_eq!(hunt.ledger.attack_units, 0);
+    assert_eq!(mobile.base.patches[0].biomass_units, 3);
+
+    world.step();
+    let later_hunt = world.hunt_snapshot().unwrap();
+    assert_eq!(later_hunt.hunters[0].observed_tick, Some(2));
+    assert_eq!(later_hunt.hunters[0].visible_prey[0].prey, SimId(1));
+    assert_eq!(later_hunt.hunters[0].visible_prey[0].reserve_units, 5);
+    assert_eq!(later_hunt.hunters[0].last_capture_tick, Some(2));
+    assert_eq!(later_hunt.hunters[0].reserve_units, 6);
+    assert_eq!((later_hunt.ledger.captures, later_hunt.ledger.attack_units,
+        later_hunt.ledger.transferred_units), (1, 1, 5));
+    assert_eq!(later_hunt.history.captures_between(1, 2), Some(1));
+    assert!(world.refuge_snapshot().unwrap().grazers.is_empty());
+    assert!(world.mobile_snapshot().unwrap().base.grazers.is_empty());
+    assert_eq!(departure.tick, 1);
+    assert_eq!(departure.grazers[0].id, SimId(1));
+}
+</code></pre></details>
+
+<h2 id="compare-placements-with-matched-inputs">Compare placements with matched inputs</h2>
+<p>A mechanism test establishes that the refuge rule can act at the intended boundary. It doesn't tell you where to put a refuge in the meadow. Return to your initial hypothesis with a longer native comparison: disabled refuges, a refuge near a feeding opportunity, and an alternative placement that tests the mechanism you proposed. Hold the authored animals, stores, rest policy, and horizon fixed within the comparison.</p>
+<p>Record the complete configurations beside the results. Then compare captures with grazer starvations and hunter starvations, rather than interpreting every missing animal as the same outcome. Follow births and capacity-blocked pairs too. More grazers surviving one encounter can increase later competition or fill the living cap; fewer captures can deprive a hunter of the reserve it needs to survive its next journey.</p>
+<p>Keep the energy equation from hunting. Shelter adds no term, but it can change the actual values of existing terms by changing which animals remain to travel, eat, reproduce, and pay upkeep. Equal initial stores do not imply equal accepted growth over the run, because consumption changes how much room is available in a patch. Explain a difference in intake as part of the result rather than quietly treating the two runs as having identical received energy.</p>
+<p>If you're listening, pause to run your comparison and inspect the complete reference results below. The generated narration skips that answer disclosure. Read its interpretation of starvation, accepted growth, and coverage before returning to the final discussion; the ending census alone leaves those differences out.</p>
+<details><summary>Complete experiment and observed reference comparison</summary><p>The <a href="reference/refuge/examples/refuges.rs">complete native example</a> uses the same meadow, two hunters, and two-tick minimum rest from hunting. It runs 120 ticks with 128 initial stored units: 72 in grazers, 24 in patches, and 32 in hunters. The disabled control, food cell at (3, 2), transit cell at (4, 2), and both food cells at (3, 2) and (7, 2) differ only in refuge configuration. There are no random draws, and neither selector seeks shelter or flees.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Refuge comparison population outcomes"><table><caption>Observed native outcomes after 120 ticks under matched starting conditions</caption><thead><tr><th scope="col">Refuge placement</th><th scope="col">Living grazers / hunters</th><th scope="col">Births</th><th scope="col">Grazer starvations</th><th scope="col">Captures</th><th scope="col">Hunter starvations</th></tr></thead><tbody><tr><td>Disabled</td><td>0 / 0</td><td>3</td><td>4</td><td>3</td><td>2</td></tr><tr><td>Food cell (3, 2)</td><td>1 / 0</td><td>3</td><td>5</td><td>1</td><td>2</td></tr><tr><td>Transit cell (4, 2)</td><td>0 / 0</td><td>3</td><td>4</td><td>3</td><td>2</td></tr><tr><td>Both food cells</td><td>1 / 0</td><td>3</td><td>5</td><td>1</td><td>2</td></tr></tbody></table></div>
+<p>Both food-site treatments retain ID 2 at reserve 24, at (3, 2). One more grazer remains alive than in the control, but grazer starvations rose from four to five while captures fell from three to one. Births stayed at three, and capacity-blocked pairs and ticks stayed at zero in every treatment. That makes the living cap an unsupported explanation for these differences, even though it remains a relevant limit in another scenario.</p>
+<p>The transit treatment and control have identical final life counts but different paths. At tick twelve the control still has one grazer; the transit treatment has none. Their accepted growth and hunter travel also differ. An equal endpoint therefore doesn't establish that the site did nothing, just as a printed checkpoint with no protected animals doesn't describe every intervening tick.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Refuge comparison actual resource flows"><table><caption>Actual native flows across the same 120 ticks; all runs start with 128 stored units</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Disabled</th><th scope="col">Food cell</th><th scope="col">Transit cell</th><th scope="col">Both food cells</th></tr></thead><tbody><tr><th scope="row">Accepted growth</th><td>60</td><td>168</td><td>55</td><td>168</td></tr><tr><th scope="row">Grazer upkeep</th><td>53</td><td>171</td><td>51</td><td>171</td></tr><tr><th scope="row">Grazer travel</th><td>15</td><td>17</td><td>15</td><td>17</td></tr><tr><th scope="row">Hunter upkeep</th><td>62</td><td>38</td><td>62</td><td>38</td></tr><tr><th scope="row">Hunter travel</th><td>13</td><td>8</td><td>10</td><td>8</td></tr><tr><th scope="row">Attack costs</th><td>3</td><td>1</td><td>3</td><td>1</td></tr><tr><th scope="row">Birth costs</th><td>6</td><td>6</td><td>6</td><td>6</td></tr><tr><th scope="row">Ending stores</th><td>36</td><td>55</td><td>36</td><td>55</td></tr><tr><th scope="row">Prey reserve transferred</th><td>46</td><td>15</td><td>43</td><td>15</td></tr><tr><th scope="row">Reserve transferred to children</th><td>12</td><td>12</td><td>12</td><td>12</td></tr></tbody></table></div>
+<p>Transfers stay inside the world's stores, so don't add the last two rows as expenditures. For the food-cell run, initial stores 128 plus growth 168 equal ending stores 55 plus upkeep 171 and 38, travel 17 and 8, attack one, and birth cost six: both sides are 296. The example checks the full energy identity and the cause-specific grazer census after every executed tick.</p>
+<p>Food-site runs evict 209 base events and retain complete base coverage only after tick 68 through tick 120. Their lifetime starvation count is five, but a base-journal query for starvations across ticks one through 120 is unknown. Capture history is complete for all 120 ticks and reports one. The population, mobile, and rest journals also retain full coverage; the control and transit treatments retain all five journals completely. These are observed results of this declared matrix, not a guarantee that another placement or population behaves similarly.</p></details>
+
+<h2 id="read-only-what-the-record-keeps">Read only what the record keeps</h2>
+<p>The refuge report tells you which site contains a current grazer at the assessment boundary. It doesn't measure time spent in shelter or preserve a sequence of entries and departures. If a snapshot shows protection at tick 120, you cannot infer that the animal stayed there throughout the experiment. A measurement of residence time would require an explicit collection rule, and is a separate extension you could propose after this one.</p>
+<p>The existing journals retain different histories under their own bounds. A known lifetime capture counter can coexist with an unknown capture count for a requested interval whose records were evicted. Use the relevant complete interval before describing an absent event as zero, and intersect coverage when your explanation requires more than one journal. Current membership cannot reconstruct a missing capture, meal, or birth record.</p>
+<p>State your conclusion at the scale of the experiment. You might find that a particular placement preserved more grazers for the chosen horizon, then explain the accompanying hunter losses and food competition. That doesn't make refuge universally beneficial or establish a scientifically calibrated ecological effect. The useful result is an inspectable causal account, together with a next comparison that could challenge it.</p>
+
+<h2 id="keep-your-project-and-show-the-evidence">Keep the project and show the evidence</h2>
+<p>Complete this capstone in <code>work/fieldwork</code>, or the directory you've carried through the earlier guides. The <a href="downloads/refuge-reference.zip">complete refuge checkpoint</a> remains available separately, alongside its <a href="reference/refuge/README.md">README</a> and <a href="reference/refuge/changes.patch">review-only diff from hunting</a>. Use them to inspect a responsibility you couldn't yet complete. The diff is a map for deliberate edits, not a promise to apply over your changes; replacing the whole project would lose the earlier investigations that make it yours.</p>
+<details><summary>Complete source map for the continuing implementation</summary><table><caption>Responsibilities to connect in your saved project</caption><thead><tr><th scope="col">Complete module</th><th scope="col">Connection to inspect</th></tr></thead><tbody><tr><td><a href="reference/refuge/src/refuge.rs">refuge.rs</a></td><td>Validate sites, store private membership, refresh it through a typed query, and return an owned report.</td></tr><tr><td><a href="reference/refuge/src/mobile/config.rs">mobile/config.rs</a></td><td>Carry optional configuration through validation and the existing scenario.</td></tr><tr><td><a href="reference/refuge/src/simulation.rs">simulation.rs</a></td><td>Install and reset the capability; place refreshes at the two relevant schedule boundaries.</td></tr><tr><td><a href="reference/refuge/src/hunting/perception.rs">hunting/perception.rs</a></td><td>Exclude currently protected grazers from local prey observations.</td></tr><tr><td><a href="reference/refuge/src/hunting/capture.rs">hunting/capture.rs</a></td><td>Reject current protection before charging or accepting a capture.</td></tr><tr><td><a href="reference/refuge/src/reproduction.rs">reproduction.rs</a></td><td>Give a newborn the membership belonging to its placed cell.</td></tr><tr><td><a href="reference/refuge/src/lib.rs">lib.rs</a></td><td>Expose the additive public configuration and owned report types.</td></tr></tbody></table></details>
+<p>Run the direct investigation, then the full stage check and matched example from the repository root:</p>
+<pre><code class="language-sh">cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test refuge_investigation
+python3 learning/scripts/fieldwork.py check --project work/fieldwork --stage refuge
+cargo +1.93.1 run --offline --locked --manifest-path work/fieldwork/Cargo.toml --example refuges</code></pre>
+<p>The refuge stage check runs the prior suites as well as the new contract and your saved tests. Its successful result supports this native extension. Advancing your saved source to refuge makes its earlier compiled browser artifacts stale. Rebuild them with the existing guides' preview commands if you want those views to remain available from the current source. They still select their existing modes without refuge configuration; the hunting mode has no refuge controls or projection. A fresh build therefore identifies current source without establishing that this feature is displayed. The native experiment is the capstone's observation surface.</p>
+<p>Leave your result with four things someone else could inspect: the feature's declared policy, the whole system and schedule connections that implement it, a test that distinguishes a plausible mistake, and the matched experiment with its coverage limits. Your next design question can then begin with something the program actually did, while the implementation and evidence remain available to disagree with the explanation.</p>

@@ -1,0 +1,340 @@
+<p class="lesson-lead">Two consumers reach a patch containing five biomass units, and each requests three. Giving both of them three would create a sixth unit from nowhere. We'll follow the first meal all the way through the patch and the consumer, then let the second consumer act on what remains. That gives us a small transaction we can explain, implement, and test.</p>
+<aside class="scope-note"><p>This isolated lab proposes a one-for-one conversion from biomass to reserve, with consumers already in contact and resolving by ascending stable ID. These are authored game rules rather than calibrated ecology. The exercise doesn't install eating in live Moss.</p></aside>
+
+<h2 id="begin-with-a-shortage">Let the first meal change the second</h2>
+<p><a href="14-movement.html">The movement bridge</a> connected an accepted action to a visible consequence. A meal introduces a consequence shared by several actors: the supply one consumer removes is no longer available to another. Testing each meal against a fresh copy of the patch would make both seem correct while missing the problem between them.</p>
+<p>Our consumers have IDs 2 and 9. Each starts with zero reserve, capacity ten, and a request for three units. The patch starts with five. We'll deliberately store ID 9 first in the array but resolve the lower stable ID first. ID 2 should receive three, leaving two for ID 9. By the end, their combined reserve gain should equal the five units removed from the patch.</p>
+<p>The ID order is a policy we can reproduce, not a measure of fairness. If the same two consumers repeatedly compete under identical conditions, the lower ID keeps its priority. We could later investigate rotating or randomized priority, but first we need to know that every version of the policy accounts for the shared supply correctly.</p>
+<p>For that reason, the lab begins at contact. It doesn't decide when an animal becomes hungry, how it travels, or which species can eat a particular food. Those conditions will surround a meal in a larger world. Here we can concentrate on what an accepted transfer does to its two accounts.</p>
+
+<h2 id="calculate-the-actual-transfer">Find one amount that fits both accounts</h2>
+<p>A request isn't necessarily the amount a consumer can receive. The patch may contain less than requested, or the consumer may have little room left in its reserve. Under our one-for-one conversion, the actual transfer is the smallest of three quantities: requested biomass, available biomass, and remaining reserve capacity.</p>
+<p>Consider a consumer at eight units out of ten. It requests four from a patch holding nine, but only two units fit. The accepted meal therefore removes two biomass and adds two reserve, leaving seven in the patch and ten in the consumer. Removing all four requested units would introduce a waste rule we haven't chosen. Crediting four while removing two would create reserve without a matching source.</p>
+<table><caption>Meals bounded by supply and reserve capacity</caption><thead><tr><th scope="col">Inputs</th><th scope="col">Accepted result</th></tr></thead><tbody><tr><td>Reserve 0/10; biomass 5; request 3</td><td>Take 3, gain 3, reserve 3, biomass 2.</td></tr><tr><td>Reserve 0/10; biomass 2; request 3</td><td>Take 2, gain 2, reserve 2, biomass 0.</td></tr><tr><td>Reserve 8/10; biomass 9; request 4</td><td>Take 2, gain 2, reserve 10, biomass 7.</td></tr><tr><td>Reserve 10/10; biomass 9; request 4</td><td>Reject for no room; leave both accounts unchanged.</td></tr></tbody></table>
+<p>We'll return a <code>Meal</code> containing <code>biomass_taken</code> and <code>energy_gained</code>. Their numbers are equal in this model, but their names describe different sides of the event. That makes the report understandable now and lets a later, explicitly chosen conversion policy explain any difference rather than hide it inside a generic “amount.”</p>
+
+<h2 id="rejection-has-no-half-finished-state">Check the transaction before changing either side</h2>
+<p>The first check in <code>transfer</code> validates that reserve doesn't exceed capacity. Only then can capacity minus reserve describe room without underflowing. The helper next checks contact, a nonzero request, nonempty supply, and available room. Each rejected condition returns a named error before assigning either account.</p>
+<p>This order also determines which error a caller receives when several conditions fail. An invalid reserve takes precedence over absent contact, for example. Most tests isolate one failed condition to make the boundary easy to see, but the implementation's ordering remains part of its contract.</p>
+<p>Once the checks succeed, we can calculate the accepted amount and both resulting balances. Bounding that amount by room guarantees that the next reserve fits within its valid capacity. The helper uses checked addition to make the expectation explicit. Bounding it by biomass likewise makes the patch subtraction safe. Only after calculating both results do we write them back.</p>
+<p>We haven't needed rollback code because rejected paths never started the transfer. The two mutable references give the function permission to change the accounts, but Rust doesn't infer the conservation rule from those references. That rule comes from calculating one accepted amount and applying it consistently to both sides.</p>
+
+<h2 id="resolve-one-shared-patch">Keep the patch current between consumers</h2>
+<p>The supplied <code>resolve</code> function handles competition around that helper. It builds a temporary list of array indices and sorts them by consumer ID. This preserves the input array's storage order while making the chosen action order explicit. Each outcome records the consumer's ID, so the result remains interpretable even when the input array is reversed.</p>
+<p>The loop then borrows one consumer at a time and passes the same mutable patch to <code>transfer</code>. After ID 2 eats, the patch contains two units. ID 9's call reads that updated balance, so its request for three is bounded to two. There is no earlier five-unit snapshot left in the calculation to spend again.</p>
+<p>Unique IDs are a caller obligation in this lab. Sorting duplicate IDs wouldn't establish a meaningful identity policy, and the resolver doesn't try to repair that malformed input. Keeping this assumption explicit lets us distinguish deterministic access order from validation of the roster itself.</p>
+<p>Immediate depletion matters even when an empty patch will eventually be removed. As <a href="12-commands.html">the command lesson</a> showed, a queued despawn can wait until a later boundary. Updating biomass now prevents another reward during that wait. A patch can remain in the world at zero and still be unavailable for a meal.</p>
+
+<h2 id="predict-the-competition">Try the contest twice</h2>
+<p>Predict the two accepted meals from five units, then reverse the input array and repeat the prediction. Finally, run the resolver again on the same depleted patch. Both consumers still have room in their reserves, but is that enough to accept another request?</p>
+<details><summary>Hint 1: follow the selected order</summary><p>ID 2 acts before ID 9 in either array arrangement. Its three-unit meal changes the shared patch before ID 9 reaches the helper.</p></details>
+<details><summary>Hint 2: carry the depleted patch into the repeat</summary><p>Room in reserve is only one requirement. After the first resolution, the shared patch has no biomass left for either consumer.</p></details>
+<details><summary>Prediction answer</summary><p>The first resolution gives three units to ID 2 and two to ID 9, regardless of array order. The second rejects both attempts as empty-patch meals and leaves their reserves at three and two.</p></details>
+<p>Prepare a new practice file with these commands from the repository root. You'll implement <code>transfer</code>; the resolver and fixtures are supplied so your helper is tested inside the shared contest.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare meals --dest work/meals-practice
+python3 learning/scripts/labs.py check meals --file work/meals-practice/meals.rs</code></pre>
+<p>The starter compiles and then reaches its intentional <code>todo!</code>. Replace the function body and repeat the check. Expect seven named tests to pass. If a rejected meal changes an account, follow the assignments back to the validation they should occur after. If reversing input changes the winners, inspect resolution order before changing the arithmetic.</p>
+<details><summary>Complete starter: meals.rs</summary><pre><code class="language-rust" data-starter="meals">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Energy { reserve_units: u32, capacity_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Patch { biomass_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Meal { biomass_taken: u32, energy_gained: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Rejection { InvalidReserve, NotInContact, ZeroRequest, EmptyPatch, NoRoom }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Consumer { id: u32, energy: Energy, in_contact: bool }
+
+fn transfer(
+    energy: &amp;mut Energy,
+    patch: &amp;mut Patch,
+    requested_biomass: u32,
+    in_contact: bool,
+) -&gt; Result&lt;Meal, Rejection&gt; {
+    let _ = (energy, patch, requested_biomass, in_contact);
+    todo!("validate, bound the actual transfer, then update both accounts")
+}
+
+fn resolve(consumers: &amp;mut [Consumer], patch: &amp;mut Patch, requested_biomass: u32)
+    -&gt; Vec&lt;(u32, Result&lt;Meal, Rejection&gt;)&gt;
+{
+    let mut order: Vec&lt;usize&gt; = (0..consumers.len()).collect();
+    order.sort_by_key(|&amp;index| consumers[index].id);
+    let mut outcomes = Vec::new();
+    for index in order {
+        let consumer = &amp;mut consumers[index];
+        let outcome = transfer(&amp;mut consumer.energy, patch, requested_biomass, consumer.in_contact);
+        outcomes.push((consumer.id, outcome));
+    }
+    outcomes
+}
+
+fn pair() -&gt; [Consumer; 2] {
+    [Consumer { id: 9, energy: Energy { reserve_units: 0, capacity_units: 10 }, in_contact: true },
+     Consumer { id: 2, energy: Energy { reserve_units: 0, capacity_units: 10 }, in_contact: true }]
+}
+
+fn main() {
+    let mut consumers = pair();
+    let mut patch = Patch { biomass_units: 5 };
+    for (id, outcome) in resolve(&amp;mut consumers, &amp;mut patch, 3) {
+        println!("id={id} result={outcome:?}");
+    }
+    println!("remaining biomass={}", patch.biomass_units);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capacity_limits_both_depletion_and_gain() {
+        let mut energy = Energy { reserve_units: 8, capacity_units: 10 };
+        let mut patch = Patch { biomass_units: 9 };
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, 4, true),
+            Ok(Meal { biomass_taken: 2, energy_gained: 2 }));
+        assert_eq!((energy.reserve_units, patch.biomass_units), (10, 7));
+    }
+
+    #[test]
+    fn lack_of_contact_rejects_without_partial_mutation() {
+        let mut energy = Energy { reserve_units: 2, capacity_units: 10 };
+        let mut patch = Patch { biomass_units: 5 };
+        let before = (energy, patch);
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, 3, false), Err(Rejection::NotInContact));
+        assert_eq!((energy, patch), before);
+    }
+
+    #[test]
+    fn invalid_reserve_rejects_before_unsigned_subtraction() {
+        let mut energy = Energy { reserve_units: 11, capacity_units: 10 };
+        let mut patch = Patch { biomass_units: 5 };
+        let before = (energy, patch);
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, 3, true), Err(Rejection::InvalidReserve));
+        assert_eq!((energy, patch), before);
+    }
+
+    #[test]
+    fn zero_request_empty_patch_and_full_reserve_each_leave_state_unchanged() {
+        for (reserve, biomass, request, expected) in [
+            (2, 5, 0, Rejection::ZeroRequest),
+            (2, 0, 3, Rejection::EmptyPatch),
+            (10, 5, 3, Rejection::NoRoom),
+        ] {
+            let mut energy = Energy { reserve_units: reserve, capacity_units: 10 };
+            let mut patch = Patch { biomass_units: biomass };
+            let before = (energy, patch);
+            assert_eq!(transfer(&amp;mut energy, &amp;mut patch, request, true), Err(expected));
+            assert_eq!((energy, patch), before);
+        }
+    }
+
+    #[test]
+    fn stable_id_order_resolves_the_same_competition_after_input_reversal() {
+        let mut a = pair();
+        let mut b = pair();
+        b.reverse();
+        let mut patch_a = Patch { biomass_units: 5 };
+        let mut patch_b = patch_a;
+        let outcomes = resolve(&amp;mut a, &amp;mut patch_a, 3);
+        assert_eq!(outcomes, vec![
+            (2, Ok(Meal { biomass_taken: 3, energy_gained: 3 })),
+            (9, Ok(Meal { biomass_taken: 2, energy_gained: 2 })),
+        ]);
+        assert_eq!(resolve(&amp;mut b, &amp;mut patch_b, 3), outcomes);
+        assert_eq!((patch_a.biomass_units, patch_b.biomass_units), (0, 0));
+        assert_eq!(a.iter().map(|c| c.energy.reserve_units).sum::&lt;u32&gt;(), 5);
+        assert_eq!(a.iter().find(|c| c.id == 2).unwrap().energy.reserve_units, 3);
+        assert_eq!(a.iter().find(|c| c.id == 9).unwrap().energy.reserve_units, 2);
+    }
+
+    #[test]
+    fn depleted_patch_cannot_reward_a_second_resolution() {
+        let mut consumers = pair();
+        let mut patch = Patch { biomass_units: 5 };
+        resolve(&amp;mut consumers, &amp;mut patch, 3);
+        let before = consumers;
+        assert_eq!(resolve(&amp;mut consumers, &amp;mut patch, 3),
+            vec![(2, Err(Rejection::EmptyPatch)), (9, Err(Rejection::EmptyPatch))]);
+        assert_eq!(consumers, before);
+        assert_eq!(patch.biomass_units, 0);
+    }
+
+    #[test]
+    fn bounding_before_addition_handles_the_numeric_limit() {
+        let mut energy = Energy { reserve_units: u32::MAX - 2, capacity_units: u32::MAX };
+        let mut patch = Patch { biomass_units: u32::MAX };
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, u32::MAX, true),
+            Ok(Meal { biomass_taken: 2, energy_gained: 2 }));
+        assert_eq!(energy.reserve_units, u32::MAX);
+        assert_eq!(patch.biomass_units, u32::MAX - 2);
+    }
+}</code></pre></details>
+<details><summary>Complete worked answer: meals.rs</summary><pre><code class="language-rust" data-runnable="meals">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Energy { reserve_units: u32, capacity_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Patch { biomass_units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Meal { biomass_taken: u32, energy_gained: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Rejection { InvalidReserve, NotInContact, ZeroRequest, EmptyPatch, NoRoom }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Consumer { id: u32, energy: Energy, in_contact: bool }
+
+fn transfer(
+    energy: &amp;mut Energy,
+    patch: &amp;mut Patch,
+    requested_biomass: u32,
+    in_contact: bool,
+) -&gt; Result&lt;Meal, Rejection&gt; {
+    if energy.reserve_units &gt; energy.capacity_units { return Err(Rejection::InvalidReserve); }
+    if !in_contact { return Err(Rejection::NotInContact); }
+    if requested_biomass == 0 { return Err(Rejection::ZeroRequest); }
+    if patch.biomass_units == 0 { return Err(Rejection::EmptyPatch); }
+    let room = energy.capacity_units - energy.reserve_units;
+    if room == 0 { return Err(Rejection::NoRoom); }
+    let taken = requested_biomass.min(patch.biomass_units).min(room);
+    let next_reserve = energy.reserve_units.checked_add(taken)
+        .expect("accepted amount is bounded by available capacity");
+    let remaining_biomass = patch.biomass_units - taken;
+    energy.reserve_units = next_reserve;
+    patch.biomass_units = remaining_biomass;
+    Ok(Meal { biomass_taken: taken, energy_gained: taken })
+}
+
+fn resolve(consumers: &amp;mut [Consumer], patch: &amp;mut Patch, requested_biomass: u32)
+    -&gt; Vec&lt;(u32, Result&lt;Meal, Rejection&gt;)&gt;
+{
+    let mut order: Vec&lt;usize&gt; = (0..consumers.len()).collect();
+    order.sort_by_key(|&amp;index| consumers[index].id);
+    let mut outcomes = Vec::new();
+    for index in order {
+        let consumer = &amp;mut consumers[index];
+        let outcome = transfer(&amp;mut consumer.energy, patch, requested_biomass, consumer.in_contact);
+        outcomes.push((consumer.id, outcome));
+    }
+    outcomes
+}
+
+fn pair() -&gt; [Consumer; 2] {
+    [Consumer { id: 9, energy: Energy { reserve_units: 0, capacity_units: 10 }, in_contact: true },
+     Consumer { id: 2, energy: Energy { reserve_units: 0, capacity_units: 10 }, in_contact: true }]
+}
+
+fn main() {
+    let mut consumers = pair();
+    let mut patch = Patch { biomass_units: 5 };
+    for (id, outcome) in resolve(&amp;mut consumers, &amp;mut patch, 3) {
+        println!("id={id} result={outcome:?}");
+    }
+    println!("remaining biomass={}", patch.biomass_units);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capacity_limits_both_depletion_and_gain() {
+        let mut energy = Energy { reserve_units: 8, capacity_units: 10 };
+        let mut patch = Patch { biomass_units: 9 };
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, 4, true),
+            Ok(Meal { biomass_taken: 2, energy_gained: 2 }));
+        assert_eq!((energy.reserve_units, patch.biomass_units), (10, 7));
+    }
+
+    #[test]
+    fn lack_of_contact_rejects_without_partial_mutation() {
+        let mut energy = Energy { reserve_units: 2, capacity_units: 10 };
+        let mut patch = Patch { biomass_units: 5 };
+        let before = (energy, patch);
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, 3, false), Err(Rejection::NotInContact));
+        assert_eq!((energy, patch), before);
+    }
+
+    #[test]
+    fn invalid_reserve_rejects_before_unsigned_subtraction() {
+        let mut energy = Energy { reserve_units: 11, capacity_units: 10 };
+        let mut patch = Patch { biomass_units: 5 };
+        let before = (energy, patch);
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, 3, true), Err(Rejection::InvalidReserve));
+        assert_eq!((energy, patch), before);
+    }
+
+    #[test]
+    fn zero_request_empty_patch_and_full_reserve_each_leave_state_unchanged() {
+        for (reserve, biomass, request, expected) in [
+            (2, 5, 0, Rejection::ZeroRequest),
+            (2, 0, 3, Rejection::EmptyPatch),
+            (10, 5, 3, Rejection::NoRoom),
+        ] {
+            let mut energy = Energy { reserve_units: reserve, capacity_units: 10 };
+            let mut patch = Patch { biomass_units: biomass };
+            let before = (energy, patch);
+            assert_eq!(transfer(&amp;mut energy, &amp;mut patch, request, true), Err(expected));
+            assert_eq!((energy, patch), before);
+        }
+    }
+
+    #[test]
+    fn stable_id_order_resolves_the_same_competition_after_input_reversal() {
+        let mut a = pair();
+        let mut b = pair();
+        b.reverse();
+        let mut patch_a = Patch { biomass_units: 5 };
+        let mut patch_b = patch_a;
+        let outcomes = resolve(&amp;mut a, &amp;mut patch_a, 3);
+        assert_eq!(outcomes, vec![
+            (2, Ok(Meal { biomass_taken: 3, energy_gained: 3 })),
+            (9, Ok(Meal { biomass_taken: 2, energy_gained: 2 })),
+        ]);
+        assert_eq!(resolve(&amp;mut b, &amp;mut patch_b, 3), outcomes);
+        assert_eq!((patch_a.biomass_units, patch_b.biomass_units), (0, 0));
+        assert_eq!(a.iter().map(|c| c.energy.reserve_units).sum::&lt;u32&gt;(), 5);
+        assert_eq!(a.iter().find(|c| c.id == 2).unwrap().energy.reserve_units, 3);
+        assert_eq!(a.iter().find(|c| c.id == 9).unwrap().energy.reserve_units, 2);
+    }
+
+    #[test]
+    fn depleted_patch_cannot_reward_a_second_resolution() {
+        let mut consumers = pair();
+        let mut patch = Patch { biomass_units: 5 };
+        resolve(&amp;mut consumers, &amp;mut patch, 3);
+        let before = consumers;
+        assert_eq!(resolve(&amp;mut consumers, &amp;mut patch, 3),
+            vec![(2, Err(Rejection::EmptyPatch)), (9, Err(Rejection::EmptyPatch))]);
+        assert_eq!(consumers, before);
+        assert_eq!(patch.biomass_units, 0);
+    }
+
+    #[test]
+    fn bounding_before_addition_handles_the_numeric_limit() {
+        let mut energy = Energy { reserve_units: u32::MAX - 2, capacity_units: u32::MAX };
+        let mut patch = Patch { biomass_units: u32::MAX };
+        assert_eq!(transfer(&amp;mut energy, &amp;mut patch, u32::MAX, true),
+            Ok(Meal { biomass_taken: 2, energy_gained: 2 }));
+        assert_eq!(energy.reserve_units, u32::MAX);
+        assert_eq!(patch.biomass_units, u32::MAX - 2);
+    }
+}</code></pre></details>
+<p>Run <code>python3 learning/scripts/labs.py check meals</code> to check the printed reference separately. The lab uses the standard library, so you can also save the full block as <code>meals.rs</code> and use these commands from its directory:</p>
+<pre><code class="language-sh">rustc +1.93.1 --edition=2024 --test meals.rs -o meals-tests
+./meals-tests
+rustc +1.93.1 --edition=2024 meals.rs -o meals
+./meals</code></pre>
+<p>Expect seven passing tests and this program output:</p>
+<pre><code class="language-text">id=2 result=Ok(Meal { biomass_taken: 3, energy_gained: 3 })
+id=9 result=Ok(Meal { biomass_taken: 2, energy_gained: 2 })
+remaining biomass=0</code></pre>
+
+<h2 id="what-the-checks-discriminate">Use the second attempt to test the first</h2>
+<p>A successful first meal tells us that reserve can increase. The second attempt against the depleted patch asks a stronger question: did the first success actually consume its source? That repeat catches a helper that reports a transfer without applying depletion, as well as one that continues to reward an old availability reading.</p>
+<p>The competition test also checks more than the combined total. It reverses the inputs and asserts which consumer receives each amount. A resolver could conserve all five units yet allocate them under the wrong priority rule. Recipient identities and accounting totals test different promises.</p>
+<p>At the arithmetic boundary, one case begins two units below the largest possible capacity while both request and supply are enormous. Computing room first keeps the accepted addition at two. Adding the full request and capping later could overflow before reaching the cap, so the extreme input tests the order of the calculation.</p>
+<p>The rejection tests compare both accounts with their original values. That is how they detect a half-finished meal: reporting an error alone wouldn't prove that reserve and biomass were left alone. The ordinary capacity case complements them by checking the exact accepted depletion when a smaller meal does fit.</p>
+
+<h2 id="keep-the-policy-and-evidence-separate">Bring the transaction into a larger world</h2>
+<p>Our five-unit shortage now has a complete account: three went to ID 2, two to ID 9, and nothing remains to reward another visit. The tests establish that behavior for authored contact values and a one-for-one conversion. An ECS integration will additionally need to establish contact, schedule the interaction, and prevent ineligible actors from reaching it.</p>
+<p>Likewise, an interactive teaching model can help you explore request, supply, and capacity, while a browser view of the Rust world must report outcomes from that world. Watching a plausible animation wouldn't establish which helper ran or whether its accounts balanced. Keeping the source of a reading clear becomes more useful as several rules begin interacting.</p>
+<details><summary>Recall why mutable access doesn't guarantee conservation</summary><p>The references permit mutation but don't choose its amount. Conservation follows from the explicit conversion rule, one bounded accepted transfer, and each consumer acting on the current shared supply.</p></details>
+<p>So far, the consumers arrive with contact already established. In <a href="16-targets.html">choosing and revalidating a target</a>, we'll leave time between noticing a patch and attempting a meal. That gives another consumer a chance to change the opportunity before the action arrives.</p>

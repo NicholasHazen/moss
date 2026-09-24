@@ -1,0 +1,191 @@
+<p class="lesson-lead">At tick twelve, the limited meadow holds eight units of grass and no living grazers. In the more generous meadow, one grazer survives beside five units of grass. The first picture might look like a feeding bug: how could the animals starve when food was available? To find out, we'll follow when that food arrived and what happened to each animal before it did.</p>
+<aside class="scope-note"><p><strong>Your first continuing course project.</strong> You'll reconstruct and investigate a small, complete meadow in a saved Cargo project, then extend that same project in later guides. Its authored rules are separate from live Moss and the movement assignment in <code>NOW.md</code>. For now, each grazer has a fixed feeding contact; movement and the other ecological rules will come later.</p></aside>
+
+<h2 id="keep-one-project">Keep one project through the investigation</h2>
+<p>Earlier labs let you examine a meal or an ordering edge in isolation. Here those pieces have to cooperate: upkeep can leave a grazer empty, daylight can replenish its patch, and a meal can rescue it before starvation is resolved. Bring your reasoning from <a href="10-borrows.html">borrowing in systems</a> and <a href="11-schedules.html">explicit ordering</a>; the arithmetic comes from the <a href="15-meals.html">finite meal</a> and <a href="18-growth.html">daylight</a> lessons. We can now ask whether those individually reasonable rules produce the tick we intended.</p>
+<p>From the Moss repository root, create a practice project and check its starting state:</p>
+<pre><code class="language-sh">python3 learning/scripts/fieldwork.py prepare --dest work/fieldwork
+python3 learning/scripts/fieldwork.py check --project work/fieldwork</code></pre>
+<p>Open <code>work/fieldwork/Cargo.toml</code> in your editor. This directory will hold your systems, questions, and tests throughout the cumulative route. It begins as a complete working implementation so you can observe the whole meadow before reconstructing parts of it. The initial check should pass nineteen required acceptance tests; that gives your next edit a useful comparison point.</p>
+<details><summary>Setup and what the project check preserves</summary><p>Use the <a href="setup.html">local setup</a> with Rust 1.93.1 and cached Bevy ECS 0.18.1 dependencies. Preparation copies the library, lockfile, examples, and tests, and refuses an existing destination. When you return, reopen this directory rather than preparing it again. The checker runs the required course assertions separately in a temporary copy and also runs your saved tests; it does not replace those tests. A missing compiler or dependency cache needs a setup repair before compilation can tell you anything about the code.</p></details>
+<p>Run the comparison once before changing a system. It uses the same saved modules that you'll edit, and later compile for the browser:</p>
+<pre><code class="language-sh">cargo +1.93.1 run --offline --locked --manifest-path work/fieldwork/Cargo.toml --example compare</code></pre>
+<p>You don't need to explain every output yet. Keep the two endings in mind while we find the state, trace one tick, and then change the implementation deliberately. By the time we return to the browser, you'll have evidence for why those endings occur.</p>
+
+<h2 id="find-the-state">Find the state and its owners</h2>
+<p>Start at <code>src/lib.rs</code>, where the public interface exposes <code>CourseWorld</code>, <code>Scenario</code>, and owned reports. Follow <code>CourseWorld::new</code> into <code>src/simulation.rs</code> and find the installed schedule. That connection matters: a helper can calculate the right amount without ever being called during a tick. The schedule is where the world actually acquires the behavior described by those helpers.</p>
+<table><caption>Files in your continuing practice project</caption><thead><tr><th scope="col">File</th><th scope="col">Question it owns</th></tr></thead><tbody>
+<tr><td><code>src/model.rs</code></td><td>Which authored inputs are valid, and what data belongs to each entity?</td></tr>
+<tr><td><code>src/lifecycle.rs</code></td><td>Who pays upkeep, and when does zero become terminal?</td></tr>
+<tr><td><code>src/supply.rs</code></td><td>How much external input fits this lit tick?</td></tr>
+<tr><td><code>src/feeding.rs</code></td><td>Who has contact, and what remains after earlier claims?</td></tr>
+<tr><td><code>src/history.rs</code></td><td>Which outcomes remain knowable after event eviction?</td></tr>
+<tr><td><code>src/simulation.rs</code></td><td>What runs when, and how do reset and observation work?</td></tr>
+</tbody></table>
+<p>As you follow the modules, distinguish the stored state from a reading of it. The world owns each grazer's reserve and each patch's biomass; <code>snapshot(&amp;self)</code> copies those values into readings sorted by stable ID. Changing a reading therefore changes only your copy. The internal roster helps find entities by their handles, but it doesn't maintain another set of reserves. This gives tests and the browser a common way to observe the simulation while leaving changes to the systems that own those responsibilities.</p>
+
+<h2 id="follow-the-ordered-tick">Follow one ordered tick</h2>
+<p>Both comparison scenarios start IDs 1 and 2 with three reserve units each. ID 1 needs two upkeep units per tick, while ID 2 needs one; both may take a meal of up to two units from patch 100. The patch starts empty and can hold eight. Before tracing the entire run, consider the first tick: upkeep will leave the animals with one and two units, so their next opportunity depends on whether growth occurs before they try to eat.</p>
+<p>The diagram follows that opportunity through six phases. First advance the tick and clear its ledger. Then charge upkeep, accept growth on a lit tick, and resolve competing meals. Only after those meals do we mark any remaining zero-reserve grazers dead and seal the history interval. Reading a snapshot doesn't advance through these phases; it shows the result of the last completed step.</p>
+<figure>
+<svg viewBox="0 0 320 600" role="img" aria-labelledby="fieldwork-phase-title fieldwork-phase-desc" style="display:block;width:min(100%,320px);height:auto;margin:auto">
+<title id="fieldwork-phase-title">Six phases of one course-world tick</title>
+<desc id="fieldwork-phase-desc">Advance the tick, pay upkeep, grow lit patches, resolve meals, resolve starvation, then complete history. Meals occur before starvation, so a zero-reserve grazer still has a chance to eat.</desc>
+<g fill="#edf2e6" stroke="#526b48" stroke-width="2"><rect x="15" y="5" width="290" height="75" rx="8"/><rect x="15" y="105" width="290" height="75" rx="8"/><rect x="15" y="205" width="290" height="75" rx="8"/><rect x="15" y="305" width="290" height="75" rx="8"/><rect x="15" y="405" width="290" height="75" rx="8"/><rect x="15" y="505" width="290" height="75" rx="8"/></g>
+<g fill="#243e2b" font-family="sans-serif" text-anchor="middle"><text x="160" y="36" font-size="21">1 · Advance tick</text><text x="160" y="60" font-size="15">Clear the latest flow ledger</text><text x="160" y="136" font-size="21">2 · Pay upkeep</text><text x="160" y="160" font-size="15">Living reserves may reach zero</text><text x="160" y="236" font-size="21">3 · Grow patches</text><text x="160" y="260" font-size="15">Lit input, bounded by capacity</text><text x="160" y="336" font-size="21">4 · Resolve meals</text><text x="160" y="360" font-size="15">Stable IDs; immediate depletion</text><text x="160" y="436" font-size="21">5 · Resolve starvation</text><text x="160" y="460" font-size="15">Still at zero becomes dead</text><text x="160" y="536" font-size="21">6 · Complete history</text><text x="160" y="560" font-size="15">The tick is available to inspect</text></g>
+<g fill="none" stroke="#526b48" stroke-width="2"><path d="M160 82v20m-6-6 6 6 6-6M160 182v20m-6-6 6 6 6-6M160 282v20m-6-6 6 6 6-6M160 382v20m-6-6 6 6 6-6M160 482v20m-6-6 6 6 6-6"/></g>
+</svg>
+<figcaption>The schedule supplies meaning to zero: upkeep can reach it before a meal rescues the grazer. Terminal resolution waits until after that opportunity.</figcaption>
+</figure>
+<p>The four-tick day lights ticks one and two, then darkens ticks three and four. Limited supply requests two new units on each lit tick; generous supply requests six. Growth accepts only what fits in the patch. When the grazers eat, lower IDs claim first and each transfer immediately reduces the biomass available to the next grazer. This makes the result reproducible, although it gives no guarantee of fairness to the animal that goes second.</p>
+<p>We can account for this tick because each operation has a different effect on stores. Upkeep removes units, growth adds units, and meals move units from one store to another. Consequently, ending stores plus actual upkeep paid must equal starting stores plus actual growth accepted. The word <em>actual</em> matters: an animal with one unit cannot pay a requested cost of three, and this model carries no unpaid debt. The ledger must describe what happened, because copying the requests would make that equality fail even when the state changes were correct.</p>
+
+<h2 id="write-maintain">Reconstruct a whole typed system</h2>
+<p>Upkeep is a useful first system to reconstruct because its arithmetic is small enough to hold in mind while choosing the ECS access. Read <code>maintain</code> in your copy of <code>src/lifecycle.rs</code>, then set its implementation aside and replace the complete function. Keep the imports and <code>starve</code>. Your function needs to choose its parameters, visit the intended entities, change their reserves, and leave an accurate ledger and event record.</p>
+<p>Begin with what that responsibility requires. The system reads the clock and each stable identity, mutates each grazer, and writes the shared ledger and journal. It doesn't need a patch: the opportunity to eat belongs to a later phase. Writing a query that requests a <code>Grazer</code> expresses that membership directly, rather than making the function search arbitrary entities for something it can charge.</p>
+<p>There is one less obvious requirement. Although upkeep payments don't compete with each other, their events enter the journal in traversal order. If reversing spawn order changes that sequence, it can also change which events a bounded history retains. Collecting and sorting owned IDs gives the system a declared order before it starts to mutate components. The acceptance suite checks that order as part of the complete snapshot.</p>
+<p>If you're listening, pause here to reconstruct the function. Generated narration skips code and answer disclosures, so open them when you need the next hint. Resume after you've run the check and compared its result with your prediction.</p>
+<details><summary>Hint 1: write the access declaration first</summary><p>Use <code>Res&lt;Clock&gt;</code>, a mutable query fetching <code>(Entity, &amp;Identity, &amp;mut Grazer)</code>, and mutable ledger/history resources. <code>Entity</code> gives you a lookup handle, while <code>Identity</code> supplies the application ID whose order must remain stable.</p></details>
+<details><summary>Hint 2: separate ordering from mutation</summary><p>Collect owned pairs of stable ID and entity handle, sort them, then fetch each mutable grazer. Skip dead rows and charge the smaller of available reserve and configured cost. Use that same actual amount for the reserve change and ledger, recording an event only when the payment is positive.</p></details>
+<details><summary>Complete replacement: maintain in src/lifecycle.rs</summary><pre><code class="language-rust" data-fieldwork-answer="maintain">pub(crate) fn maintain(
+    clock: Res&lt;Clock&gt;,
+    mut grazers: Query&lt;(Entity, &amp;Identity, &amp;mut Grazer)&gt;,
+    mut ledger: ResMut&lt;TickLedger&gt;,
+    mut history: ResMut&lt;History&gt;,
+) {
+    let mut order: Vec&lt;_&gt; = grazers
+        .iter()
+        .map(|(entity, id, _)| (id.0, entity))
+        .collect();
+    order.sort_by_key(|(id, _)| *id);
+    for (id, entity) in order {
+        let (_, _, mut grazer) = grazers.get_mut(entity).expect("listed grazer still exists");
+        if grazer.life != Life::Alive {
+            continue;
+        }
+        let paid = grazer.reserve_units.min(grazer.maintenance_units_per_tick);
+        grazer.reserve_units -= paid;
+        ledger.maintenance_units = ledger
+            .maintenance_units
+            .checked_add(u64::from(paid))
+            .expect("maintenance ledger exhausted");
+        if paid &gt; 0 {
+            history.record(
+                &amp;clock,
+                EventKind::Maintenance {
+                    grazer: id,
+                    units: paid,
+                },
+            );
+        }
+    }
+}</code></pre></details>
+<p>Run the project check and pay attention to its rescue case. That animal starts with one unit, requests upkeep of three, and later receives a meal of two. It must finish alive at two. The case checks two decisions at once: the upkeep ledger must record only one paid unit, and reaching zero during upkeep must leave the later meal available. A system that kills the animal immediately would take that opportunity away.</p>
+
+<h2 id="diagnose-a-held-borrow">Let a compiler error reveal a held borrow</h2>
+<p>The working function separates collecting IDs from mutating grazers. To see why that separation matters in Rust, temporarily replace the entire <code>maintain</code> function with the version below. It tries to keep query items for the later loop instead of copying just the IDs and handles. Predict which access those retained items keep alive, then run the direct Cargo check so the diagnostic points into your own saved file.</p>
+<pre><code class="language-rust" data-fieldwork-probe="borrowed-query">pub(crate) fn maintain(mut grazers: Query&lt;(Entity, &amp;Identity, &amp;mut Grazer)&gt;) {
+    let borrowed: Vec&lt;_&gt; = grazers.iter().collect();
+    for (entity, _identity, _old) in borrowed {
+        let (_, _, mut grazer) = grazers.get_mut(entity).unwrap();
+        grazer.reserve_units = grazer.reserve_units.saturating_sub(1);
+    }
+}</code></pre>
+<pre><code class="language-sh">cargo +1.93.1 check --offline --locked --manifest-path work/fieldwork/Cargo.toml</code></pre>
+<p>The expected error says that <code>grazers</code> cannot be borrowed mutably while an immutable borrow is still in use. Owning the vector doesn't make its contents independent of the world: the collected items still contain references into the query. The second loop uses those references while asking <code>get_mut</code> for exclusive access to the same component data, so the compiler cannot grant both accesses.</p>
+<p>Restore the complete function above and compare what crosses the boundary between its two loops. IDs and entity handles are owned lookup values; keeping them doesn't retain a component borrow. Each later lookup can therefore borrow a grazer briefly, perform its work, and release that access before the next iteration. The repair follows from deciding what the second phase actually needs to remember. Bevy's <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/system/struct.Query.html">0.18.1 Query documentation</a> describes these fetched component references and entity handles.</p>
+
+<h2 id="connect-the-second-system">Connect a second system and challenge the schedule</h2>
+<p>Now reconstruct <code>grow</code> in <code>src/supply.rs</code>, again keeping the module imports but replacing the whole function. The structure should feel familiar, while the access and accounting change: this query mutates patches, the daylight resource determines whether work happens, and the ledger records input from outside the world. Calculate remaining capacity before adding anything, so even a large growth request cannot overflow the biomass value on its way to being capped.</p>
+<details><summary>Growth hint</summary><p>Return unless the current executed tick is lit. Sort owned patch IDs and handles, then accept the smaller of the growth request and remaining capacity. Increase biomass and the ledger by that accepted amount, preserving the same distinction between a configured request and an actual flow that you used for upkeep.</p></details>
+<details><summary>Complete replacement: grow in src/supply.rs</summary><pre><code class="language-rust" data-fieldwork-answer="grow">pub(crate) fn grow(
+    clock: Res&lt;Clock&gt;,
+    daylight: Res&lt;Daylight&gt;,
+    mut patches: Query&lt;(Entity, &amp;Identity, &amp;mut Patch)&gt;,
+    mut ledger: ResMut&lt;TickLedger&gt;,
+    mut history: ResMut&lt;History&gt;,
+) {
+    if daylight.is_lit(clock.tick) != Some(true) {
+        return;
+    }
+    let mut order: Vec&lt;_&gt; = patches
+        .iter()
+        .map(|(entity, id, _)| (id.0, entity))
+        .collect();
+    order.sort_by_key(|(id, _)| *id);
+    for (id, entity) in order {
+        let (_, _, mut patch) = patches.get_mut(entity).expect("listed patch still exists");
+        let added = patch
+            .growth_units_per_lit_tick
+            .min(patch.capacity_units - patch.biomass_units);
+        patch.biomass_units += added;
+        ledger.added_units = ledger
+            .added_units
+            .checked_add(u64::from(added))
+            .expect("growth ledger exhausted");
+        if added &gt; 0 {
+            history.record(
+                &amp;clock,
+                EventKind::Growth {
+                    patch: id,
+                    units: added,
+                },
+            );
+        }
+    }
+}</code></pre></details>
+<p>Once both systems pass, we can challenge a different claim: whether their results are used in the right order. In <code>tick_schedule</code> inside <code>src/simulation.rs</code>, temporarily move <code>lifecycle::starve</code> before <code>feeding::feed</code>, leaving the rest in place. The functions still compile, but the rescue acceptance test should now report a dead animal at zero where an alive animal at two was required. Correct subtraction and transfer helpers can't protect an opportunity that the schedule has already removed.</p>
+<p>Repair the tuple to the following sequence and retain its <code>.chain()</code> call:</p>
+<pre><code class="language-rust">(
+    begin_tick,
+    lifecycle::maintain,
+    supply::grow,
+    feeding::feed,
+    lifecycle::starve,
+    complete_tick,
+).chain()</code></pre>
+<p>Rerun the project check. The single-threaded executor ensures that systems execute serially; the chain declares which order the simulation requires. Those are separate choices, and the rescue case gives this particular ordering edge an observable purpose.</p>
+
+<h2 id="write-an-investigation">Write a test for a question the suite leaves open</h2>
+<p>So far, the comparison has changed how much food the meadow can receive. Your own investigation will change <em>when</em> it can receive food. Keep the generous scenario's population, capacities, and contacts, but compare six requested units on two lit ticks with three on all four. Both request twelve units per cycle before capacity limits. Would that be enough to preserve the same animals, or can the dark interval still matter?</p>
+<p>Write your prediction before creating <code>work/fieldwork/tests/investigation.rs</code>. Have the test construct both scenarios, advance twelve complete ticks, accumulate actual accepted growth, and compare survivors and individual reserves. Use the public API, which makes the test ask the same kinds of questions that a browser host can ask without accessing private components. The <a href="https://doc.rust-lang.org/book/ch11-03-test-organization.html">Rust Book's test organization chapter</a> explains how integration tests exercise that public surface.</p>
+<details><summary>Investigation hint</summary><p>Start the second case from a generous scenario, change its daylight to <code>Daylight::new(4, 4)</code>, and reduce its patch growth request to three. Sum each snapshot's <code>ledger.added_units</code>, because equal requests do not guarantee equal accepted growth when the patch can fill.</p></details>
+<details><summary>Complete investigation.rs and the prediction it tests</summary><pre><code class="language-rust" data-fieldwork-test="supply-timing">use moss_course_ecosystem::{CourseWorld, Daylight, Life, Scenario};
+
+#[test]
+fn equal_potential_supply_can_have_different_timing_and_survivors() {
+    let mut steady_setup = Scenario::generous_supply();
+    steady_setup.daylight = Daylight::new(4, 4).unwrap();
+    steady_setup.patches[0].growth_units_per_lit_tick = 3;
+    let mut pulsed = CourseWorld::new(Scenario::generous_supply()).unwrap();
+    let mut steady = CourseWorld::new(steady_setup).unwrap();
+    let (mut pulsed_added, mut steady_added) = (0_u64, 0_u64);
+    for _ in 0..12 {
+        pulsed.step();
+        steady.step();
+        pulsed_added += pulsed.snapshot().ledger.added_units;
+        steady_added += steady.snapshot().ledger.added_units;
+    }
+    let pulsed = pulsed.snapshot();
+    let steady = steady.snapshot();
+    assert_eq!(pulsed.grazers.iter().filter(|g| g.life == Life::Alive).count(), 1);
+    assert_eq!(steady.grazers.iter().filter(|g| g.life == Life::Alive).count(), 2);
+    assert_eq!((pulsed_added, steady_added), (34, 36));
+    assert_eq!(steady.grazers.iter().map(|g| g.reserve_units).collect::&lt;Vec&lt;_&gt;&gt;(), vec![3, 3]);
+    assert_eq!(steady.patches[0].biomass_units, 0);
+}</code></pre>
+<p>With steady input, every tick restores ID 1 from one to three and ID 2 from two to three. With pulsed input, the food runs out before the second dark tick, and the higher-cost animal dies on tick eight. Its absence then changes later consumption: at tick ten, only four of the six requested growth units fit in the patch, bringing total accepted input to thirty-four. Timing was the configuration we changed; unequal accepted supply is a consequence of how that timing interacts with capacity and consumption. The two runs therefore do not have equal actual intake.</p></details>
+<p>Run the project check and find your test's name in its output. Then temporarily assert that both grazers survive the pulsed run, observe the failure, and restore the expectation you can explain. This deliberate wrong prediction checks that Cargo discovers your file and that the assertion can distinguish the outcomes. Keep the test beside your systems when you return to the project.</p>
+<p>If you're following the audio, pause to read the complete investigation answer before continuing. Its explanation of tick ten is essential to interpreting the result: requesting the same supply and receiving the same supply are different experimental conditions, even when you choose other assertions for your own test.</p>
+
+<h2 id="observe-your-compiled-world">Observe your compiled world</h2>
+<p>Once the reconstructed systems and your investigation pass, compile the saved project for the browser. Run these commands from the repository root, then reload this page:</p>
+<pre><code class="language-sh">python3 learning/scripts/fieldwork_preview.py --project work/fieldwork
+python3 learning/scripts/build.py</code></pre>
+<details><summary>Opening the page and identifying the build</summary><p>Serve the course with <code>python3 learning/scripts/serve.py</code> if it isn't already open. The preview's source label distinguishes the course reference from your compiled project. Check it before interpreting a result, and check and rebuild again after changing sources: an earlier successful binary describes the earlier code.</p></details>
+<section class="experiment" data-ecosystem-preview aria-label="Cumulative course ecosystem"></section>
+<p>Choose limited supply, reset, and advance twelve ticks; then repeat with generous supply. These points from the original reference's native trace give you intermediate states to compare, so a different ending can be traced back to the tick where your build first diverged:</p>
+<table><caption>Reference expectations for fixed contacts and the original two scenarios</caption><thead><tr><th scope="col">Tick</th><th scope="col">Limited: reserves 1 / 2; biomass</th><th scope="col">Generous: reserves 1 / 2; biomass</th></tr></thead><tbody><tr><td>1</td><td>3 / 2; 0</td><td>3 / 4; 2</td></tr><tr><td>4</td><td>0 / 0; 0</td><td>1 / 5; 0</td></tr><tr><td>8</td><td>0 / 0; 4</td><td>0 / 7; 0</td></tr><tr><td>12</td><td>0 / 0; 8</td><td>0 / 8; 5</td></tr></tbody></table>
+<p>Limited supply loses ID 2 on tick three and ID 1 on tick four. Generous supply keeps both alive longer, but loses ID 1 on tick eight. Check those transitions in your browser build as well as the final stores. The table establishes the native reference expectation; your browser observation checks that the compiled host exposes the same behavior. The custom steady-supply investigation remains a native test unless that scenario is also added to a host.</p>
+<p>The inspector can show every patch, but each grazer still eats only from its authored contact. History adds when those actions happened: retained events name a run, tick, and stable ID. When a journal has evicted older events, use its coverage bounds before interpreting an absent starvation record. A complete interval starts strictly after <code>complete_after_tick</code> and includes <code>collected_through_tick</code>; outside it, absence may mean unknown. Reset starts a new run and clears its history, while an owned report you saved beforehand continues to describe the old run.</p>
+<p>We can now explain the opening picture. Food left at tick twelve couldn't rescue grazers that had already died in the dark interval. That explanation needed individual reserves, the order of a tick, and the timing of growth together. Keep this project and its investigation for <a href="population.html">funded births and the next generation</a>, then <a href="mobile.html">local decisions and paid journeys</a>: each extends the same saved world and keeps its earlier accounting available to test.</p>

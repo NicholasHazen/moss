@@ -1,0 +1,343 @@
+<p class="lesson-lead">Suppose an observation is empty. You know several ways that could happen: the entity might lack a required component, its commands might still be pending, or the history might not cover the time you're asking about. Recognizing the result isn't enough to choose between those explanations. These six returns change the fixtures from earlier lessons and ask you to decide what evidence would settle the question.</p>
+<aside class="scope-note"><p><strong>Optional mixed practice.</strong> Try cases one through three after the ECS core, then four through six after <a href="fieldwork.html">the first cumulative fieldwork</a>. Each is available whenever you want it; there are no grades or unlocks. The examples use isolated course worlds and leave live Moss and <code>NOW.md</code> unchanged.</p></aside>
+<p>You don't need to work through every case on each visit. Choose one whose answer you no longer remember, make a prediction in your field note, and name the observation you'd use to check it. If you're unsure, try to locate the uncertainty: is it which entities a query visits, when a system executes, or what a saved value can tell you? That choice will make the linked return to an earlier lesson more useful than rereading everything.</p>
+<p>If you're listening, pause at the prediction before opening its hint or full answer; generated narration skips those disclosures and their code. The first three cases build small reporting worlds, while four and five use your actual fieldwork library. Their five worked tests can later live together in that saved project. Case six uses the existing target lab, so it doesn't introduce another implementation of the same selection rule.</p>
+
+<h2 id="membership-and-memory">1. Which rows changed, and which reading stayed old?</h2>
+<p>Start with a reporting world containing the three rows below. Each execution of its decrement system requests <code>Query&lt;(&amp;Identity, &amp;mut Reserve), With&lt;Active&gt;&gt;</code> and removes one unit from every matching row. Before running the schedule, an observer saves an owned vector of identity and reserve pairs. Its reporting query does not require <code>Active</code>, so the writer and observer may include different rows.</p>
+<table><caption>Initial reporting fixture</caption><thead><tr><th scope="col">Row</th><th scope="col">Identity</th><th scope="col">Reserve</th><th scope="col">Active marker</th></tr></thead><tbody><tr><td>A</td><td>11</td><td>7</td><td>Present</td></tr><tr><td>B</td><td>12</td><td>7</td><td>Absent</td></tr><tr><td>C</td><td>Absent</td><td>7</td><td>Present</td></tr></tbody></table>
+<p>Run the decrement schedule twice, asking for extra reports between the runs. Predict each current reserve, the vector saved before execution, and a fresh vector afterward. In your explanation, account for why a row can be unchanged yet still appear in the report, and why another row can be absent from the report altogether. Finally, decide what owning the vector gives the caller: ownership of the components, or ownership of the values copied from them?</p>
+<details><summary>Hint: separate the two membership rules</summary><p>The writer needs identity, reserve, and the active marker. The observer needs identity and reserve. Work out those two memberships before doing the subtraction, and remember that neither query supplies a component the entity lacks.</p></details>
+<details><summary>Full reasoning and expected result</summary><p>Only A matches the writer, so the current reserves are five, seven, and seven. B still appears in the report because the observer doesn't require the marker; C appears in neither report because it lacks identity. The original vector stays <code>[(11, 7), (12, 7)]</code>, while the fresh vector is <code>[(11, 5), (12, 7)]</code>. The saved vector owns copied numbers, so subsequent component changes cannot update it, and reading extra reports does not execute the decrement schedule.</p><p>If membership was uncertain, return to <a href="03-queries.html#predict-membership">predicting query membership</a>. If you expected the saved values to change, revisit <a href="02-ownership.html#a-snapshot-with-a-name">a saved reading's ownership</a> and <a href="08-collections.html#build-the-owned-report">the owned report</a>. The final numbers are evidence for both ideas, but each difficulty needs a different explanation.</p></details>
+
+<h2 id="locate-the-stale-value">2. The observer saw 91. What would you inspect next?</h2>
+<p>In this fixture, a selected sample contains two units out of seven, while an unselected sample contains four out of five. A projection system floors the selected percentage and writes it into a display resource. The display starts at 91, and another system copies its value into a trace. After one schedule run, that trace contains 91—the old value you hoped the projection would replace.</p>
+<p>Two installation mistakes could explain this result: the projection wasn't installed, or it ran after the observer. Choose one additional reading that would distinguish those explanations in this fixture. Predict both the final display and trace for each mistake, then for a repaired schedule. There's also a helper-only percentage test available; explain whether passing it would settle which system actually ran.</p>
+<details><summary>Hint: look for a write that happened too late</summary><p>The earlier observation can be identical in both cases even if the final world differs. Ask whether either mistaken schedule still executes the projection after recording the trace.</p></details>
+<details><summary>Full reasoning and expected result</summary><p>Read the final display. Without the projection installed, it remains 91 and the trace is <code>[91]</code>. With the order reversed, the projection eventually writes 28, but the earlier trace remains <code>[91]</code>. Correct order produces display 28 and trace <code>[28]</code>. The unselected sample would produce 80, giving the fixture another distinguishable outcome if the wrong membership were used.</p><p>This reasoning assumes the supplied projection works when called; it doesn't imply that all stale displays have only two causes. The worked test executes all three schedules so it can distinguish their behavior, while a percentage helper test alone cannot establish installation or order. Return to <a href="11-schedules.html#draw-the-two-edges">required ordering edges</a> or <a href="13-evidence.html#write-the-evidence-yourself">writing discriminating evidence</a> according to which part of that diagnosis you want to revisit.</p></details>
+
+<h2 id="three-times-for-one-row">3. A handle, a visible component, and a retained observation</h2>
+<p>Now the thing waiting to become visible is an entity rather than a calculated percentage. An empty world queues <code>RowId(41)</code> and immediately saves its entity handle. Observer A runs next, followed by an explicit <code>ApplyDeferred</code>, then observer B. Both observers save copied IDs. For this experiment, automatic intermediate application is disabled, while final application at the end of the schedule remains enabled.</p>
+<p>Predict A's vector, B's vector, and whether the saved handle resolves to <code>RowId</code> when the schedule returns. Then remove only the explicit intermediate application point and predict all three again. If the final world contains the row in both runs, decide whether that final state could tell you what A saw earlier. Keep the application settings beside your prediction; changing them would change the experiment.</p>
+<details><summary>Hint: keep the experimental settings with the prediction</summary><p>With automatic insertion disabled, declaring an order does not supply an intermediate application point. In the altered schedule, final application still happens, but only after both observers have finished.</p></details>
+<details><summary>Full reasoning and expected result</summary><p>With the intermediate point present, A saves <code>[]</code>, B saves <code>[41]</code>, and the handle resolves to 41 after the schedule. Without that point, both saved vectors are empty, although the final handle still resolves to 41. Applying the command later changes what a future query can fetch; it doesn't rewrite observations the earlier systems already copied.</p><p>The reserved handle was therefore not proof of component visibility. These results depend on the stated experimental settings, rather than a general claim that chains never flush commands. Revisit <a href="12-commands.html#make-the-application-point-explicit">explicit application points</a> and <a href="12-commands.html#separate-identity-from-a-handle">identity versus an entity handle</a> if the difference between reservation and observation was hard to place.</p></details>
+
+<h2 id="account-for-a-rescue">4. Can the accounting balance while the animal dies too early?</h2>
+<p>Return to the actual fieldwork library with a smaller fixture. One grazer begins with two reserve units and capacity six. It requests five upkeep units, then a meal of three from its authored contact. The patch begins with one biomass unit, has capacity four, and requests growth of four on tick one, which is lit. The installed order is upkeep, growth, meals, then starvation—the same rescue opportunity you established in fieldwork.</p>
+<p>Predict the actual upkeep payment, accepted growth, meal transfer, ending stores, and life state. Then move starvation before meals in your imagined trace and work out the ending again. Would the total-store conservation equation necessarily expose that ordering mistake? Pause to write both outcomes, including the individual stores, before using the hint.</p>
+<details><summary>Hint: a requested amount is not automatically an actual flow</summary><p>The reserve floor limits the payment, and the patch's remaining capacity limits growth. A meal transfers units between stores. Starvation changes which actions are still available; it doesn't create or remove patch biomass.</p></details>
+<details><summary>Full reasoning and expected result</summary><p>Upkeep pays two and leaves the grazer at zero. Growth accepts three, filling the patch to four, then the meal transfers three. The grazer finishes alive at three and the patch holds one. The ledger records added three, upkeep two, eaten three, and no starvation. Ending stores of four plus payment of two equal starting stores of three plus accepted growth of three.</p><p>A starvation-first schedule can instead leave a dead grazer at zero beside four units in the patch. The same conservation equation still balances because total stores are still four. Individual reserve and life assertions are what establish that the intended rescue opportunity occurred. The worked test calls <code>CourseWorld::step</code>, exercising your installed systems rather than recreating their arithmetic. Revisit <a href="18-growth.html#report-what-fits">accepted growth</a>, <a href="15-meals.html#calculate-the-actual-transfer">actual transfer</a>, or <a href="fieldwork.html#follow-the-ordered-tick">the connected tick</a> to recover the part of the trace you need.</p></details>
+
+<h2 id="zero-over-which-interval">5. Zero deaths over which interval?</h2>
+<p>An owned course report has an empty event vector, but also says its complete coverage starts strictly after tick four and extends through tick seven. Its current grazer is dead at zero reserve. Predict what <code>starvations_between</code> returns for four through seven, five through seven, and seven through eight. The intervals differ by only a boundary, so identify what each includes before interpreting the empty vector.</p>
+<p>The executable fixture reaches this state with no patches, four initial reserve units, upkeep of one per tick, and history capacity zero. It executes seven ticks. Trace when the animal dies and what happens to records produced then. How can a journal that retains no events still establish zero new deaths for a later interval?</p>
+<details><summary>Hint: retained contents and collected coverage answer different questions</summary><p>Events were lost through tick four. Ticks five, six, and seven were executed without another terminal transition, while tick eight has not yet been collected. The report can use those facts even when it can't supply the earlier event records.</p></details>
+<details><summary>Full reasoning and expected result</summary><p>The answers are <code>None</code>, <code>Some(0)</code>, and <code>None</code>. Four upkeep records and one starvation were evicted, making five lost events. The last loss happened in tick four; later empty ticks advanced the collected boundary without producing another death. Thus coverage excludes the death tick but includes the completed interval from five through seven.</p><p>Dead state describes a present condition, not the missing interval's event count. The test's known starting state lets us explain how this particular history arose, but an empty report alone cannot recover it. Return to <a href="05-options.html#missing-is-not-zero">unknown versus zero</a> and <a href="19-history.html#bounded-records-visible-coverage">coverage boundaries</a> if those answers were difficult to distinguish. Replacing an absent answer with zero would hide exactly the uncertainty this report preserves.</p></details>
+
+<h2 id="a-target-is-not-a-reservation">6. The chosen patch is already empty</h2>
+<p>For this case, return to the <a href="16-targets.html">isolated target lab</a>; the shared-meadow checkpoint itself uses fixed contacts. At observation time, an actor at zero, zero sees ID 17 at one, zero and ID 12 at zero, one. Both patches have two biomass units and lie within radius two. The selection policy compares Manhattan distance first, then stable ID when distances tie.</p>
+<p>Predict which patch it chooses. Before acting, the actor reaches that patch, but another completed meal empties it. The saved reading still says two units, and ID 17 remains visible with food. Decide what this action's resolver may do, then change the fixture again: what if the chosen patch has disappeared entirely? In each case, distinguish evidence that the earlier choice was reasonable from permission to take a meal now.</p>
+<details><summary>Hint: distinguish choosing again from validating this action</summary><p>The tie rule chooses one identity. The resolver revalidates that identity against current state; a failure does not silently invoke another selection policy or establish contact with a different patch.</p></details>
+<details><summary>Full reasoning and expected result</summary><p>ID 12 wins the equal-distance tie. Its currently empty state rejects the bite without reserve gain, even though the saved observation remains two. Removing ID 12 instead produces a missing-target rejection. Neither outcome authorizes a fallback meal at ID 17, and food remaining at the selected patch would still require current contact before transfer.</p><p>Those answers follow the target lab's declared rules; the lab does not by itself prove that movement or another consumer actually ran. Its existing tests supply the executable evidence for selection and revalidation, so the file below doesn't duplicate the selector. Return to <a href="16-targets.html#make-the-tie-rule-visible">the tie rule</a>, <a href="16-targets.html#revalidate-the-selected-action">action-time revalidation</a>, and <a href="15-meals.html#rejection-has-no-half-finished-state">rejection without partial mutation</a> to connect a failed choice with the state it must leave unchanged.</p></details>
+
+<h2 id="keep-the-executable-evidence">Keep five checks beside your investigation</h2>
+<p>When you're ready to execute the worked cases, save the complete file below as <code>work/fieldwork/tests/returns.rs</code> in the persistent project prepared by <a href="fieldwork.html#keep-one-project">fieldwork</a>. Leave <code>investigation.rs</code> in place, and merge deliberately if you already have a <code>returns.rs</code>. These questions belong beside your own work so they can keep testing the same library as you extend it.</p>
+<details><summary>Where the worked file runs</summary><p>You can <a href="examples/mixed-returns.rs" download>download the complete worked test file</a>, also kept in the repository at <code>learning/practice/returns.rs</code>. It depends on the project's Bevy ECS 0.18.1 and course library, so it runs as an integration test there rather than as a standalone <code>rustc</code> file.</p></details>
+<p>Run these commands from the Moss repository root:</p>
+<pre><code class="language-sh">cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test returns
+python3 learning/scripts/fieldwork.py check --project work/fieldwork</code></pre>
+<p>The first should report five passing named tests. The second also runs the course acceptance suite and your other saved targets. Read a failure according to what it establishes: a missing compiler or dependency cache needs a setup repair, while an assertion failure gives you an observed result to investigate. Passing these native checks doesn't yet describe what a browser displays or how well you can explain the cause.</p>
+<p>Inside the file, <code>membership</code>, <code>projection</code>, and <code>deferred</code> build separate small ECS worlds; the other two tests call the public course API. The reporting helper needs mutable world access to prepare its query, but that access doesn't execute the decrement schedule. Before opening the full file, choose one assertion and name a plausible defect it would catch. That connects the code you're about to read with the evidence you wanted from the case.</p>
+<p>If you're listening, pause to inspect the file and run its checks. Then leave yourself a specific return point, such as “Revisit command visibility because I inferred an earlier observation from the final world.” You can use that question on your next visit without repeating every case, and change the fixture again when the original answer has become too familiar.</p>
+<details><summary>Complete worked file: tests/returns.rs</summary><pre><code class="language-rust" data-practice-answer="mixed-returns">
+//! Worked checks for “Return with a different question.”
+//! Save this whole file as work/fieldwork/tests/returns.rs, preserving any
+//! investigation.rs already there. This is an integration test, not a rustc lab.
+//! From the Moss repository root:
+//! cargo +1.93.1 test --offline --locked --manifest-path work/fieldwork/Cargo.toml --test returns
+//! python3 learning/scripts/fieldwork.py check --project work/fieldwork
+//!
+//! Cases 1–3 use separate, nonbiological Bevy worlds. Cases 4–5 execute the
+//! actual persistent course library. Case 6 returns to the existing target lab.
+
+mod membership {
+    use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+
+    #[derive(Component)]
+    struct Identity(u32);
+    #[derive(Component)]
+    struct Reserve(u32);
+    #[derive(Component)]
+    struct Active;
+
+    fn decrement(mut rows: Query&lt;(&amp;Identity, &amp;mut Reserve), With&lt;Active&gt;&gt;) {
+        for (_, mut reserve) in &amp;mut rows {
+            reserve.0 = reserve.0.checked_sub(1).expect(&quot;fixture has enough units&quot;);
+        }
+    }
+
+    fn report(world: &amp;mut World) -&gt; Vec&lt;(u32, u32)&gt; {
+        let mut query = world.query::&lt;(&amp;Identity, &amp;Reserve)&gt;();
+        let mut rows: Vec&lt;_&gt; = query
+            .iter(world)
+            .map(|(id, reserve)| (id.0, reserve.0))
+            .collect();
+        rows.sort_by_key(|(id, _)| *id);
+        rows
+    }
+
+    #[test]
+    fn case_1_required_components_and_owned_readings_answer_different_questions() {
+        let mut world = World::new();
+        let a = world.spawn((Identity(11), Reserve(7), Active)).id();
+        let b = world.spawn((Identity(12), Reserve(7))).id();
+        let unnamed = world.spawn((Reserve(7), Active)).id();
+        let saved = report(&amp;mut world);
+        let mut schedule = Schedule::default();
+        schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+        schedule.add_systems(decrement);
+        for _ in 0..2 {
+            let _ = report(&amp;mut world); // Reading does not run the schedule.
+            schedule.run(&amp;mut world);
+            let _ = report(&amp;mut world);
+        }
+        assert_eq!(world.get::&lt;Reserve&gt;(a).unwrap().0, 5);
+        assert_eq!(world.get::&lt;Reserve&gt;(b).unwrap().0, 7);
+        assert_eq!(world.get::&lt;Reserve&gt;(unnamed).unwrap().0, 7);
+        assert_eq!(saved, vec![(11, 7), (12, 7)]);
+        assert_eq!(report(&amp;mut world), vec![(11, 5), (12, 7)]);
+    }
+}
+
+mod projection {
+    use bevy_ecs::{prelude::*, schedule::ExecutorKind};
+
+    #[derive(Component)]
+    struct Chosen;
+    #[derive(Component)]
+    struct Sample {
+        used: u32,
+        capacity: u32,
+    }
+    #[derive(Resource)]
+    struct Display(Option&lt;u32&gt;);
+    #[derive(Resource, Default)]
+    struct Trace(Vec&lt;Option&lt;u32&gt;&gt;);
+
+    fn project(rows: Query&lt;&amp;Sample, With&lt;Chosen&gt;&gt;, mut display: ResMut&lt;Display&gt;) {
+        display.0 = rows.single().ok().and_then(|sample| {
+            (sample.capacity != 0).then(|| {
+                (u64::from(sample.used.min(sample.capacity)) * 100 / u64::from(sample.capacity))
+                    as u32
+            })
+        });
+    }
+
+    fn observe(display: Res&lt;Display&gt;, mut trace: ResMut&lt;Trace&gt;) {
+        trace.0.push(display.0);
+    }
+
+    enum Order {
+        Missing,
+        Reversed,
+        Correct,
+    }
+
+    fn run(order: Order) -&gt; (Option&lt;u32&gt;, Vec&lt;Option&lt;u32&gt;&gt;) {
+        let mut world = World::new();
+        world.spawn((
+            Sample {
+                used: 2,
+                capacity: 7,
+            },
+            Chosen,
+        ));
+        world.spawn(Sample {
+            used: 4,
+            capacity: 5,
+        });
+        world.insert_resource(Display(Some(91)));
+        world.init_resource::&lt;Trace&gt;();
+        let mut schedule = Schedule::default();
+        schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+        match order {
+            Order::Missing =&gt; {
+                schedule.add_systems(observe);
+            }
+            Order::Reversed =&gt; {
+                schedule.add_systems((observe, project).chain());
+            }
+            Order::Correct =&gt; {
+                schedule.add_systems((project, observe).chain());
+            }
+        }
+        schedule.run(&amp;mut world);
+        (
+            world.resource::&lt;Display&gt;().0,
+            world.resource::&lt;Trace&gt;().0.clone(),
+        )
+    }
+
+    #[test]
+    fn case_2_final_display_separates_missing_installation_from_wrong_order() {
+        assert_eq!(run(Order::Missing), (Some(91), vec![Some(91)]));
+        assert_eq!(run(Order::Reversed), (Some(28), vec![Some(91)]));
+        assert_eq!(run(Order::Correct), (Some(28), vec![Some(28)]));
+    }
+}
+
+mod deferred {
+    use bevy_ecs::{
+        prelude::*,
+        schedule::{ExecutorKind, ScheduleBuildSettings},
+    };
+
+    #[derive(Component)]
+    struct RowId(u32);
+    #[derive(Resource, Default)]
+    struct Reserved(Vec&lt;Entity&gt;);
+    #[derive(Resource, Default)]
+    struct Seen {
+        before: Vec&lt;u32&gt;,
+        after: Vec&lt;u32&gt;,
+    }
+
+    fn enqueue(mut commands: Commands, mut reserved: ResMut&lt;Reserved&gt;) {
+        reserved.0.push(commands.spawn(RowId(41)).id());
+    }
+
+    fn before(rows: Query&lt;&amp;RowId&gt;, mut seen: ResMut&lt;Seen&gt;) {
+        seen.before = rows.iter().map(|row| row.0).collect();
+        seen.before.sort();
+    }
+
+    fn after(rows: Query&lt;&amp;RowId&gt;, mut seen: ResMut&lt;Seen&gt;) {
+        seen.after = rows.iter().map(|row| row.0).collect();
+        seen.after.sort();
+    }
+
+    fn run(intermediate_application: bool) -&gt; (Vec&lt;u32&gt;, Vec&lt;u32&gt;, u32) {
+        let mut world = World::new();
+        world.init_resource::&lt;Reserved&gt;();
+        world.init_resource::&lt;Seen&gt;();
+        let mut schedule = Schedule::default();
+        schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+        schedule.set_build_settings(ScheduleBuildSettings {
+            auto_insert_apply_deferred: false,
+            ..Default::default()
+        });
+        schedule.set_apply_final_deferred(true);
+        if intermediate_application {
+            schedule.add_systems((enqueue, before, ApplyDeferred, after).chain());
+        } else {
+            schedule.add_systems((enqueue, before, after).chain());
+        }
+        schedule.run(&amp;mut world);
+        let saved = world.resource::&lt;Seen&gt;();
+        let handle = world.resource::&lt;Reserved&gt;().0[0];
+        (
+            saved.before.clone(),
+            saved.after.clone(),
+            world.get::&lt;RowId&gt;(handle).unwrap().0,
+        )
+    }
+
+    #[test]
+    fn case_3_final_existence_does_not_rewrite_an_earlier_observation() {
+        assert_eq!(run(true), (vec![], vec![41], 41));
+        assert_eq!(run(false), (vec![], vec![], 41));
+    }
+}
+
+use moss_course_ecosystem::{
+    CourseWorld, Daylight, GrazerSeed, Life, PatchSeed, Scenario, SimId, TickLedger,
+};
+
+#[test]
+fn case_4_actual_course_tick_caps_growth_and_rescues_after_actual_upkeep() {
+    let mut world = CourseWorld::new(Scenario {
+        daylight: Daylight::new(4, 2).unwrap(),
+        grazers: vec![GrazerSeed {
+            id: SimId(8),
+            reserve_units: 2,
+            capacity_units: 6,
+            maintenance_units_per_tick: 5,
+            meal_units_per_tick: 3,
+            feeding_site: Some(SimId(80)),
+        }],
+        patches: vec![PatchSeed {
+            id: SimId(80),
+            biomass_units: 1,
+            capacity_units: 4,
+            growth_units_per_lit_tick: 4,
+        }],
+        history_limit: 32,
+    })
+    .unwrap();
+    let before = world.snapshot();
+    assert_eq!(before.tick, 0);
+    world.step();
+    let after = world.snapshot();
+    assert_eq!(after.tick, 1);
+    assert_eq!(
+        (after.grazers[0].reserve_units, after.grazers[0].life),
+        (3, Life::Alive)
+    );
+    assert_eq!(after.patches[0].biomass_units, 1);
+    assert_eq!(
+        after.ledger,
+        TickLedger {
+            added_units: 3,
+            maintenance_units: 2,
+            eaten_units: 3,
+            starvations: 0,
+        }
+    );
+    let before_stores =
+        u64::from(before.grazers[0].reserve_units) + u64::from(before.patches[0].biomass_units);
+    let after_stores =
+        u64::from(after.grazers[0].reserve_units) + u64::from(after.patches[0].biomass_units);
+    assert_eq!(
+        after_stores + after.ledger.maintenance_units,
+        before_stores + after.ledger.added_units
+    );
+    assert_eq!(after.history.starvations_between(1, 1), Some(0));
+}
+
+#[test]
+fn case_5_evicted_death_and_collected_empty_ticks_have_different_evidence() {
+    let mut world = CourseWorld::new(Scenario {
+        daylight: Daylight::new(4, 0).unwrap(),
+        grazers: vec![GrazerSeed {
+            id: SimId(9),
+            reserve_units: 4,
+            capacity_units: 4,
+            maintenance_units_per_tick: 1,
+            meal_units_per_tick: 0,
+            feeding_site: None,
+        }],
+        patches: vec![],
+        history_limit: 0,
+    })
+    .unwrap();
+    for _ in 0..7 {
+        world.step();
+    }
+    let state = world.snapshot();
+    assert_eq!(state.grazers[0].life, Life::Dead);
+    assert_eq!(state.grazers[0].reserve_units, 0);
+    assert!(state.history.events.is_empty());
+    assert_eq!(state.history.evicted_events, 5);
+    assert_eq!(
+        (
+            state.history.complete_after_tick,
+            state.history.collected_through_tick
+        ),
+        (4, 7)
+    );
+    assert_eq!(state.history.starvations_between(4, 7), None);
+    assert_eq!(state.history.starvations_between(5, 7), Some(0));
+    assert_eq!(state.history.starvations_between(7, 8), None);
+}
+
+</code></pre></details>
