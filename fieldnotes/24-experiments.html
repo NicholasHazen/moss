@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Compare a declared intervention across matched cohorts, retaining losses and missing coverage in the report."><meta name="color-scheme" content="light dark">
+<title>Make a comparison explain its denominator · Moss Fieldnotes</title><link rel="stylesheet" href="assets/fieldnotes.css?v=45ff3179bc2c">
+<script src="assets/records.js?v=45ff3179bc2c" defer></script><script src="assets/models.js?v=45ff3179bc2c" defer></script><script src="assets/terrarium.js?v=45ff3179bc2c" defer></script><script src="assets/evidence.js?v=45ff3179bc2c" defer></script><script src="assets/ecosystem.js?v=45ff3179bc2c" defer></script><script src="assets/population.js?v=45ff3179bc2c" defer></script><script src="assets/mobile.js?v=45ff3179bc2c" defer></script><script src="assets/fieldnotes.js?v=45ff3179bc2c" defer></script></head>
+<body data-page="24-experiments"><a class="skip-link" href="#reading">Skip to reading</a>
+<header class="masthead"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">m</span><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">Moss · Fieldnotes 0.2.1</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></header>
+<div class="workspace"><aside class="sidebar"><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><ol><li class="nav-group"><details><summary>Start with evidence</summary><ol><li><a href="01-observe.html"><span class="number">01</span><span>A tick is a promise<small>25 min · values</small></span><span class="progress-dot" data-progress-for="01-observe" aria-hidden="true"></span></a></li><li><a href="02-ownership.html"><span class="number">02</span><span>Who owns the next change?<small>35 min · ownership</small></span><span class="progress-dot" data-progress-for="02-ownership" aria-hidden="true"></span></a></li><li><a href="03-queries.html"><span class="number">03</span><span>Ask the world a typed question<small>35 min · components</small></span><span class="progress-dot" data-progress-for="03-queries" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Everyday Rust</summary><ol><li><a href="04-units.html"><span class="number">04</span><span>Give the number a unit<small>30 min · newtypes</small></span><span class="progress-dot" data-progress-for="04-units" aria-hidden="true"></span></a></li><li><a href="05-options.html"><span class="number">05</span><span>Missing is a different state<small>30 min · enums</small></span><span class="progress-dot" data-progress-for="05-options" aria-hidden="true"></span></a></li><li><a href="06-results.html"><span class="number">06</span><span>A rejected request has a reason<small>35 min · Result</small></span><span class="progress-dot" data-progress-for="06-results" aria-hidden="true"></span></a></li><li><a href="07-modules.html"><span class="number">07</span><span>Put the boundary in the code<small>30 min · modules</small></span><span class="progress-dot" data-progress-for="07-modules" aria-hidden="true"></span></a></li><li><a href="08-collections.html"><span class="number">08</span><span>Collect a report, release the world<small>35 min · Vec</small></span><span class="progress-dot" data-progress-for="08-collections" aria-hidden="true"></span></a></li><li><a href="09-traits.html"><span class="number">09</span><span>A trait is a promise you can use<small>35 min · traits</small></span><span class="progress-dot" data-progress-for="09-traits" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>The ECS contract</summary><ol><li><a href="10-borrows.html"><span class="number">10</span><span>Prove that the borrows cannot meet<small>35 min · disjoint queries</small></span><span class="progress-dot" data-progress-for="10-borrows" aria-hidden="true"></span></a></li><li><a href="11-schedules.html"><span class="number">11</span><span>Give the observations an order<small>35 min · schedules</small></span><span class="progress-dot" data-progress-for="11-schedules" aria-hidden="true"></span></a></li><li><a href="12-commands.html"><span class="number">12</span><span>Change structure at a known boundary<small>40 min · Commands</small></span><span class="progress-dot" data-progress-for="12-commands" aria-hidden="true"></span></a></li><li><a href="13-evidence.html"><span class="number">13</span><span>Make a test disagree with a plausible mistake<small>40 min · testing</small></span><span class="progress-dot" data-progress-for="13-evidence" aria-hidden="true"></span></a></li><li><a href="14-movement.html"><span class="number">14</span><span>Connect one affordable action to the world<small>35 min · movement bridge</small></span><span class="progress-dot" data-progress-for="14-movement" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details open><summary>Ecosystem depth</summary><ol><li><a href="15-meals.html"><span class="number">15</span><span>A finite meal has two sides<small>40 min · finite transfers</small></span><span class="progress-dot" data-progress-for="15-meals" aria-hidden="true"></span></a></li><li><a href="16-targets.html"><span class="number">16</span><span>Choose, then revalidate a target<small>40 min · local observations</small></span><span class="progress-dot" data-progress-for="16-targets" aria-hidden="true"></span></a></li><li><a href="17-variation.html"><span class="number">17</span><span>Compare individuals fairly<small>40 min · authored populations</small></span><span class="progress-dot" data-progress-for="17-variation" aria-hidden="true"></span></a></li><li><a href="18-growth.html"><span class="number">18</span><span>Let environmental input change supply<small>45 min · bounded growth</small></span><span class="progress-dot" data-progress-for="18-growth" aria-hidden="true"></span></a></li><li><a href="19-history.html"><span class="number">19</span><span>Keep a disappearance explainable<small>45 min · lifecycle</small></span><span class="progress-dot" data-progress-for="19-history" aria-hidden="true"></span></a></li><li><a href="20-predation.html"><span class="number">20</span><span>Consume once, even before removal<small>45 min · predation</small></span><span class="progress-dot" data-progress-for="20-predation" aria-hidden="true"></span></a></li><li><a href="21-rest.html"><span class="number">21</span><span>Make rest a commitment you can inspect<small>40 min · state machines</small></span><span class="progress-dot" data-progress-for="21-rest" aria-hidden="true"></span></a></li><li><a href="22-births.html"><span class="number">22</span><span>Commit both parents before creating a child<small>45 min · paired transactions</small></span><span class="progress-dot" data-progress-for="22-births" aria-hidden="true"></span></a></li><li><a href="23-inheritance.html"><span class="number">23</span><span>Keep inheritance distinct from selection<small>45 min · inheritance</small></span><span class="progress-dot" data-progress-for="23-inheritance" aria-hidden="true"></span></a></li><li><a href="24-experiments.html" aria-current="page"><span class="number">24</span><span>Make a comparison explain its denominator<small>45 min · controlled comparisons</small></span><span class="progress-dot" data-progress-for="24-experiments" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>A selective Rust survey</summary><ol><li><a href="25-lifetimes.html"><span class="number">25</span><span>Let a view borrow exactly what it needs<small>40 min · lifetimes</small></span><span class="progress-dot" data-progress-for="25-lifetimes" aria-hidden="true"></span></a></li><li><a href="26-indirection.html"><span class="number">26</span><span>Choose the owner before the abstraction<small>45 min · Box</small></span><span class="progress-dot" data-progress-for="26-indirection" aria-hidden="true"></span></a></li><li><a href="27-async.html"><span class="number">27</span><span>Accept asynchronous results at a tick boundary<small>45 min · concurrency</small></span><span class="progress-dot" data-progress-for="27-async" aria-hidden="true"></span></a></li><li><a href="28-macros.html"><span class="number">28</span><span>Read the code a macro asks Rust to check<small>40 min · macro_rules</small></span><span class="progress-dot" data-progress-for="28-macros" aria-hidden="true"></span></a></li></ol></details></li></ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+<div class="search-control" hidden><label for="search">Find an idea</label><input id="search" type="search" placeholder="ownership, ticks, queries…" autocomplete="off"><div id="search-results" aria-live="polite"></div></div>
+<p class="sidebar-caption">Small experiments.<br>Complete explanations.<br>A world you can account for.</p></aside>
+<main id="reading" tabindex="-1"><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span></div>
+<article><p class="eyebrow">Ecosystem depth · 45 minutes</p><h1 data-narration="0">Make a comparison explain its denominator</h1><p class="lesson-lead" data-narration="1">A chart reports one reserve unit per survivor. That could mean four animals are still alive with one unit each, or that only one animal remains from the original four. The average is doing its arithmetic correctly, but we need more context to interpret it. In this investigation we'll build a report that keeps the starting group, individual outcomes and missing history visible alongside the summary.</p>
+<aside class="scope-note"><p data-narration="2">This isolated experiment follows four authored animals for three ticks under a chosen maintenance rule. It uses the history lesson's proposed zero-reserve terminal policy, with no feeding, movement, births or live Moss integration. That small world lets us concentrate on comparison and reporting before applying the same questions to the continuing meadow.</p></aside>
+
+<h2 id="ask-a-question-the-model-can-answer" data-narration="3">Ask a question the model can answer</h2>
+<p data-narration="4">We'll ask how increasing maintenance from one to two units per tick changes survival over three ticks. The one-unit rule is our baseline, and the two-unit rule is the treatment we're comparing against it. For the comparison to say something about that change, each pair of runs must start with the same animals and reserves. Otherwise a difference in the outcome could have come from the starting group instead.</p>
+<p data-narration="5">Each starting cohort contains four stable IDs, with reserves between three and eight assigned by an explicit seeded generator. On an executed tick, the model applies any scheduled reserve grants, pays maintenance down to a floor of zero, marks zero-reserve animals dead and lets survivors increment an action counter. The main comparison schedules no grants, so its animals have only their initial reserve to spend.</p>
+<p data-narration="6">Dead animals remain in the roster with zero reserve and cannot become alive again. With no births or arrivals either, the same four individuals stay identifiable throughout the run. That makes “alive out of four” a useful fixed denominator. A changing population would need a report that also accounts for who entered and left, rather than carrying this denominator over unchanged.</p>
+<p data-narration="7">The <a href="22-births.html">birth transaction</a> and <a href="20-predation.html">predation resolver</a> show some of the extra causes that appear in a richer world. Food intake, competing consumers, births and the order of actions can all affect who survives. We'll leave them out of this first reporting exercise, then take the same comparison habits back to the integrated guides, where those interactions are the point of the investigation.</p>
+
+<h2 id="match-the-starting-conditions" data-narration="8">Match starting conditions within each pair</h2>
+<p data-narration="9">For seed one, the generator supplies reserves of seven, four, four and four. Give that exact roster to both maintenance rules. If the treatment used a new sequence of draws, it might begin with more or less reserve, making its result ambiguous. Pairing the starting states removes that particular alternative explanation.</p>
+<p data-narration="10">The fixture uses the inheritance example's fixed-width recurrence, but maps four successive outputs to reserves with <code>3 + output % 6</code>. We name this procedure <code>moss-cohort-lcg64-v1</code>. To reproduce a run, keep that label and mapping together with its seed, horizon, maintenance cost, initial policy and any pending interventions. The seed alone doesn't specify the experiment.</p>
+<p data-narration="11">The tests check matching before they check outcomes. At every chosen seed, they compare the canonical initial animal states used for the two costs. They then compare the completed runs with literal expected differences. These checks answer separate questions: did we start the pair fairly, and did the requested cost actually affect the executed model? A simulation that ignored the treatment could pass the first check while failing the second.</p>
+<p data-narration="12">A matching roster is necessary, but current reserve isn't the whole state. Suppose two runs show identical animals while only one has a reserve grant queued for the next tick. They can diverge without any further change to the maintenance rule. The canonical snapshot therefore includes pending grants, the completed tick, identity, reserve, life and action count. Tests expose both the queued-input difference and a clock difference between otherwise identical all-dead rosters. Camera position stays outside this model, while the experiment's specification must still be compared alongside its snapshot.</p>
+
+<h2 id="repeat-the-pair-before-generalizing" data-narration="13">Repeat the pair before generalizing</h2>
+<p data-narration="14">Now repeat the matched comparison for seeds one through four. Record treatment survivors minus baseline survivors for each pair, giving minus three, minus two, minus two and minus two. Keeping those four differences lets us see how the result varies with the starting cohort, rather than replacing them immediately with a single average.</p>
+<table data-narration="15"><caption>Survivors after three ticks, from four initial animals per run</caption><thead><tr><th scope="col">Seed</th><th scope="col">Maintenance 1</th><th scope="col">Maintenance 2</th><th scope="col">Paired difference</th></tr></thead><tbody><tr><td>1</td><td>4</td><td>1</td><td>−3</td></tr><tr><td>2</td><td>3</td><td>1</td><td>−2</td></tr><tr><td>3</td><td>4</td><td>2</td><td>−2</td></tr><tr><td>4</td><td>4</td><td>2</td><td>−2</td></tr></tbody></table>
+<p data-narration="16">The table describes four specified cases. It doesn't establish a statistical guarantee about every possible ecosystem, and consecutive seeds from this small generator haven't been shown to provide independent scientific samples. What we can say is that, under the stated rules and horizon, the higher cost reduced survival in each of these four matched runs.</p>
+<p data-narration="17">The direction of that result also follows from the simple model: spending more can't add reserve, there is no feeding to compensate, and death stops later actions. Running several fixtures checks that we implemented the relationship consistently. It doesn't turn that relationship into a surprising ecological discovery. In the continuing meadow, where a behavioral change can affect both costs and access to food, interpreting the result will require more of the individual evidence.</p>
+
+<h2 id="keep-the-denominator-and-distribution" data-narration="18">Keep the denominator and distribution</h2>
+<p data-narration="19">For seed one's treatment, the final sorted reserves are zero, zero, zero and one. Our <code>summarize</code> function will report two means: the cohort mean divides the total reserve of one by all four original members, while the survivor mean divides one by the single remaining animal. Both are legitimate calculations, but only the first retains the original cohort as its denominator. Labeling the group is part of reporting the number.</p>
+<p data-narration="20">The mean type keeps an integer sum and count, postponing division rather than rounding to a floating-point result immediately. It also represents an empty group with <code>None</code>. If all four animals die, the cohort still has four members and a known mean of zero over four; the survivor group has no members and no mean. Substituting zero for that absence would make two different situations look like the same measurement.</p>
+<p data-narration="21">Even a correctly labeled mean can hide a distribution. Compare reserves of zero, zero, zero, eight with two, two, two, two: each cohort averages two, but their individual outcomes differ sharply. Filtering the first group to its positive member would report eight and hide three zeros altogether. We'll therefore keep the sorted reserve values and owned individual outcomes so an aggregate can be examined rather than merely accepted.</p>
+<p data-narration="22">Owning those outcomes also makes the report a stable record of the run. You can follow an unexpected average back to a named individual without keeping the world borrowed, and later changes to the original run won't rewrite the saved result. The report carries its own specification and collection boundary so its values can be understood in the context where they were observed.</p>
+
+<h2 id="coverage-is-part-of-the-result" data-narration="23">Coverage is part of the result</h2>
+<p data-narration="24">Individual history introduces one more kind of missing information. The death journal uses <a href="19-history.html">the retained-coverage rule</a>: when a journal with two slots receives a third record, it evicts the oldest. If even one record from a tick is lost, a query for the complete event count at that tick must report that it cannot answer, although other records from the tick may remain.</p>
+<p data-narration="25">Seed one's treatment makes this concrete because three animals become terminal on tick two. A two-slot journal retains two records and evicts one, leaving complete history only from tick three onward. Asking it for a complete count over the whole three-tick experiment therefore returns unknown. Keeping two visible records isn't enough to reconstruct the missing third event.</p>
+<p data-narration="26">The roster still tells us something useful: three members of this fixed cohort are dead. That present-day census doesn't recover all the lost event details, but incomplete history doesn't erase the census either. Keeping the two sources distinct lets the report say what is known about the ending population while remaining honest about which transitions it can explain.</p>
+<p data-narration="27">A test changes the retention limit from one slot to eight and checks that canonical biology stays the same. The journal should affect how much evidence we retain, rather than changing what the animals do. A later browser chart or exporter will need to preserve that distinction too; the native test establishes it for this model.</p>
+
+<h2 id="predict-the-report" data-narration="28">Predict the report, then build it</h2>
+<p data-narration="29">Before implementing the report, predict both means for seed one's treatment and decide whether its two-slot journal can count the full interval. Then raise maintenance to twenty, making all four animals die on the first tick. Consider what changes in each denominator: does the absence of survivors also remove the original cohort?</p>
+<details><summary>Hint 1: choose a population before counting</summary><p>Build the two groups deliberately. The cohort includes the dead members retained in the fixed roster, while the survivor group includes only animals whose current life state is alive. Each mean needs its own sum and count.</p></details>
+<details><summary>Hint 2: require complete collection and retention</summary><p>The journal can answer only if collection has reached the requested horizon and every tick in the requested interval remains complete. An unexecuted run hasn't collected evidence for its future ticks, even if its journal is currently empty.</p></details>
+<details><summary>Prediction answer</summary><p>For seed one, the cohort mean is one over four and the survivor mean is one over one. The two-slot journal can't give a complete event count for the full interval. When all four die, the cohort remains a group of four with mean zero, while the empty survivor group has no mean.</p></details>
+<p data-narration="30">Prepare the practice file and replace <code>summarize</code>. The supplied code runs the tick model, constructs canonical snapshots and provides a checked mean helper. Your job is to assemble the owned report while preserving the distinctions between cohorts, survivors, retained events and complete coverage.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare experiments --dest work/experiments-practice
+python3 learning/scripts/labs.py check experiments --file work/experiments-practice/experiments.rs</code></pre>
+<p data-narration="31">The starter compiles and then reaches its intentional <code>todo!</code>; after the edit, all nine tests should pass. If an average seems unexpectedly generous, inspect which individuals entered its denominator before changing the arithmetic. If incomplete history appears as zero deaths, follow the <code>Option</code> returned by the coverage query and check whether its absence was replaced with a number.</p>
+<details><summary>Complete starter: experiments.rs</summary><pre><code class="language-rust" data-starter="experiments">use std::collections::VecDeque;
+const ALGORITHM: &amp;str = &quot;moss-cohort-lcg64-v1&quot;;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Spec { seed: u64, maintenance_units: u32, ticks: u32, history_limit: usize }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Animal { id: u32, reserve: u32, alive: bool, actions: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Grant { tick: u32, id: u32, units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Death { tick: u32, id: u32 }
+#[derive(Clone, Debug)]
+struct Run {
+    spec: Spec,
+    animals: Vec&lt;Animal&gt;,
+    pending: Vec&lt;Grant&gt;,
+    deaths: VecDeque&lt;Death&gt;,
+    evicted: usize,
+    complete_from: u32,
+    collected_through: u32,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Mean { sum: u64, count: usize }
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Report {
+    spec: Spec,
+    algorithm: &amp;&#x27;static str,
+    outcomes: Vec&lt;Animal&gt;,
+    pending: Vec&lt;Grant&gt;,
+    initial: usize,
+    survivors: usize,
+    sorted_reserves: Vec&lt;u32&gt;,
+    cohort_mean: Option&lt;Mean&gt;,
+    survivor_mean: Option&lt;Mean&gt;,
+    complete_death_count: Option&lt;usize&gt;,
+    retained_deaths: Vec&lt;Death&gt;,
+    complete_from: u32,
+    collected_through: u32,
+    evicted: usize,
+}
+fn mean(values: impl Iterator&lt;Item = u32&gt;) -&gt; Option&lt;Mean&gt; {
+    let (sum, count) = values.fold((0_u64, 0_usize), |(sum, count), value|
+        (sum.checked_add(u64::from(value)).expect(&quot;sum exhausted&quot;),
+         count.checked_add(1).expect(&quot;count exhausted&quot;)));
+    (count &gt; 0).then_some(Mean { sum, count })
+}
+fn initial(spec: Spec) -&gt; Run {
+    assert!(spec.history_limit &gt; 0);
+    let mut state = spec.seed;
+    let animals = (1..=4).map(|id| {
+        state = state.wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        Animal { id, reserve: 3 + ((state &gt;&gt; 32) as u32 % 6), alive: true, actions: 0 }
+    }).collect();
+    Run { spec, animals, pending: vec![], deaths: VecDeque::new(), evicted: 0,
+        complete_from: 1, collected_through: 0 }
+}
+fn advance(run: &amp;mut Run) {
+    let tick = run.collected_through.checked_add(1).expect(&quot;tick exhausted&quot;);
+    assert!(tick &lt;= run.spec.ticks);
+    for grant in run.pending.iter().filter(|grant| grant.tick == tick) {
+        if let Some(animal) = run.animals.iter_mut().find(|animal| animal.id == grant.id &amp;&amp; animal.alive) {
+            animal.reserve = animal.reserve.checked_add(grant.units).expect(&quot;grant exceeds units&quot;);
+        }
+    }
+    run.pending.retain(|grant| grant.tick &gt; tick);
+    for animal in run.animals.iter_mut().filter(|animal| animal.alive) {
+        animal.reserve = animal.reserve.saturating_sub(run.spec.maintenance_units);
+        if animal.reserve == 0 {
+            animal.alive = false;
+            if run.deaths.len() == run.spec.history_limit {
+                let removed = run.deaths.pop_front().unwrap();
+                run.complete_from = run.complete_from.max(removed.tick.checked_add(1).unwrap());
+                run.evicted = run.evicted.checked_add(1).unwrap();
+            }
+            run.deaths.push_back(Death { tick, id: animal.id });
+        } else {
+            animal.actions = animal.actions.checked_add(1).unwrap();
+        }
+    }
+    run.collected_through = tick;
+}
+fn execute(spec: Spec) -&gt; Run {
+    let mut run = initial(spec);
+    for _ in 0..spec.ticks { advance(&amp;mut run); }
+    run
+}
+fn summarize(run: &amp;Run) -&gt; Report {
+    let _ = run;
+    todo!(&quot;build an owned report with separate denominators and honest journal coverage&quot;)
+}
+
+fn canonical(run: &amp;Run) -&gt; (u32, Vec&lt;Animal&gt;, Vec&lt;Grant&gt;) {
+    let mut animals = run.animals.clone(); animals.sort_by_key(|animal| animal.id);
+    let mut pending = run.pending.clone(); pending.sort();
+    (run.collected_through, animals, pending)
+}
+fn spec(seed: u64, maintenance_units: u32, history_limit: usize) -&gt; Spec {
+    Spec { seed, maintenance_units, ticks: 3, history_limit }
+}
+fn main() {
+    println!(&quot;algorithm={ALGORITHM} ticks=3 seeds=1,2,3,4&quot;);
+    for seed in 1..=4 {
+        let baseline = summarize(&amp;execute(spec(seed, 1, 2)));
+        let treatment = summarize(&amp;execute(spec(seed, 2, 2)));
+        println!(&quot;seed={seed} alive={}/{} -&gt; {}/{} delta={}&quot;, baseline.survivors,
+            baseline.initial, treatment.survivors, treatment.initial,
+            treatment.survivors as i64 - baseline.survivors as i64);
+    }
+    let run = execute(spec(1, 2, 2));
+    let report = summarize(&amp;run);
+    println!(&quot;seed=1 treatment reserves={:?} cohort={:?} survivors={:?}&quot;,
+        report.sorted_reserves, report.cohort_mean, report.survivor_mean);
+    println!(&quot;journal death count={:?} retained={} evicted={} complete={}..={}&quot;,
+        report.complete_death_count, report.retained_deaths.len(), report.evicted,
+        report.complete_from, report.collected_through);
+    println!(&quot;pending after horizon={}&quot;, canonical(&amp;run).2.len());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn reporting_keeps_dead_members_in_the_initial_cohort_denominator() {
+        let run = execute(spec(1, 2, 8));
+        let report = summarize(&amp;run);
+        assert_eq!((report.initial, report.survivors), (4, 1));
+        assert_eq!(report.sorted_reserves, vec![0, 0, 0, 1]);
+        assert_eq!(report.cohort_mean, Some(Mean { sum: 1, count: 4 }));
+        assert_eq!(report.survivor_mean, Some(Mean { sum: 1, count: 1 }));
+        assert_eq!(report.complete_death_count, Some(3));
+    }
+    #[test]
+    fn matched_cost_intervention_starts_from_identical_animals_for_every_seed() {
+        for seed in 1..=4 {
+            assert_eq!(canonical(&amp;initial(spec(seed, 1, 8))), canonical(&amp;initial(spec(seed, 2, 8))));
+        }
+        let differences: Vec&lt;_&gt; = (1..=4).map(|seed| {
+            let a = summarize(&amp;execute(spec(seed, 1, 8)));
+            let b = summarize(&amp;execute(spec(seed, 2, 8)));
+            b.survivors as i32 - a.survivors as i32
+        }).collect();
+        assert_eq!(differences, vec![-3, -2, -2, -2]);
+    }
+    #[test]
+    fn report_owns_values_and_retained_records_after_the_run_changes() {
+        let mut run = execute(spec(1, 2, 8));
+        let report = summarize(&amp;run);
+        run.animals.clear(); run.deaths.clear();
+        assert_eq!(report.initial, 4);
+        assert_eq!(report.sorted_reserves, vec![0, 0, 0, 1]);
+        assert_eq!(report.retained_deaths.len(), 3);
+    }
+    #[test]
+    fn eviction_makes_complete_death_count_unknown_without_changing_biology() {
+        let short = execute(spec(1, 2, 1));
+        let long = execute(spec(1, 2, 8));
+        assert_eq!(canonical(&amp;short), canonical(&amp;long));
+        let report = summarize(&amp;short);
+        assert_eq!(report.complete_death_count, None);
+        assert_eq!((report.retained_deaths.len(), report.evicted), (1, 2));
+        assert_eq!(summarize(&amp;long).complete_death_count, Some(3));
+    }
+    #[test]
+    fn fully_observed_zero_deaths_differs_from_no_collection() {
+        let observed = summarize(&amp;execute(spec(1, 0, 2)));
+        assert_eq!(observed.complete_death_count, Some(0));
+        assert_eq!(observed.survivors, 4);
+        assert_eq!(summarize(&amp;initial(spec(1, 0, 2))).complete_death_count, None);
+    }
+    #[test]
+    fn no_survivors_has_no_survivor_mean_and_does_not_erase_the_cohort() {
+        let report = summarize(&amp;execute(spec(1, 20, 8)));
+        assert_eq!((report.initial, report.survivors), (4, 0));
+        assert_eq!(report.survivor_mean, None);
+        assert_eq!(report.cohort_mean, Some(Mean { sum: 0, count: 4 }));
+        assert_eq!(report.complete_death_count, Some(4));
+    }
+    #[test]
+    fn pending_interventions_are_part_of_state_and_change_future_outcomes() {
+        let mut plain = initial(spec(1, 20, 8));
+        let mut granted = plain.clone();
+        granted.pending.push(Grant { tick: 1, id: 1, units: 30 });
+        assert_ne!(canonical(&amp;plain), canonical(&amp;granted));
+        advance(&amp;mut plain); advance(&amp;mut granted);
+        assert_eq!(summarize(&amp;plain).survivors, 0);
+        assert_eq!(summarize(&amp;granted).survivors, 1);
+        assert!(granted.pending.is_empty());
+    }
+    #[test]
+    fn a_mean_cannot_replace_the_distribution() {
+        let sparse = [0, 0, 0, 8];
+        let even = [2, 2, 2, 2];
+        assert_eq!(mean(sparse.into_iter()), mean(even.into_iter()));
+        assert_ne!(sparse, even);
+    }
+    #[test]
+    fn completed_tick_distinguishes_equal_rosters_with_different_future_eligibility() {
+        let mut early = initial(spec(1, 20, 8));
+        advance(&amp;mut early);
+        let finished = execute(spec(1, 20, 8));
+        assert_eq!(early.spec, finished.spec);
+        assert_eq!(early.animals, finished.animals);
+        assert_eq!(early.pending, finished.pending);
+        assert_eq!((early.collected_through, finished.collected_through), (1, 3));
+        assert_ne!(canonical(&amp;early), canonical(&amp;finished));
+        advance(&amp;mut early);
+        assert_eq!(early.collected_through, 2);
+    }
+
+}
+</code></pre></details>
+
+<h2 id="the-complete-report" data-narration="32">The complete report and matched experiment</h2>
+<p data-narration="33">The complete answer returns a report with the specification, algorithm label, individual outcomes, pending inputs, aggregates and retained coverage. Its sum helper checks overflow even though these four-animal fixtures sit comfortably within the limits. Together, those fields let a reader move from the summary back to the conditions and observations that produced it.</p>
+<details><summary>Complete worked answer: experiments.rs</summary><pre><code class="language-rust" data-runnable="experiments">use std::collections::VecDeque;
+const ALGORITHM: &amp;str = &quot;moss-cohort-lcg64-v1&quot;;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Spec { seed: u64, maintenance_units: u32, ticks: u32, history_limit: usize }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Animal { id: u32, reserve: u32, alive: bool, actions: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Grant { tick: u32, id: u32, units: u32 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Death { tick: u32, id: u32 }
+#[derive(Clone, Debug)]
+struct Run {
+    spec: Spec,
+    animals: Vec&lt;Animal&gt;,
+    pending: Vec&lt;Grant&gt;,
+    deaths: VecDeque&lt;Death&gt;,
+    evicted: usize,
+    complete_from: u32,
+    collected_through: u32,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Mean { sum: u64, count: usize }
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Report {
+    spec: Spec,
+    algorithm: &amp;&#x27;static str,
+    outcomes: Vec&lt;Animal&gt;,
+    pending: Vec&lt;Grant&gt;,
+    initial: usize,
+    survivors: usize,
+    sorted_reserves: Vec&lt;u32&gt;,
+    cohort_mean: Option&lt;Mean&gt;,
+    survivor_mean: Option&lt;Mean&gt;,
+    complete_death_count: Option&lt;usize&gt;,
+    retained_deaths: Vec&lt;Death&gt;,
+    complete_from: u32,
+    collected_through: u32,
+    evicted: usize,
+}
+fn mean(values: impl Iterator&lt;Item = u32&gt;) -&gt; Option&lt;Mean&gt; {
+    let (sum, count) = values.fold((0_u64, 0_usize), |(sum, count), value|
+        (sum.checked_add(u64::from(value)).expect(&quot;sum exhausted&quot;),
+         count.checked_add(1).expect(&quot;count exhausted&quot;)));
+    (count &gt; 0).then_some(Mean { sum, count })
+}
+fn initial(spec: Spec) -&gt; Run {
+    assert!(spec.history_limit &gt; 0);
+    let mut state = spec.seed;
+    let animals = (1..=4).map(|id| {
+        state = state.wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        Animal { id, reserve: 3 + ((state &gt;&gt; 32) as u32 % 6), alive: true, actions: 0 }
+    }).collect();
+    Run { spec, animals, pending: vec![], deaths: VecDeque::new(), evicted: 0,
+        complete_from: 1, collected_through: 0 }
+}
+fn advance(run: &amp;mut Run) {
+    let tick = run.collected_through.checked_add(1).expect(&quot;tick exhausted&quot;);
+    assert!(tick &lt;= run.spec.ticks);
+    for grant in run.pending.iter().filter(|grant| grant.tick == tick) {
+        if let Some(animal) = run.animals.iter_mut().find(|animal| animal.id == grant.id &amp;&amp; animal.alive) {
+            animal.reserve = animal.reserve.checked_add(grant.units).expect(&quot;grant exceeds units&quot;);
+        }
+    }
+    run.pending.retain(|grant| grant.tick &gt; tick);
+    for animal in run.animals.iter_mut().filter(|animal| animal.alive) {
+        animal.reserve = animal.reserve.saturating_sub(run.spec.maintenance_units);
+        if animal.reserve == 0 {
+            animal.alive = false;
+            if run.deaths.len() == run.spec.history_limit {
+                let removed = run.deaths.pop_front().unwrap();
+                run.complete_from = run.complete_from.max(removed.tick.checked_add(1).unwrap());
+                run.evicted = run.evicted.checked_add(1).unwrap();
+            }
+            run.deaths.push_back(Death { tick, id: animal.id });
+        } else {
+            animal.actions = animal.actions.checked_add(1).unwrap();
+        }
+    }
+    run.collected_through = tick;
+}
+fn execute(spec: Spec) -&gt; Run {
+    let mut run = initial(spec);
+    for _ in 0..spec.ticks { advance(&amp;mut run); }
+    run
+}
+fn summarize(run: &amp;Run) -&gt; Report {
+    let (_, outcomes, pending) = canonical(run);
+    let mut sorted_reserves: Vec&lt;_&gt; = run.animals.iter().map(|animal| animal.reserve).collect();
+    sorted_reserves.sort_unstable();
+    let full_coverage = run.complete_from == 1 &amp;&amp; run.collected_through == run.spec.ticks
+        &amp;&amp; run.collected_through &gt; 0;
+    Report { spec: run.spec, algorithm: ALGORITHM, outcomes, pending, initial: run.animals.len(), survivors: run.animals.iter().filter(|animal| animal.alive).count(),
+        sorted_reserves, cohort_mean: mean(run.animals.iter().map(|animal| animal.reserve)),
+        survivor_mean: mean(run.animals.iter().filter(|animal| animal.alive).map(|animal| animal.reserve)),
+        complete_death_count: full_coverage.then_some(run.deaths.len()),
+        retained_deaths: run.deaths.iter().copied().collect(), complete_from: run.complete_from,
+        collected_through: run.collected_through, evicted: run.evicted }
+}
+fn canonical(run: &amp;Run) -&gt; (u32, Vec&lt;Animal&gt;, Vec&lt;Grant&gt;) {
+    let mut animals = run.animals.clone(); animals.sort_by_key(|animal| animal.id);
+    let mut pending = run.pending.clone(); pending.sort();
+    (run.collected_through, animals, pending)
+}
+fn spec(seed: u64, maintenance_units: u32, history_limit: usize) -&gt; Spec {
+    Spec { seed, maintenance_units, ticks: 3, history_limit }
+}
+fn main() {
+    println!(&quot;algorithm={ALGORITHM} ticks=3 seeds=1,2,3,4&quot;);
+    for seed in 1..=4 {
+        let baseline = summarize(&amp;execute(spec(seed, 1, 2)));
+        let treatment = summarize(&amp;execute(spec(seed, 2, 2)));
+        println!(&quot;seed={seed} alive={}/{} -&gt; {}/{} delta={}&quot;, baseline.survivors,
+            baseline.initial, treatment.survivors, treatment.initial,
+            treatment.survivors as i64 - baseline.survivors as i64);
+    }
+    let run = execute(spec(1, 2, 2));
+    let report = summarize(&amp;run);
+    println!(&quot;seed=1 treatment reserves={:?} cohort={:?} survivors={:?}&quot;,
+        report.sorted_reserves, report.cohort_mean, report.survivor_mean);
+    println!(&quot;journal death count={:?} retained={} evicted={} complete={}..={}&quot;,
+        report.complete_death_count, report.retained_deaths.len(), report.evicted,
+        report.complete_from, report.collected_through);
+    println!(&quot;pending after horizon={}&quot;, canonical(&amp;run).2.len());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn reporting_keeps_dead_members_in_the_initial_cohort_denominator() {
+        let run = execute(spec(1, 2, 8));
+        let report = summarize(&amp;run);
+        assert_eq!((report.initial, report.survivors), (4, 1));
+        assert_eq!(report.sorted_reserves, vec![0, 0, 0, 1]);
+        assert_eq!(report.cohort_mean, Some(Mean { sum: 1, count: 4 }));
+        assert_eq!(report.survivor_mean, Some(Mean { sum: 1, count: 1 }));
+        assert_eq!(report.complete_death_count, Some(3));
+    }
+    #[test]
+    fn matched_cost_intervention_starts_from_identical_animals_for_every_seed() {
+        for seed in 1..=4 {
+            assert_eq!(canonical(&amp;initial(spec(seed, 1, 8))), canonical(&amp;initial(spec(seed, 2, 8))));
+        }
+        let differences: Vec&lt;_&gt; = (1..=4).map(|seed| {
+            let a = summarize(&amp;execute(spec(seed, 1, 8)));
+            let b = summarize(&amp;execute(spec(seed, 2, 8)));
+            b.survivors as i32 - a.survivors as i32
+        }).collect();
+        assert_eq!(differences, vec![-3, -2, -2, -2]);
+    }
+    #[test]
+    fn report_owns_values_and_retained_records_after_the_run_changes() {
+        let mut run = execute(spec(1, 2, 8));
+        let report = summarize(&amp;run);
+        run.animals.clear(); run.deaths.clear();
+        assert_eq!(report.initial, 4);
+        assert_eq!(report.sorted_reserves, vec![0, 0, 0, 1]);
+        assert_eq!(report.retained_deaths.len(), 3);
+    }
+    #[test]
+    fn eviction_makes_complete_death_count_unknown_without_changing_biology() {
+        let short = execute(spec(1, 2, 1));
+        let long = execute(spec(1, 2, 8));
+        assert_eq!(canonical(&amp;short), canonical(&amp;long));
+        let report = summarize(&amp;short);
+        assert_eq!(report.complete_death_count, None);
+        assert_eq!((report.retained_deaths.len(), report.evicted), (1, 2));
+        assert_eq!(summarize(&amp;long).complete_death_count, Some(3));
+    }
+    #[test]
+    fn fully_observed_zero_deaths_differs_from_no_collection() {
+        let observed = summarize(&amp;execute(spec(1, 0, 2)));
+        assert_eq!(observed.complete_death_count, Some(0));
+        assert_eq!(observed.survivors, 4);
+        assert_eq!(summarize(&amp;initial(spec(1, 0, 2))).complete_death_count, None);
+    }
+    #[test]
+    fn no_survivors_has_no_survivor_mean_and_does_not_erase_the_cohort() {
+        let report = summarize(&amp;execute(spec(1, 20, 8)));
+        assert_eq!((report.initial, report.survivors), (4, 0));
+        assert_eq!(report.survivor_mean, None);
+        assert_eq!(report.cohort_mean, Some(Mean { sum: 0, count: 4 }));
+        assert_eq!(report.complete_death_count, Some(4));
+    }
+    #[test]
+    fn pending_interventions_are_part_of_state_and_change_future_outcomes() {
+        let mut plain = initial(spec(1, 20, 8));
+        let mut granted = plain.clone();
+        granted.pending.push(Grant { tick: 1, id: 1, units: 30 });
+        assert_ne!(canonical(&amp;plain), canonical(&amp;granted));
+        advance(&amp;mut plain); advance(&amp;mut granted);
+        assert_eq!(summarize(&amp;plain).survivors, 0);
+        assert_eq!(summarize(&amp;granted).survivors, 1);
+        assert!(granted.pending.is_empty());
+    }
+    #[test]
+    fn a_mean_cannot_replace_the_distribution() {
+        let sparse = [0, 0, 0, 8];
+        let even = [2, 2, 2, 2];
+        assert_eq!(mean(sparse.into_iter()), mean(even.into_iter()));
+        assert_ne!(sparse, even);
+    }
+    #[test]
+    fn completed_tick_distinguishes_equal_rosters_with_different_future_eligibility() {
+        let mut early = initial(spec(1, 20, 8));
+        advance(&amp;mut early);
+        let finished = execute(spec(1, 20, 8));
+        assert_eq!(early.spec, finished.spec);
+        assert_eq!(early.animals, finished.animals);
+        assert_eq!(early.pending, finished.pending);
+        assert_eq!((early.collected_through, finished.collected_through), (1, 3));
+        assert_ne!(canonical(&amp;early), canonical(&amp;finished));
+        advance(&amp;mut early);
+        assert_eq!(early.collected_through, 2);
+    }
+
+}
+</code></pre></details>
+<p data-narration="34">Use the commands below to check the printed reference separately from your practice file. Your own implementation is still selected by the earlier <code>--file</code> command.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py check experiments</code></pre>
+<p data-narration="35">The reference produces the following output. Compare its named groups and paired differences with your prediction, and notice where a report preserves an unavailable answer rather than supplying a convenient zero.</p>
+<pre><code class="language-text">algorithm=moss-cohort-lcg64-v1 ticks=3 seeds=1,2,3,4
+seed=1 alive=4/4 -&gt; 1/4 delta=-3
+seed=2 alive=3/4 -&gt; 1/4 delta=-2
+seed=3 alive=4/4 -&gt; 2/4 delta=-2
+seed=4 alive=4/4 -&gt; 2/4 delta=-2
+seed=1 treatment reserves=[0, 0, 0, 1] cohort=Some(Mean { sum: 1, count: 4 }) survivors=Some(Mean { sum: 1, count: 1 })
+journal death count=None retained=2 evicted=1 complete=3..=3
+pending after horizon=0</code></pre>
+
+<h2 id="recall-and-evidence" data-narration="36">Make a claim the evidence supports</h2>
+<p data-narration="37">Return to the opening chart and explain what “one reserve unit per survivor” leaves unresolved. Then consider the claim you could make from our four paired runs: what do they establish about these maintenance rules, and what would you still need to know before calling one setup better for a game or an ecosystem?</p>
+<details><summary>Recall answers</summary><p>The average alone doesn't reveal how many original members survived or how their reserves are distributed. One cohort can also hide sensitivity to starting conditions, while four chosen cohorts still don't settle every scenario. Enjoyment needs a player-facing question beyond survival, and these runs contain no reproduction or inherited change across generations from which to infer evolution.</p></details>
+<p data-narration="38">The tests establish the declared toy behavior and report contracts. Evaluating a scenario's balance, connecting it to a browser chart and judging the experience of watching it are further investigations with different evidence. A sound report helps with all of them because it exposes its denominator and gaps instead of quietly making those decisions for the reader.</p>
+<p data-narration="39">Take that report-reading habit into the <a href="resting.html#compare-a-policy-that-can-change-the-run">continuing meadow's rest comparison</a> or <a href="hunting.html">the hunting investigation</a>. There, changing one rule affects access to food and later births as well as immediate costs. Choose a stated assumption to vary, predict which outcomes should differ, and retain the individual evidence that could prove your prediction wrong.</p>
+</article><nav class="chapter-nav" aria-label="Lesson navigation"><a href="23-inheritance.html">← Keep inheritance distinct from selection</a><a href="25-lifetimes.html">Let a view borrow exactly what it needs →</a></nav></main>
+<aside class="field-desk"><p class="eyebrow">On your desk</p><p class="desk-boundary">The browser is your reading and experiment space. Rust edits run in your local workbench.</p><section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
+      <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
+      <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
+      <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
+      <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section>
+<section class="data-controls" hidden><h2>Take your notes with you</h2><button type="button" id="export-progress">Export reading record</button><button type="button" id="export-recovery" hidden>Download unreadable saved data</button><label class="file-label">Import reading record<input id="import-progress" type="file" accept="application/json,.json"></label><details><summary>Use copy and paste</summary><button type="button" id="copy-record">Copy reading record</button><label for="paste-record">Paste a reading record (JSON)</label><textarea id="paste-record" rows="4" spellcheck="false"></textarea><button type="button" id="import-pasted">Import pasted record</button></details><p id="data-status" role="status"></p><p class="quiet">Saved in this browser, on this origin. Export before clearing browser data or changing ports.</p></section>
+<details><summary>What is live in Moss?</summary><p>Maintenance is live. Movement remains the learner-owned edit in <code>NOW.md</code>. Later biology is proposed or isolated reference work. Reading a lesson never activates a rule.</p></details></aside></div>
+<footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
+<noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>
+</body></html>

@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>tests/acceptance.rs · shared-meadow · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="shared-meadow"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">shared-meadow checkpoint</p><h1>tests/acceptance.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../fieldwork.html">← One meadow, several consequences</a>
+<a href="acceptance.rs" download>Download raw file</a>
+<a href="../../../downloads/shared-meadow-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="acceptance.rs">//! Public API checks. Learner-owned tests can live beside these in another file.
+
+use moss_course_ecosystem::{
+    CourseWorld, Daylight, EventKind, GrazerSeed, Life, PatchSeed, Scenario, ScenarioError, SimId,
+    Snapshot, TickLedger,
+};
+
+fn grazer(
+    id: u32,
+    reserve: u32,
+    capacity: u32,
+    cost: u32,
+    meal: u32,
+    site: Option&lt;u32&gt;,
+) -&gt; GrazerSeed {
+    GrazerSeed {
+        id: SimId(id),
+        reserve_units: reserve,
+        capacity_units: capacity,
+        maintenance_units_per_tick: cost,
+        meal_units_per_tick: meal,
+        feeding_site: site.map(SimId),
+    }
+}
+
+fn patch(id: u32, biomass: u32, capacity: u32, growth: u32) -&gt; PatchSeed {
+    PatchSeed {
+        id: SimId(id),
+        biomass_units: biomass,
+        capacity_units: capacity,
+        growth_units_per_lit_tick: growth,
+    }
+}
+
+fn scenario(grazers: Vec&lt;GrazerSeed&gt;, patches: Vec&lt;PatchSeed&gt;) -&gt; Scenario {
+    Scenario {
+        daylight: Daylight::new(4, 2).unwrap(),
+        grazers,
+        patches,
+        history_limit: 128,
+    }
+}
+
+fn stores(snapshot: &amp;Snapshot) -&gt; u64 {
+    snapshot
+        .grazers
+        .iter()
+        .map(|grazer| u64::from(grazer.reserve_units))
+        .sum::&lt;u64&gt;()
+        + snapshot
+            .patches
+            .iter()
+            .map(|patch| u64::from(patch.biomass_units))
+            .sum::&lt;u64&gt;()
+}
+
+#[test]
+fn competing_consumers_deplete_once_and_cannot_receive_a_second_reward() {
+    let mut world = CourseWorld::new(scenario(
+        vec![
+            grazer(2, 0, 10, 0, 3, Some(100)),
+            grazer(1, 0, 10, 0, 3, Some(100)),
+        ],
+        vec![patch(100, 5, 5, 0)],
+    ))
+    .unwrap();
+    world.step();
+    let first = world.snapshot();
+    assert_eq!(
+        first
+            .grazers
+            .iter()
+            .map(|g| (g.id, g.reserve_units))
+            .collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![(SimId(1), 3), (SimId(2), 2)]
+    );
+    assert_eq!(first.patches[0].biomass_units, 0);
+    assert_eq!(first.ledger.eaten_units, 5);
+    assert_eq!(stores(&amp;first), 5);
+    world.step();
+    let second = world.snapshot();
+    assert_eq!(second.grazers, first.grazers);
+    assert_eq!(second.ledger.eaten_units, 0);
+    assert_eq!(
+        second
+            .history
+            .events
+            .iter()
+            .filter(|event| matches!(event.kind, EventKind::Meal { .. }))
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn full_or_zero_demand_consumer_leaves_food_for_the_next_eligible_consumer() {
+    let mut world = CourseWorld::new(scenario(
+        vec![
+            grazer(1, 2, 2, 0, 9, Some(100)),
+            grazer(2, 1, 5, 0, 0, Some(100)),
+            grazer(3, 1, 5, 0, 9, Some(100)),
+        ],
+        vec![patch(100, 3, 3, 0)],
+    ))
+    .unwrap();
+    world.step();
+    let state = world.snapshot();
+    assert_eq!(
+        state
+            .grazers
+            .iter()
+            .map(|g| g.reserve_units)
+            .collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![2, 1, 4]
+    );
+    assert_eq!(state.ledger.eaten_units, 3);
+    assert_eq!(state.patches[0].biomass_units, 0);
+}
+
+#[test]
+fn full_reserve_can_eat_after_upkeep_creates_capacity() {
+    let mut world = CourseWorld::new(scenario(
+        vec![grazer(1, 5, 5, 2, 9, Some(100))],
+        vec![patch(100, 5, 5, 0)],
+    ))
+    .unwrap();
+    world.step();
+    let state = world.snapshot();
+    assert_eq!(state.grazers[0].reserve_units, 5);
+    assert_eq!(state.patches[0].biomass_units, 3);
+    assert_eq!(
+        state.ledger,
+        TickLedger {
+            added_units: 0,
+            maintenance_units: 2,
+            eaten_units: 2,
+            starvations: 0
+        }
+    );
+}
+
+#[test]
+fn global_inspector_visibility_does_not_grant_a_local_feeding_contact() {
+    let mut world = CourseWorld::new(scenario(
+        vec![
+            grazer(1, 2, 8, 1, 3, None),
+            grazer(2, 2, 8, 1, 3, Some(999)),
+            grazer(3, 2, 8, 1, 3, Some(1)),
+            grazer(4, 2, 8, 1, 3, Some(100)),
+        ],
+        vec![patch(100, 8, 8, 0), patch(200, 7, 7, 0)],
+    ))
+    .unwrap();
+    assert_eq!(world.snapshot().patches.len(), 2);
+    world.step();
+    let state = world.snapshot();
+    assert_eq!(
+        state
+            .grazers
+            .iter()
+            .map(|g| g.reserve_units)
+            .collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![1, 1, 1, 4]
+    );
+    assert_eq!(
+        state
+            .patches
+            .iter()
+            .map(|p| p.biomass_units)
+            .collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![5, 7]
+    );
+    assert_eq!(state.grazers[1].feeding_site, Some(SimId(999)));
+    assert_eq!(state.grazers[0].feeding_site, None);
+}
+
+#[test]
+fn zero_reserve_receives_lit_supply_before_starvation_is_decided() {
+    let mut world = CourseWorld::new(scenario(
+        vec![grazer(1, 1, 5, 3, 2, Some(100))],
+        vec![patch(100, 0, 5, 2)],
+    ))
+    .unwrap();
+    world.step();
+    let state = world.snapshot();
+    assert_eq!(
+        (state.grazers[0].reserve_units, state.grazers[0].life),
+        (2, Life::Alive)
+    );
+    assert_eq!(
+        state.ledger,
+        TickLedger {
+            added_units: 2,
+            maintenance_units: 1,
+            eaten_units: 2,
+            starvations: 0
+        }
+    );
+    assert_eq!(
+        state
+            .history
+            .events
+            .iter()
+            .map(|event| event.kind)
+            .collect::&lt;Vec&lt;_&gt;&gt;(),
+        vec![
+            EventKind::Maintenance {
+                grazer: SimId(1),
+                units: 1
+            },
+            EventKind::Growth {
+                patch: SimId(100),
+                units: 2
+            },
+            EventKind::Meal {
+                grazer: SimId(1),
+                patch: SimId(100),
+                units: 2
+            },
+        ]
+    );
+}
+
+#[test]
+fn starvation_is_permanent_even_when_food_arrives_after_the_terminal_tick() {
+    let mut setup = scenario(
+        vec![
+            grazer(1, 1, 5, 1, 2, Some(100)),
+            grazer(2, 1, 5, 1, 2, Some(100)),
+        ],
+        vec![patch(100, 0, 5, 2)],
+    );
+    setup.daylight = Daylight::new(2, 1).unwrap();
+    let mut world = CourseWorld::new(setup).unwrap();
+    world.step();
+    assert_eq!(world.snapshot().grazers[1].life, Life::Dead);
+    world.step();
+    world.step(); // New supply at dawn cannot revive ID 2.
+    let state = world.snapshot();
+    assert_eq!(state.grazers[1].reserve_units, 0);
+    assert_eq!(state.grazers[1].life, Life::Dead);
+    assert_eq!(state.grazers[0].reserve_units, 2);
+    assert_eq!(state.history.starvations_between(1, 3), Some(1));
+    assert!(!state.history.events.iter().any(|event| event.tick &gt; 1
+        &amp;&amp; matches!(
+            event.kind,
+            EventKind::Meal {
+                grazer: SimId(2),
+                ..
+            } | EventKind::Maintenance {
+                grazer: SimId(2),
+                ..
+            }
+        )));
+}
+
+#[test]
+fn limited_supply_has_a_literal_phase_sensitive_five_tick_trace() {
+    let mut world = CourseWorld::new(Scenario::limited_supply()).unwrap();
+    assert_eq!(world.snapshot().lit, None);
+    let mut trace = Vec::new();
+    for _ in 0..5 {
+        world.step();
+        let state = world.snapshot();
+        trace.push((
+            state.tick,
+            state.lit,
+            state.grazers[0].reserve_units,
+            state.grazers[1].reserve_units,
+            state
+                .grazers
+                .iter()
+                .filter(|grazer| grazer.life == Life::Alive)
+                .count(),
+            state.patches[0].biomass_units,
+        ));
+    }
+    assert_eq!(
+        trace,
+        vec![
+            (1, Some(true), 3, 2, 2, 0),
+            (2, Some(true), 3, 1, 2, 0),
+            (3, Some(false), 1, 0, 1, 0),
+            (4, Some(false), 0, 0, 0, 0),
+            (5, Some(true), 0, 0, 0, 2)
+        ]
+    );
+}
+
+#[test]
+fn changing_only_supply_changes_twelve_tick_population_outcomes() {
+    let limited_setup = Scenario::limited_supply();
+    let generous_setup = Scenario::generous_supply();
+    assert_eq!(limited_setup.grazers, generous_setup.grazers);
+    assert_eq!(limited_setup.daylight, generous_setup.daylight);
+    assert_eq!(
+        limited_setup.patches[0].capacity_units,
+        generous_setup.patches[0].capacity_units
+    );
+    let mut limited = CourseWorld::new(limited_setup).unwrap();
+    let mut generous = CourseWorld::new(generous_setup).unwrap();
+    for _ in 0..12 {
+        limited.step();
+        generous.step();
+    }
+    let scarce = limited.snapshot();
+    let abundant = generous.snapshot();
+    assert_eq!(
+        scarce
+            .grazers
+            .iter()
+            .filter(|g| g.life == Life::Alive)
+            .count(),
+        0
+    );
+    assert_eq!(
+        abundant
+            .grazers
+            .iter()
+            .filter(|g| g.life == Life::Alive)
+            .count(),
+        1
+    );
+    assert_eq!(scarce.history.starvations_between(1, 12), Some(2));
+    assert_eq!(abundant.history.starvations_between(1, 12), Some(1));
+    assert_eq!(scarce.patches[0].biomass_units, 8);
+    assert_eq!(
+        (abundant.grazers[0].reserve_units, abundant.grazers[0].life),
+        (0, Life::Dead)
+    );
+    assert_eq!(
+        (abundant.grazers[1].reserve_units, abundant.grazers[1].life),
+        (8, Life::Alive)
+    );
+    assert_eq!(abundant.patches[0].biomass_units, 5);
+}
+
+#[test]
+fn actual_ledger_accounts_for_stores_across_lit_dark_and_terminal_ticks() {
+    for setup in [Scenario::limited_supply(), Scenario::generous_supply()] {
+        let mut world = CourseWorld::new(setup).unwrap();
+        for _ in 0..12 {
+            let before = stores(&amp;world.snapshot());
+            world.step();
+            let after = world.snapshot();
+            assert_eq!(
+                stores(&amp;after) + after.ledger.maintenance_units,
+                before + after.ledger.added_units
+            );
+        }
+    }
+}
+
+#[test]
+fn reads_are_owned_and_do_not_change_fixed_tick_results() {
+    let mut direct = CourseWorld::new(Scenario::generous_supply()).unwrap();
+    let mut observed = CourseWorld::new(Scenario::generous_supply()).unwrap();
+    let mut saved = observed.snapshot();
+    saved.grazers[0].reserve_units = 999;
+    saved.patches.clear();
+    assert_eq!(observed.snapshot().grazers[0].reserve_units, 3);
+    assert_eq!(observed.snapshot().patches.len(), 1);
+    for _ in 0..12 {
+        direct.step();
+        for _ in 0..10 {
+            let _ = observed.snapshot();
+        }
+        observed.step();
+        for _ in 0..10 {
+            let _ = observed.snapshot();
+        }
+    }
+    assert_eq!(observed.snapshot(), direct.snapshot());
+}
+
+#[test]
+fn reversing_spawn_order_preserves_claims_snapshots_and_event_order() {
+    let mut setup = Scenario::generous_supply();
+    setup.patches.push(patch(200, 0, 7, 1));
+    let mut reverse = setup.clone();
+    reverse.grazers.reverse();
+    reverse.patches.reverse();
+    let mut first = CourseWorld::new(setup).unwrap();
+    let mut second = CourseWorld::new(reverse).unwrap();
+    assert_eq!(first.snapshot(), second.snapshot());
+    for _ in 0..6 {
+        first.step();
+        second.step();
+        assert_eq!(first.snapshot(), second.snapshot());
+    }
+}
+
+#[test]
+fn history_eviction_makes_partial_ticks_unknown_without_erasing_life_state() {
+    let mut setup = scenario(
+        vec![grazer(1, 1, 5, 1, 0, None), grazer(2, 1, 5, 1, 0, None)],
+        vec![],
+    );
+    setup.history_limit = 1;
+    let mut world = CourseWorld::new(setup).unwrap();
+    world.step();
+    let first = world.snapshot();
+    assert_eq!(first.history.events.len(), 1);
+    assert_eq!(first.history.evicted_events, 3);
+    assert_eq!(first.history.complete_after_tick, 1);
+    assert_eq!(first.history.collected_through_tick, 1);
+    assert_eq!(first.history.starvations_between(1, 1), None);
+    assert_eq!(
+        first
+            .grazers
+            .iter()
+            .filter(|g| g.life == Life::Dead)
+            .count(),
+        2
+    );
+    world.step();
+    let second = world.snapshot();
+    assert_eq!(second.history.starvations_between(2, 2), Some(0));
+    assert_eq!(second.history.starvations_between(1, 2), None);
+    assert_eq!(second.history.events, first.history.events);
+}
+
+#[test]
+fn zero_history_limit_distinguishes_lost_events_from_a_later_known_empty_tick() {
+    let mut setup = scenario(vec![grazer(1, 0, 0, 0, 0, None)], vec![]);
+    setup.history_limit = 0;
+    let mut world = CourseWorld::new(setup).unwrap();
+    assert_eq!(world.snapshot().history.starvations_between(1, 1), None);
+    world.step();
+    let first = world.snapshot();
+    assert!(first.history.events.is_empty());
+    assert_eq!(first.history.evicted_events, 1);
+    assert_eq!(first.history.starvations_between(1, 1), None);
+    world.step();
+    let history = world.snapshot().history;
+    assert_eq!(history.starvations_between(2, 2), Some(0));
+    assert_eq!(history.starvations_between(0, 1), None);
+    assert_eq!(history.starvations_between(2, 1), None);
+    assert_eq!(history.starvations_between(2, 3), None);
+}
+
+#[test]
+fn reset_restores_configuration_and_run_scoped_history_then_can_step_again() {
+    let mut world = CourseWorld::new(Scenario::limited_supply()).unwrap();
+    let initial = world.snapshot();
+    for _ in 0..5 {
+        world.step();
+    }
+    let old = world.snapshot();
+    world.reset();
+    let reset = world.snapshot();
+    assert_eq!(reset.run, 2);
+    assert_eq!(reset.tick, 0);
+    assert_eq!(reset.grazers, initial.grazers);
+    assert_eq!(reset.patches, initial.patches);
+    assert_eq!(reset.ledger, TickLedger::default());
+    assert_eq!(reset.lit, None);
+    assert!(reset.history.events.is_empty());
+    assert_eq!(reset.history.collected_through_tick, 0);
+    assert_eq!(reset.history.evicted_events, 0);
+    world.step();
+    let next = world.snapshot();
+    assert_eq!(next.tick, 1);
+    assert_eq!(next.grazers[0].reserve_units, 3);
+    assert!(
+        next.history
+            .events
+            .iter()
+            .all(|event| event.run == 2 &amp;&amp; event.tick == 1)
+    );
+    assert!(old.history.events.iter().all(|event| event.run == 1));
+}
+
+#[test]
+fn integer_limits_are_bounded_before_growth_and_meal_addition() {
+    let mut world = CourseWorld::new(scenario(
+        vec![grazer(1, u32::MAX - 1, u32::MAX, 0, u32::MAX, Some(100))],
+        vec![patch(100, u32::MAX - 1, u32::MAX, u32::MAX)],
+    ))
+    .unwrap();
+    world.step();
+    let state = world.snapshot();
+    assert_eq!(state.grazers[0].reserve_units, u32::MAX);
+    assert_eq!(state.patches[0].biomass_units, u32::MAX - 1);
+    assert_eq!(state.ledger.added_units, 1);
+    assert_eq!(state.ledger.eaten_units, 1);
+}
+
+#[test]
+fn scenario_switch_is_validated_atomically_and_keeps_the_run_sequence() {
+    let mut world = CourseWorld::new(Scenario::limited_supply()).unwrap();
+    world.step();
+    let before = world.snapshot();
+    let mut invalid = Scenario::generous_supply();
+    invalid.grazers[0].reserve_units = 9;
+    assert_eq!(
+        world.reset_with(invalid),
+        Err(ScenarioError::ReserveOverCapacity(SimId(1)))
+    );
+    assert_eq!(world.snapshot(), before);
+    world.reset();
+    assert_eq!(world.snapshot().run, 2);
+    assert_eq!(world.snapshot().patches[0].growth_units_per_lit_tick, 2);
+    world.reset_with(Scenario::generous_supply()).unwrap();
+    assert_eq!(world.snapshot().run, 3);
+    world.step();
+    assert_eq!(world.snapshot().grazers[1].reserve_units, 4);
+    world.reset();
+    let reset = world.snapshot();
+    assert_eq!(reset.run, 4);
+    assert_eq!(reset.tick, 0);
+    assert_eq!(reset.patches[0].growth_units_per_lit_tick, 6);
+}
+
+#[test]
+fn empty_world_and_zero_capacity_patch_still_have_completed_tick_evidence() {
+    let mut world = CourseWorld::new(scenario(vec![], vec![patch(100, 0, 0, u32::MAX)])).unwrap();
+    world.step();
+    let state = world.snapshot();
+    assert!(state.grazers.is_empty());
+    assert_eq!(state.patches[0].biomass_units, 0);
+    assert_eq!(state.tick, 1);
+    assert_eq!(state.ledger, TickLedger::default());
+    assert_eq!(state.history.starvations_between(1, 1), Some(0));
+    let mut empty = CourseWorld::new(scenario(vec![], vec![])).unwrap();
+    empty.step();
+    assert!(empty.snapshot().patches.is_empty());
+}
+
+#[test]
+fn configuration_rejects_duplicate_cross_kind_ids_and_invalid_bounds() {
+    assert_eq!(Daylight::new(0, 0), Err(ScenarioError::InvalidDaylight));
+    assert_eq!(Daylight::new(3, 4), Err(ScenarioError::InvalidDaylight));
+    let error = CourseWorld::new(scenario(
+        vec![grazer(1, 1, 2, 0, 0, None)],
+        vec![patch(1, 0, 1, 0)],
+    ))
+    .err();
+    assert_eq!(error, Some(ScenarioError::DuplicateId(SimId(1))));
+    let error = CourseWorld::new(scenario(vec![grazer(1, 3, 2, 0, 0, None)], vec![])).err();
+    assert_eq!(error, Some(ScenarioError::ReserveOverCapacity(SimId(1))));
+    let error = CourseWorld::new(scenario(vec![], vec![patch(1, 3, 2, 0)])).err();
+    assert_eq!(error, Some(ScenarioError::BiomassOverCapacity(SimId(1))));
+}
+
+#[test]
+fn all_dark_and_all_lit_days_change_supply_only_on_executed_ticks() {
+    let mut dark_setup = scenario(vec![], vec![patch(100, 0, 10, 2)]);
+    dark_setup.daylight = Daylight::new(3, 0).unwrap();
+    let mut lit_setup = dark_setup.clone();
+    lit_setup.daylight = Daylight::new(3, 3).unwrap();
+    let mut dark = CourseWorld::new(dark_setup).unwrap();
+    let mut lit = CourseWorld::new(lit_setup).unwrap();
+    for _ in 0..3 {
+        dark.step();
+        lit.step();
+    }
+    assert_eq!(
+        (
+            dark.snapshot().lit,
+            dark.snapshot().patches[0].biomass_units
+        ),
+        (Some(false), 0)
+    );
+    assert_eq!(
+        (lit.snapshot().lit, lit.snapshot().patches[0].biomass_units),
+        (Some(true), 6)
+    );
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

@@ -1,0 +1,1988 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>changes.patch · resting · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../assets/source.css?v=45ff3179bc2c">
+<script src="../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="resting"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">resting checkpoint</p><h1>changes.patch</h1>
+<p>This review-only diff maps the previous checkpoint to this one. Use it to plan deliberate edits; it is not an automatic migration over your saved project.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../resting.html">← A pause still has a cost</a>
+<a href="changes.patch" download>Download raw file</a>
+<a href="../../downloads/resting-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-diff" data-source-file="changes.patch">--- a/README.md
++++ b/README.md
+@@ -722,3 +722,224 @@
+ Browser adapters, rendered map/keyboard checks, later rest/predation, and the full
+ goal remain separate work. No live source, learner-owned current movement helper,
+ or assignment was changed by this checkpoint.
++
++## Checkpoint B: optional fatigue and committed rest
++
++`MobileScenario::new(...)` still defaults to checkpoint A. Enable the additional
++policy with `scenario.with_rest(RestPolicy::default())`; its `rest()` accessor
++returns `Option&lt;&amp;RestPolicy&gt;`. `CourseWorld::new_mobile`, `reset_with_mobile`, and
++`reset` select, validate, and repeat the whole configured mode. Rest is absent
++from the first-arc and fixed-contact modes. No live Moss source or learner-owned
++movement exercise changes here.
++
++```rust
++use moss_course_ecosystem::{CourseWorld, MobileError, MobileScenario, RestPolicy};
++fn main() -&gt; Result&lt;(), MobileError&gt; {
++let mut world = CourseWorld::new_mobile(MobileScenario::resting_journey())?;
++world.step();
++let space = world.mobile_snapshot().unwrap();
++let rest = world.rest_snapshot().unwrap();
++assert_eq!(space.grazers[0].cell.x, 1);
++assert_eq!(rest.grazers[0].fatigue_points, 2);
++world.reset_with_mobile(MobileScenario::meadow().with_rest(RestPolicy {
++    minimum_rest_ticks: 3,
++    ..RestPolicy::default()
++}))?;
++Ok(())
++}
++```
++
++This code is an API excerpt; run the complete native example with:
++
++```sh
++CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 run --offline --locked --manifest-path learning/ecosystem/Cargo.toml --example resting
++```
++
++`RestPolicy` fields and defaults are `maximum_fatigue_points: 10`,
++`effort_points_per_cell: 2`, `enter_at_points: 6`, `exit_at_points: 2`,
++`minimum_rest_ticks: 2`, `recovery_points_per_tick: 2`, and `history_limit: 128`.
++The first six are `u32`; the history limit is `usize`. Validation requires
++`exit &lt; entry &lt;= maximum`, positive effort no greater than maximum, positive
++recovery, and positive minimum commitment. Recovery greater than the maximum is
++valid and recovers only the fatigue actually present. Invalid rest configuration
++returns `MobileError::InvalidRestPolicy` before replacing the current world or
++saved reset configuration. These are proposed integer game rules, not measured
++animal physiology.
++
++### State, decisions, and effects
++
++Each rest-enabled mobile actor begins with zero fatigue and `Activity::Foraging`.
++The other enum case is `Activity::Resting { remaining_ticks }`. This stored
++commitment is distinct from the fatigue exit condition. A pure transition helper
++selects an activity without charging time or recovering fatigue. Its adapter runs
++after upkeep/growth and before observation. At or above the entry threshold it
++selects rest; the following target-selection phase cancels the old target. A
++resting actor gets no new perception, no travel, no feeding contact, no meal, and
++no parental transaction. The shared upkeep system continues charging reserve.
++
++Only the later executed rest phase recovers `min(fatigue, recovery)` and reduces
++the commitment by one toward zero. It records one action even when actual
++recovery is zero. The `last_rest_tick` guard prevents a repeated invocation from
++performing another action. Waking requires both zero remaining commitment and
++fatigue at or below the exit threshold, at a subsequent decision tick. It enters
++foraging with no retained target, then receives a fresh current-tick observation.
++The last copied view remains timestamped while resting; it is historical local
++knowledge, not a fresh current view. Reads never run either decision or effect.
++
++Travel additionally accepts only whole steps whose full effort fits the remaining
++fatigue capacity. It adds exactly `accepted_cells * effort_points_per_cell`,
++checked before position/reserve mutations. It never saturates away an accepted
++step's effort. No target, no movement, an unaffordable step, and a stationary meal
++add zero fatigue. This differs intentionally from lesson 21's abstract effort on
++every foraging tick: the cumulative world now charges actual spatial actions.
++
++Newborns receive zero fatigue, foraging activity, and absent action/transition
++timestamps. The existing first-eligible tick prevents an erroneous late rest
++phase from changing a visible newborn. Resting parents are rejected again inside
++the birth transaction, including a deliberately injected stale target/contact.
++Upkeep, actual travel costs, and birth dissipation remain energy sinks; fatigue
++recovery produces no energy. A hungry resting actor can die beside food, because
++this policy has no hunger override.
++
++The mobile schedule is still single-threaded and fully ordered. Its explicit
++phases are now grouped into three chained tuples to stay within Bevy 0.18.1's
++supported tuple arity; the outer chain preserves the order between groups.
++
++```text
++begin tick/clear ledgers → mature → upkeep → grow
++→ decide rest/wake → observe foragers → select/cancel target
++→ travel → execute rest → derive contacts → meals → starvation
++→ births → ApplyDeferred → cleanup → ApplyDeferred → complete journals
++```
++
++### Reading the supplemental report
++
++The earlier public `Snapshot`, `PopulationSnapshot`, `MobileSnapshot`, mobile
++ledger, and mobile event variants keep their meanings. Call
++`rest_snapshot() -&gt; Option&lt;RestSnapshot&gt;` for the supplemental version
++`moss-course-rest-b-v1`. `None` means the policy is disabled. A complete observation
++of a rest-enabled run includes **both** the mobile and rest reports; the older
++projection alone does not contain every future-relevant activity state.
++
++`RestSnapshot` owns `run`, `tick`, `policy`, sorted `grazers`, latest `ledger`,
++lifetime `totals`, and `history`. Each `RestGrazerReading` contains stable `id`,
++`fatigue_points`, `activity`, `last_rest_tick`, and `last_transition_tick`.
++An absent timestamp means that action/transition has never occurred in this run.
++The counters share `RestCounters`: `effort_points`, `recovered_points`,
++`rest_actions`, `entered_rest`, and `woke`, all `u64` and checked on addition.
++
++The separate bounded journal records `EnteredRest`, `Woke`, `TravelEffort`, and
++`Rested`, with run/tick and stable actor IDs. `Rested` records actual recovery,
++fatigue after the action, and remaining commitment. Its coverage follows the
++existing conservative whole-tick convention. `rest_actions_between(first,last)`
++returns `None` for invalid/future/incompletely retained intervals, including a
++partially evicted tick; `Some(0)` requires complete evidence. A lifetime total can
++remain known after causal events are lost. There is no second biological copy in
++this report, journal, or future browser adapter.
++
++| File | B responsibility |
++| --- | --- |
++| `src/mobile/rest.rs` | Policy, fatigue/activity state, checked counters, and owned projection. |
++| `src/mobile/rest/systems.rs` | Pure activity decision, ordered adapter, and guarded execution. |
++| `src/mobile/rest/history.rs` | Supplemental outcomes and explicit retained coverage. |
++| `src/mobile/movement.rs` | Whole-step effort bound and accepted effort accounting. |
++| `src/mobile/perception.rs`, `src/feeding.rs`, `src/reproduction.rs` | Rest eligibility at intention and actual action boundaries. |
++| `tests/rest.rs` | Public cumulative behavior, accounting, reset, and history cases. |
++| `src/simulation/rest_tests.rs` | Late newborn/effect calls, stale permissions, and preflight failures. |
++| `examples/resting.rs` | Declared journey and matched 120-tick meadow observations. |
++
++### Observed journeys and controlled comparison
++
++`resting_journey()` starts grazer 1 at `(0,0)` with reserve 20/capacity 24,
++upkeep 1/meal 2/sight 5/speed 1/travel cost 1. Patch 100 at `(5,0)` holds 20,
++capacity 20, no renewal. The grid is `6 × 2`; the population configuration is the
++single founder from `short_journey`; default rest is enabled. All fatigue begins
++at zero. The actual native trace is:
++
++| Tick | x | Reserve | Fatigue | Activity after tick | Observed tick |
++| --- | --- | --- | --- | --- | --- |
++| 1 | 1 | 18 | 2 | Foraging | 1 |
++| 2 | 2 | 16 | 4 | Foraging | 2 |
++| 3 | 3 | 14 | 6 | Foraging | 3 |
++| 4 | 3 | 13 | 4 | Resting, 1 left | 3 |
++| 5 | 3 | 12 | 2 | Resting, 0 left | 3 |
++| 6 | 4 | 10 | 4 | Foraging | 6 |
++| 7 | 5 | 10 | 6 | Foraging | 7 |
++| 8 | 5 | 9 | 4 | Resting, 1 left | 7 |
++| 9 | 5 | 8 | 2 | Resting, 0 left | 7 |
++| 10 | 5 | 9 | 2 | Foraging | 10 |
++
++With recovery 10 instead of 2, tick 4 already reaches fatigue zero, yet tick 5
++still executes a rest action recovering zero points; waking occurs at tick 6.
++With minimum 3 instead of 2 and default recovery, tick 6 instead ends at x3,
++reserve 11, fatigue zero, resting with zero commitment left. Its first meal is at
++tick 8 instead of tick 7. These differences were executed and asserted.
++
++The original design's proposed minimum 1 versus 2 does not distinguish waking
++under the default 6→4→2 recovery path: both need two actions for the exit
++threshold. The comparison used here changes **only minimum 2 versus 3**. It
++uses the full `MobileScenario::meadow()` specification in checkpoint A above,
++default rest in every other field, and exactly 120 ticks. All versions, IDs,
++initial stores, growth, inheritance, newborn motion, and capacities match.
++
++| Minimum | Tick | Living | Births / starvations | Travel cells | Rest actions | Reserve / patch stores |
++| --- | --- | --- | --- | --- | --- | --- |
++| 2 | 8 | 3 | 3 / 4 | 15 | 7 | 31 / 18 |
++| 3 | 8 | 4 | 3 / 3 | 14 | 8 | 32 / 18 |
++| 2 | 12 | 3 | 4 / 5 | 19 | 12 | 28 / 34 |
++| 3 | 12 | 3 | 4 / 5 | 18 | 11 | 37 / 22 |
++| 2 | 40 | 0 | 7 / 11 | 36 | 21 | 0 / 36 |
++| 3 | 40 | 2 | 7 / 9 | 46 | 33 | 26 / 18 |
++| 2 | 120 | 0 | 7 / 11 | 36 | 21 | 0 / 36 |
++| 3 | 120 | 1 | 10 / 13 | 71 | 53 | 24 / 31 |
++
++Minimum 2 accepted growth 98, upkeep 108, travel cost 36, and birth dissipation
++14: initial stores 96 + growth 98 = final stores 36 + those costs. Minimum 3
++accepted growth 308, upkeep 258, travel cost 71, and birth dissipation 20:
++96 + 308 = 55 + 258 + 71 + 20. The single final survivor is founder 1. Effort /
++recovered totals are 72/42 versus 142/106; fatigue is a separate store and departed
++actors are no longer in the current fatigue census. Both runs pass the energy
++and population census equations after every tick. This outcome does not claim
++that longer rest generally improves survival; it shows why the actual coupled
++run is needed. Early store timing and later turnover differ, despite matching
++initial conditions.
++
++At tick 120 with minimum 2, base coverage is `(2,120]` with 11 evictions;
++population, mobile, and rest journals retain `(0,120]` with none. With minimum 3,
++base coverage is `(68,120]` with 296 evictions, population `(0,120]` with none,
++mobile `(6,120]` with 28, and rest `(10,120]` with 31. Neither complete endpoints
++nor known lifetime totals restore missing early causal events.
++
++### B verification and limits
++
++The final pinned native suite passed **75 tests**: 49 byte-identical public cases
++from earlier checkpoints, 12 new public rest cases, and 14 internal tests. The
++new internal cases deliberately call decision/effect phases late, inject stale
++resting permissions, and exhaust an effort counter before movement. The two exact
++public investigation tests decoded from `learning/content/resting.html` also
++passed in a separate copied project and independent Cargo target directory.
++
++Seven isolated defects compiled and then failed their intended assertions:
++ignoring remaining commitment, allowing a newborn's early rest effect, recovering
++twice in one tick, reducing commitment during policy evaluation, accepting travel
++beyond available fatigue, allowing a resting meal, and allowing resting parents
++to reproduce. Each mutant had its own target directory; compilation failures were
++not counted as behavioral evidence. The source and outputs are retained under
++`learning/work/ecosystem-rest-probe-*`.
++
++Commands executed from the `learning/ecosystem` package were:
++
++```sh
++cargo +1.93.1 fmt --all -- --check
++cargo +1.93.1 test --offline --locked
++cargo +1.93.1 clippy --offline --locked --all-targets -- -D warnings
++cargo +1.93.1 run --offline --locked --example resting
++```
++
++Formatting and strict Clippy passed. The earlier acceptance/population SHA-256
++values above are unchanged; `tests/mobile.rs` remains byte-identical to checkpoint
++A with SHA-256 `99e59a86b5df7558e9517fe342fd49d7c0c97f28f1077242ea1493270d5971e6`.
++B adds no dependency or calibrated biological claim. Native tests, the scalar
++WASM adapter, and actual browser behavior remain distinct evidence. Predation is
++not implemented here, and this checkpoint does not complete the full learning
++goal.
+--- a/examples/resting.rs
++++ b/examples/resting.rs
+@@ -0,0 +1,95 @@
++use moss_course_ecosystem::{CourseWorld, MobileScenario, RestPolicy};
++
++fn main() {
++    for recovery in [2, 6, 10] {
++        let mut world =
++            CourseWorld::new_mobile(MobileScenario::resting_journey().with_rest(RestPolicy {
++                recovery_points_per_tick: recovery,
++                ..Default::default()
++            }))
++            .unwrap();
++        println!(
++            "journey recovery={recovery}: tick x reserve fatigue activity observed_tick last_rest"
++        );
++        for _ in 0..10 {
++            world.step();
++            let m = world.mobile_snapshot().unwrap();
++            let r = world.rest_snapshot().unwrap();
++            println!(
++                "{} {} {} {} {:?} {:?} {:?}",
++                r.tick,
++                m.grazers[0].cell.x,
++                m.base.grazers[0].reserve_units,
++                r.grazers[0].fatigue_points,
++                r.grazers[0].activity,
++                m.grazers[0].observed_tick,
++                r.grazers[0].last_rest_tick
++            );
++        }
++    }
++    for minimum_rest_ticks in [2, 3] {
++        let mut world = CourseWorld::new_mobile(MobileScenario::meadow().with_rest(RestPolicy {
++            minimum_rest_ticks,
++            ..Default::default()
++        }))
++        .unwrap();
++        println!(
++            "meadow minimum={minimum_rest_ticks}, otherwise MobileScenario::meadow + RestPolicy::default, horizon120"
++        );
++        let mut upkeep = 0;
++        let mut growth = 0;
++        let mut birth_cost = 0;
++        for tick in 1..=120 {
++            world.step();
++            let m = world.mobile_snapshot().unwrap();
++            let r = world.rest_snapshot().unwrap();
++            upkeep += m.base.ledger.maintenance_units;
++            growth += m.base.ledger.added_units;
++            birth_cost += m.population.ledger.dissipated_units;
++            if [4, 8, 12, 40, 80, 120].contains(&amp;tick) {
++                let reserves: u64 = m
++                    .base
++                    .grazers
++                    .iter()
++                    .map(|g| u64::from(g.reserve_units))
++                    .sum();
++                let food: u64 = m
++                    .base
++                    .patches
++                    .iter()
++                    .map(|p| u64::from(p.biomass_units))
++                    .sum();
++                println!(
++                    "tick={tick} living={} juveniles={} births={} starvations={} travel={} reserves={reserves} biomass={food} rest={:?}",
++                    m.base.grazers.len(),
++                    m.population.juveniles,
++                    m.population.totals.births,
++                    m.population.totals.starvations,
++                    m.totals.travel_cells,
++                    r.totals
++                );
++            }
++        }
++        let m = world.mobile_snapshot().unwrap();
++        let r = world.rest_snapshot().unwrap();
++        println!(
++            "growth={growth} upkeep={upkeep} birth_cost={birth_cost} final_ids={:?}",
++            m.base.grazers.iter().map(|g| g.id).collect::&lt;Vec&lt;_&gt;&gt;()
++        );
++        println!(
++            "coverage base({},{}] lost{} population({},{}] lost{} mobile({},{}] lost{} rest({},{}] lost{}",
++            m.base.history.complete_after_tick,
++            m.tick,
++            m.base.history.evicted_events,
++            m.population.history.complete_after_tick,
++            m.tick,
++            m.population.history.evicted_events,
++            m.history.complete_after_tick,
++            m.tick,
++            m.history.evicted_events,
++            r.history.complete_after_tick,
++            r.tick,
++            r.history.evicted_events
++        );
++    }
++}
+--- a/src/feeding.rs
++++ b/src/feeding.rs
+@@ -51,7 +51,11 @@
+             let current_target = actor
+                 .target
+                 .is_some_and(|target| target.patch == site &amp;&amp; target.observed_tick == clock.tick);
+-            if !current_target || position.is_none() || position != patch_position {
++            if !actor.can_forage()
++                || !current_target
++                || position.is_none()
++                || position != patch_position
++            {
+                 continue;
+             }
+         }
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -3,7 +3,7 @@
+ //! One ordered Bevy world combines upkeep, bounded daylight supply, competing
+ //! meals, and starvation. An opt-in population policy adds funded births,
+ //! maturation, and inherited upkeep. Mobile mode adds local choice and paid travel;
+-//! rest and predation remain later arcs.
++//! optional fatigue and committed rest interrupt those actions. Predation is later.
+ 
+ mod feeding;
+ mod history;
+@@ -17,9 +17,11 @@
+ 
+ pub use history::{Event, EventKind, HistorySnapshot};
+ pub use mobile::{
+-    Cell, GrazerPlacement, GridBounds, MOBILE_VERSION, MobileError, MobileEvent, MobileEventKind,
+-    MobileGrazerReading, MobileHistorySnapshot, MobileLedger, MobileScenario, MobileSnapshot,
+-    MobileTotals, Motion, PatchObservation, PatchPlacement, PatchTarget, SpatialConfig,
++    Activity, Cell, GrazerPlacement, GridBounds, MOBILE_VERSION, MobileError, MobileEvent,
++    MobileEventKind, MobileGrazerReading, MobileHistorySnapshot, MobileLedger, MobileScenario,
++    MobileSnapshot, MobileTotals, Motion, PatchObservation, PatchPlacement, PatchTarget,
++    REST_VERSION, RestCounters, RestEvent, RestEventKind, RestGrazerReading, RestHistorySnapshot,
++    RestPolicy, RestSnapshot, SpatialConfig,
+ };
+ pub use model::{
+     Daylight, GrazerReading, GrazerSeed, Life, PatchReading, PatchSeed, Scenario, ScenarioError,
+--- a/src/mobile.rs
++++ b/src/mobile.rs
+@@ -4,7 +4,12 @@
+ mod history;
+ pub(crate) mod movement;
+ pub(crate) mod perception;
++pub(crate) mod rest;
+ mod scenarios;
++pub use rest::{
++    Activity, REST_VERSION, RestCounters, RestEvent, RestEventKind, RestGrazerReading,
++    RestHistorySnapshot, RestPolicy, RestSnapshot,
++};
+ 
+ use crate::model::{Clock, Grazer, Identity, Life, Patch};
+ use crate::simulation::Roster;
+@@ -46,9 +51,19 @@
+     pub observed_cell: Option&lt;Cell&gt;,
+     pub visible_patches: Vec&lt;PatchObservation&gt;,
+     pub last_travel_tick: Option&lt;u64&gt;,
++    pub rest: Option&lt;rest::RestActor&gt;,
+ }
+ 
+ impl MobileActor {
++    pub fn can_forage(&amp;self) -&gt; bool {
++        self.rest
++            .as_ref()
++            .is_none_or(|rest| rest.activity == Activity::Foraging)
++    }
++    pub fn with_rest(mut self, enabled: bool) -&gt; Self {
++        self.rest = enabled.then(rest::RestActor::default);
++        self
++    }
+     pub fn new(motion: Motion) -&gt; Self {
+         Self {
+             motion,
+@@ -57,6 +72,7 @@
+             observed_cell: None,
+             visible_patches: Vec::new(),
+             last_travel_tick: None,
++            rest: None,
+         }
+     }
+ }
+@@ -105,6 +121,7 @@
+ #[derive(Resource)]
+ pub(crate) struct MobileState {
+     pub newborn_motion: Motion,
++    pub rest_enabled: bool,
+     pub ledger: MobileLedger,
+     pub totals: MobileTotals,
+     pub history: MobileHistory,
+@@ -132,9 +149,10 @@
+             .expect("grazer identity exists")
+             .0;
+         let placement = grazers[&amp;id];
+-        world
+-            .entity_mut(entity)
+-            .insert((Position(placement.cell), MobileActor::new(placement.motion)));
++        world.entity_mut(entity).insert((
++            Position(placement.cell),
++            MobileActor::new(placement.motion).with_rest(initial.rest().is_some()),
++        ));
+     }
+     for entity in patch_entities {
+         let id = world
+@@ -143,8 +161,12 @@
+             .0;
+         world.entity_mut(entity).insert(Position(patches[&amp;id]));
+     }
++    if let Some(policy) = initial.rest() {
++        world.insert_resource(rest::RestState::new(*policy));
++    }
+     world.insert_resource(MobileState {
+         newborn_motion: initial.space().newborn_motion,
++        rest_enabled: initial.rest().is_some(),
+         ledger: MobileLedger::default(),
+         totals: MobileTotals::default(),
+         history: MobileHistory::new(initial.history_limit()),
+@@ -214,8 +236,14 @@
+     }
+ }
+ 
+-pub(crate) fn begin_mobile_tick(mut state: ResMut&lt;MobileState&gt;) {
++pub(crate) fn begin_mobile_tick(
++    mut state: ResMut&lt;MobileState&gt;,
++    rest: Option&lt;ResMut&lt;rest::RestState&gt;&gt;,
++) {
+     state.ledger = MobileLedger::default();
++    if let Some(mut rest) = rest {
++        rest.ledger = RestCounters::default();
++    }
+ }
+ 
+ /// Derive a contact token from current space; feeding rechecks the actual contact.
+@@ -229,21 +257,30 @@
+         .map(|(id, position)| (id.0, position.0))
+         .collect();
+     for (position, actor, mut grazer) in &amp;mut grazers {
+-        grazer.feeding_site =
+-            if grazer.life == Life::Alive &amp;&amp; clock.tick &gt;= grazer.first_eligible_tick {
+-                actor
+-                    .target
+-                    .filter(|target| {
+-                        target.observed_tick == clock.tick
+-                            &amp;&amp; cells.get(&amp;target.patch) == Some(&amp;position.0)
+-                    })
+-                    .map(|target| target.patch)
+-            } else {
+-                None
+-            };
+-    }
+-}
+-
+-pub(crate) fn complete_mobile_tick(clock: Res&lt;Clock&gt;, mut state: ResMut&lt;MobileState&gt;) {
++        grazer.feeding_site = if grazer.life == Life::Alive
++            &amp;&amp; clock.tick &gt;= grazer.first_eligible_tick
++            &amp;&amp; actor.can_forage()
++        {
++            actor
++                .target
++                .filter(|target| {
++                    target.observed_tick == clock.tick
++                        &amp;&amp; cells.get(&amp;target.patch) == Some(&amp;position.0)
++                })
++                .map(|target| target.patch)
++        } else {
++            None
++        };
++    }
++}
++
++pub(crate) fn complete_mobile_tick(
++    clock: Res&lt;Clock&gt;,
++    mut state: ResMut&lt;MobileState&gt;,
++    rest: Option&lt;ResMut&lt;rest::RestState&gt;&gt;,
++) {
++    if let Some(mut rest) = rest {
++        rest.history.collected_through_tick = clock.tick;
++    }
+     state.history.collected_through_tick = clock.tick;
+ }
+--- a/src/mobile/config.rs
++++ b/src/mobile/config.rs
+@@ -3,6 +3,7 @@
+ use std::collections::{BTreeMap, BTreeSet};
+ use std::fmt;
+ 
++use super::rest::RestPolicy;
+ use crate::{PopulationConfig, PopulationError, Scenario, SimId};
+ 
+ #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+@@ -65,6 +66,7 @@
+     population: PopulationConfig,
+     space: SpatialConfig,
+     history_limit: usize,
++    rest: Option&lt;RestPolicy&gt;,
+ }
+ 
+ impl MobileScenario {
+@@ -74,7 +76,16 @@
+             population,
+             space,
+             history_limit: 128,
+-        }
++            rest: None,
++        }
++    }
++
++    pub fn with_rest(mut self, policy: RestPolicy) -&gt; Self {
++        self.rest = Some(policy);
++        self
++    }
++    pub fn rest(&amp;self) -&gt; Option&lt;&amp;RestPolicy&gt; {
++        self.rest.as_ref()
+     }
+ 
+     pub fn scenario(&amp;self) -&gt; &amp;Scenario {
+@@ -99,6 +110,9 @@
+             .population
+             .validate(&amp;self.scenario)
+             .map_err(MobileError::Population)?;
++        if self.rest.is_some_and(|policy| !policy.valid()) {
++            return Err(MobileError::InvalidRestPolicy);
++        }
+         let bounds = self.space.bounds;
+         if bounds.width_cells == 0 || bounds.height_cells == 0 {
+             return Err(MobileError::InvalidBounds);
+@@ -172,6 +186,7 @@
+ pub enum MobileError {
+     Population(PopulationError),
+     InvalidBounds,
++    InvalidRestPolicy,
+     AuthoredContact(SimId),
+     MissingGrazerPlacement(SimId),
+     DuplicateGrazerPlacement(SimId),
+--- a/src/mobile/movement.rs
++++ b/src/mobile/movement.rs
+@@ -1,5 +1,6 @@
+ //! Bounded x-then-y cardinal travel, charged only for accepted cells.
+ 
++use super::rest::{RestCounters, RestEvent, RestEventKind, RestState};
+ use super::{Cell, MobileActor, MobileEvent, MobileEventKind, MobileState, Position};
+ use crate::model::{Clock, Grazer, Identity, Life, Patch};
+ use bevy_ecs::prelude::*;
+@@ -33,6 +34,7 @@
+         &amp;mut MobileActor,
+     )&gt;,
+     mut state: ResMut&lt;MobileState&gt;,
++    mut rest_state: Option&lt;ResMut&lt;RestState&gt;&gt;,
+ ) {
+     let available: BTreeSet&lt;_&gt; = patches.iter().map(|id| id.0).collect();
+     let mut order: Vec&lt;_&gt; = grazers
+@@ -45,6 +47,7 @@
+             grazers.get_mut(entity).expect("listed actor exists");
+         if grazer.life != Life::Alive
+             || clock.tick &lt; grazer.first_eligible_tick
++            || !actor.can_forage()
+             || actor.last_travel_tick == Some(clock.tick)
+         {
+             continue;
+@@ -52,11 +55,20 @@
+         let target = actor.target.filter(|target| {
+             target.observed_tick == clock.tick &amp;&amp; available.contains(&amp;target.patch)
+         });
++        let effort_capacity = rest_state.as_ref().map_or(u32::MAX, |state| {
++            let fatigue = actor
++                .rest
++                .as_ref()
++                .expect("rest enabled for actor")
++                .fatigue_points;
++            (state.policy.maximum_fatigue_points - fatigue) / state.policy.effort_points_per_cell
++        });
+         let (next, cells, spent) = if let Some(target) = target {
+             let cells = position
+                 .0
+                 .distance(target.observed_cell)
+                 .min(u64::from(actor.motion.max_cells_per_tick))
++                .min(u64::from(effort_capacity))
+                 .min(u64::from(
+                     grazer.reserve_units / actor.motion.travel_units_per_cell,
+                 )) as u32;
+@@ -95,6 +107,18 @@
+                 state.history.can_record(),
+                 "mobile event eviction counter exhausted"
+             );
++            let rest_plan = rest_state.as_ref().map(|rest| {
++                let points = cells
++                    .checked_mul(rest.policy.effort_points_per_cell)
++                    .expect("bounded effort fits maximum");
++                (
++                    points,
++                    rest.planned(RestCounters {
++                        effort_points: u64::from(points),
++                        ..Default::default()
++                    }),
++                )
++            });
+             state.history.record(MobileEvent {
+                 run: clock.run,
+                 tick: clock.tick,
+@@ -110,6 +134,25 @@
+             state.ledger.travel_units = ledger_units;
+             state.totals.travel_cells = total_cells;
+             state.totals.travel_units = total_units;
++            if let Some((points, counters)) = rest_plan {
++                rest_state.as_mut().expect("rest state exists").commit(
++                    counters,
++                    RestEvent {
++                        run: clock.run,
++                        tick: clock.tick,
++                        kind: RestEventKind::TravelEffort {
++                            grazer: id,
++                            cells,
++                            points,
++                        },
++                    },
++                );
++                actor
++                    .rest
++                    .as_mut()
++                    .expect("rest enabled for actor")
++                    .fatigue_points += points;
++            }
+             grazer.reserve_units -= spent;
+             position.0 = next;
+         }
+--- a/src/mobile/perception.rs
++++ b/src/mobile/perception.rs
+@@ -12,7 +12,10 @@
+     mut grazers: Query&lt;(&amp;Position, &amp;Grazer, &amp;mut MobileActor)&gt;,
+ ) {
+     for (position, grazer, mut actor) in &amp;mut grazers {
+-        if grazer.life != Life::Alive || clock.tick &lt; grazer.first_eligible_tick {
++        if grazer.life != Life::Alive
++            || clock.tick &lt; grazer.first_eligible_tick
++            || !actor.can_forage()
++        {
+             continue;
+         }
+         let mut readings: Vec&lt;_&gt; = patches
+@@ -54,7 +57,7 @@
+             reading.biomass_units &gt; 0
+                 &amp;&amp; position.0.distance(reading.cell) &lt;= u64::from(actor.motion.sensing_radius)
+         };
+-        let selected = if actor.observed_tick == Some(clock.tick) {
++        let selected = if actor.can_forage() &amp;&amp; actor.observed_tick == Some(clock.tick) {
+             actor
+                 .visible_patches
+                 .iter()
+--- a/src/mobile/rest.rs
++++ b/src/mobile/rest.rs
+@@ -0,0 +1,208 @@
++//! Optional fatigue: a separate store, committed actions, and owned evidence.
++
++mod history;
++mod systems;
++pub use history::{RestEvent, RestEventKind, RestHistorySnapshot};
++pub(crate) use systems::{decide, execute};
++
++use super::MobileActor;
++use crate::SimId;
++use crate::model::{Clock, Identity};
++use crate::simulation::Roster;
++use bevy_ecs::prelude::*;
++use history::RestHistory;
++
++pub const REST_VERSION: &amp;str = "moss-course-rest-b-v1";
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct RestPolicy {
++    pub maximum_fatigue_points: u32,
++    pub effort_points_per_cell: u32,
++    pub enter_at_points: u32,
++    pub exit_at_points: u32,
++    pub minimum_rest_ticks: u32,
++    pub recovery_points_per_tick: u32,
++    pub history_limit: usize,
++}
++
++impl Default for RestPolicy {
++    fn default() -&gt; Self {
++        Self {
++            maximum_fatigue_points: 10,
++            effort_points_per_cell: 2,
++            enter_at_points: 6,
++            exit_at_points: 2,
++            minimum_rest_ticks: 2,
++            recovery_points_per_tick: 2,
++            history_limit: 128,
++        }
++    }
++}
++
++impl RestPolicy {
++    pub(super) fn valid(self) -&gt; bool {
++        self.exit_at_points &lt; self.enter_at_points
++            &amp;&amp; self.enter_at_points &lt;= self.maximum_fatigue_points
++            &amp;&amp; self.effort_points_per_cell &gt; 0
++            &amp;&amp; self.effort_points_per_cell &lt;= self.maximum_fatigue_points
++            &amp;&amp; self.minimum_rest_ticks &gt; 0
++            &amp;&amp; self.recovery_points_per_tick &gt; 0
++    }
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Activity {
++    Foraging,
++    Resting { remaining_ticks: u32 },
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) struct RestActor {
++    pub fatigue_points: u32,
++    pub activity: Activity,
++    pub last_rest_tick: Option&lt;u64&gt;,
++    pub last_transition_tick: Option&lt;u64&gt;,
++}
++
++impl Default for RestActor {
++    fn default() -&gt; Self {
++        Self {
++            fatigue_points: 0,
++            activity: Activity::Foraging,
++            last_rest_tick: None,
++            last_transition_tick: None,
++        }
++    }
++}
++
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct RestCounters {
++    pub effort_points: u64,
++    pub recovered_points: u64,
++    pub rest_actions: u64,
++    pub entered_rest: u64,
++    pub woke: u64,
++}
++
++impl RestCounters {
++    fn adding(self, delta: Self) -&gt; Self {
++        Self {
++            effort_points: self
++                .effort_points
++                .checked_add(delta.effort_points)
++                .expect("effort counter exhausted"),
++            recovered_points: self
++                .recovered_points
++                .checked_add(delta.recovered_points)
++                .expect("recovery counter exhausted"),
++            rest_actions: self
++                .rest_actions
++                .checked_add(delta.rest_actions)
++                .expect("rest-action counter exhausted"),
++            entered_rest: self
++                .entered_rest
++                .checked_add(delta.entered_rest)
++                .expect("rest-entry counter exhausted"),
++            woke: self
++                .woke
++                .checked_add(delta.woke)
++                .expect("wake counter exhausted"),
++        }
++    }
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct RestGrazerReading {
++    pub id: SimId,
++    pub fatigue_points: u32,
++    pub activity: Activity,
++    pub last_rest_tick: Option&lt;u64&gt;,
++    pub last_transition_tick: Option&lt;u64&gt;,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RestSnapshot {
++    pub version: &amp;'static str,
++    pub run: u64,
++    pub tick: u64,
++    pub policy: RestPolicy,
++    pub grazers: Vec&lt;RestGrazerReading&gt;,
++    pub ledger: RestCounters,
++    pub totals: RestCounters,
++    pub history: RestHistorySnapshot,
++}
++
++#[derive(Resource)]
++pub(crate) struct RestState {
++    pub policy: RestPolicy,
++    pub ledger: RestCounters,
++    pub totals: RestCounters,
++    pub history: RestHistory,
++}
++
++impl RestState {
++    pub fn new(policy: RestPolicy) -&gt; Self {
++        Self {
++            policy,
++            ledger: RestCounters::default(),
++            totals: RestCounters::default(),
++            history: RestHistory::new(policy.history_limit),
++        }
++    }
++
++    /// Preflight every fallible accounting operation before an actor changes.
++    pub fn planned(&amp;self, delta: RestCounters) -&gt; (RestCounters, RestCounters) {
++        let ledger = self.ledger.adding(delta);
++        let totals = self.totals.adding(delta);
++        assert!(
++            self.history.can_record(),
++            "rest event eviction counter exhausted"
++        );
++        (ledger, totals)
++    }
++
++    pub fn commit(&amp;mut self, counters: (RestCounters, RestCounters), event: RestEvent) {
++        self.history.record(event);
++        self.ledger = counters.0;
++        self.totals = counters.1;
++    }
++}
++
++pub(crate) fn snapshot(world: &amp;World) -&gt; Option&lt;RestSnapshot&gt; {
++    let state = world.get_resource::&lt;RestState&gt;()?;
++    let clock = world.resource::&lt;Clock&gt;();
++    let mut grazers: Vec&lt;_&gt; = world
++        .resource::&lt;Roster&gt;()
++        .grazers
++        .iter()
++        .map(|entity| {
++            let id = world
++                .get::&lt;Identity&gt;(*entity)
++                .expect("rostered identity exists")
++                .0;
++            let rest = world
++                .get::&lt;MobileActor&gt;(*entity)
++                .expect("mobile actor exists")
++                .rest
++                .expect("rest enabled for every actor");
++            RestGrazerReading {
++                id,
++                fatigue_points: rest.fatigue_points,
++                activity: rest.activity,
++                last_rest_tick: rest.last_rest_tick,
++                last_transition_tick: rest.last_transition_tick,
++            }
++        })
++        .collect();
++    grazers.sort_by_key(|grazer| grazer.id);
++    Some(RestSnapshot {
++        version: REST_VERSION,
++        run: clock.run,
++        tick: clock.tick,
++        policy: state.policy,
++        grazers,
++        ledger: state.ledger,
++        totals: state.totals,
++        history: state.history.snapshot(),
++    })
++}
+--- a/src/mobile/rest/history.rs
++++ b/src/mobile/rest/history.rs
+@@ -0,0 +1,105 @@
++//! Bounded rest evidence has its own coverage; it never changes mobile-A events.
++
++use crate::SimId;
++use std::collections::VecDeque;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum RestEventKind {
++    EnteredRest {
++        grazer: SimId,
++        fatigue_points: u32,
++        committed_ticks: u32,
++    },
++    Woke {
++        grazer: SimId,
++        fatigue_points: u32,
++    },
++    TravelEffort {
++        grazer: SimId,
++        cells: u32,
++        points: u32,
++    },
++    Rested {
++        grazer: SimId,
++        recovered_points: u32,
++        fatigue_after: u32,
++        remaining_ticks: u32,
++    },
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct RestEvent {
++    pub run: u64,
++    pub tick: u64,
++    pub kind: RestEventKind,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RestHistorySnapshot {
++    pub events: Vec&lt;RestEvent&gt;,
++    pub limit: usize,
++    pub evicted_events: u64,
++    pub complete_after_tick: u64,
++    pub collected_through_tick: u64,
++}
++
++impl RestHistorySnapshot {
++    pub fn rest_actions_between(&amp;self, first: u64, last: u64) -&gt; Option&lt;u64&gt; {
++        if first == 0
++            || first &gt; last
++            || first &lt;= self.complete_after_tick
++            || last &gt; self.collected_through_tick
++        {
++            return None;
++        }
++        Some(
++            self.events
++                .iter()
++                .filter(|event| {
++                    (first..=last).contains(&amp;event.tick)
++                        &amp;&amp; matches!(event.kind, RestEventKind::Rested { .. })
++                })
++                .count() as u64,
++        )
++    }
++}
++
++pub(crate) struct RestHistory {
++    events: VecDeque&lt;RestEvent&gt;,
++    limit: usize,
++    evicted_events: u64,
++    complete_after_tick: u64,
++    pub collected_through_tick: u64,
++}
++impl RestHistory {
++    pub fn new(limit: usize) -&gt; Self {
++        Self {
++            events: VecDeque::new(),
++            limit,
++            evicted_events: 0,
++            complete_after_tick: 0,
++            collected_through_tick: 0,
++        }
++    }
++    pub fn can_record(&amp;self) -&gt; bool {
++        self.events.len() &lt; self.limit || self.evicted_events.checked_add(1).is_some()
++    }
++    pub fn record(&amp;mut self, event: RestEvent) {
++        assert!(self.can_record(), "rest event eviction counter exhausted");
++        self.events.push_back(event);
++        if self.events.len() &gt; self.limit {
++            let evicted = self.events.pop_front().expect("event just appended");
++            self.complete_after_tick = self.complete_after_tick.max(evicted.tick);
++            self.evicted_events += 1;
++        }
++    }
++    pub fn snapshot(&amp;self) -&gt; RestHistorySnapshot {
++        RestHistorySnapshot {
++            events: self.events.iter().copied().collect(),
++            limit: self.limit,
++            evicted_events: self.evicted_events,
++            complete_after_tick: self.complete_after_tick,
++            collected_through_tick: self.collected_through_tick,
++        }
++    }
++}
+--- a/src/mobile/rest/systems.rs
++++ b/src/mobile/rest/systems.rs
+@@ -0,0 +1,139 @@
++//! Decisions select an activity; only execute spends commitment and recovers.
++
++use super::{Activity, RestActor, RestCounters, RestEvent, RestEventKind, RestPolicy, RestState};
++use crate::mobile::MobileActor;
++use crate::model::{Clock, Grazer, Identity, Life};
++use bevy_ecs::prelude::*;
++
++// Selecting an activity changes neither fatigue nor remaining commitment.
++fn next_activity(rest: RestActor, policy: RestPolicy, tick: u64) -&gt; Activity {
++    match rest.activity {
++        Activity::Foraging if rest.fatigue_points &gt;= policy.enter_at_points =&gt; Activity::Resting {
++            remaining_ticks: policy.minimum_rest_ticks,
++        },
++        Activity::Resting { remaining_ticks: 0 }
++            if rest.fatigue_points &lt;= policy.exit_at_points
++                &amp;&amp; rest.last_rest_tick != Some(tick) =&gt;
++        {
++            Activity::Foraging
++        }
++        current =&gt; current,
++    }
++}
++
++pub(crate) fn decide(
++    clock: Res&lt;Clock&gt;,
++    mut actors: Query&lt;(Entity, &amp;Identity, &amp;Grazer, &amp;mut MobileActor)&gt;,
++    state: Option&lt;ResMut&lt;RestState&gt;&gt;,
++) {
++    let Some(mut state) = state else {
++        return;
++    };
++    let mut order: Vec&lt;_&gt; = actors
++        .iter()
++        .map(|(entity, id, _, _)| (id.0, entity))
++        .collect();
++    order.sort_by_key(|(id, _)| *id);
++    for (id, entity) in order {
++        let (_, _, grazer, mut actor) = actors.get_mut(entity).expect("listed actor exists");
++        if grazer.life != Life::Alive || clock.tick &lt; grazer.first_eligible_tick {
++            continue;
++        }
++        let rest = actor.rest.as_mut().expect("rest enabled for actor");
++        if rest.last_transition_tick == Some(clock.tick) {
++            continue;
++        }
++        let next = next_activity(*rest, state.policy, clock.tick);
++        if next == rest.activity {
++            continue;
++        }
++        let (kind, delta) = match next {
++            Activity::Resting { remaining_ticks } =&gt; (
++                RestEventKind::EnteredRest {
++                    grazer: id,
++                    fatigue_points: rest.fatigue_points,
++                    committed_ticks: remaining_ticks,
++                },
++                RestCounters {
++                    entered_rest: 1,
++                    ..Default::default()
++                },
++            ),
++            Activity::Foraging =&gt; (
++                RestEventKind::Woke {
++                    grazer: id,
++                    fatigue_points: rest.fatigue_points,
++                },
++                RestCounters {
++                    woke: 1,
++                    ..Default::default()
++                },
++            ),
++        };
++        let counters = state.planned(delta);
++        state.commit(
++            counters,
++            RestEvent {
++                run: clock.run,
++                tick: clock.tick,
++                kind,
++            },
++        );
++        rest.activity = next;
++        rest.last_transition_tick = Some(clock.tick);
++    }
++}
++
++pub(crate) fn execute(
++    clock: Res&lt;Clock&gt;,
++    mut actors: Query&lt;(Entity, &amp;Identity, &amp;Grazer, &amp;mut MobileActor)&gt;,
++    state: Option&lt;ResMut&lt;RestState&gt;&gt;,
++) {
++    let Some(mut state) = state else {
++        return;
++    };
++    let mut order: Vec&lt;_&gt; = actors
++        .iter()
++        .map(|(entity, id, _, _)| (id.0, entity))
++        .collect();
++    order.sort_by_key(|(id, _)| *id);
++    for (id, entity) in order {
++        let (_, _, grazer, mut actor) = actors.get_mut(entity).expect("listed actor exists");
++        if grazer.life != Life::Alive || clock.tick &lt; grazer.first_eligible_tick {
++            continue;
++        }
++        let rest = actor.rest.as_mut().expect("rest enabled for actor");
++        let Activity::Resting { remaining_ticks } = rest.activity else {
++            continue;
++        };
++        if rest.last_rest_tick == Some(clock.tick) {
++            continue;
++        }
++        let recovered = rest
++            .fatigue_points
++            .min(state.policy.recovery_points_per_tick);
++        let fatigue_after = rest.fatigue_points - recovered;
++        let remaining_ticks = remaining_ticks.saturating_sub(1);
++        let counters = state.planned(RestCounters {
++            recovered_points: u64::from(recovered),
++            rest_actions: 1,
++            ..Default::default()
++        });
++        state.commit(
++            counters,
++            RestEvent {
++                run: clock.run,
++                tick: clock.tick,
++                kind: RestEventKind::Rested {
++                    grazer: id,
++                    recovered_points: recovered,
++                    fatigue_after,
++                    remaining_ticks,
++                },
++            },
++        );
++        rest.fatigue_points = fatigue_after;
++        rest.activity = Activity::Resting { remaining_ticks };
++        rest.last_rest_tick = Some(clock.tick);
++    }
++}
+--- a/src/mobile/scenarios.rs
++++ b/src/mobile/scenarios.rs
+@@ -138,3 +138,21 @@
+         Self::new(scenario, population, space)
+     }
+ }
++
++impl MobileScenario {
++    /// One funded traveler reaches the rest threshold before a patch at x=5.
++    pub fn resting_journey() -&gt; Self {
++        let original = Self::short_journey();
++        let mut scenario = original.scenario().clone();
++        scenario.grazers[0].reserve_units = 20;
++        scenario.grazers[0].capacity_units = 24;
++        scenario.patches[0].biomass_units = 20;
++        scenario.patches[0].capacity_units = 20;
++        let mut space = original.space().clone();
++        space.bounds.width_cells = 6;
++        space.grazers[0].motion.sensing_radius = 5;
++        space.patches[0].cell.x = 5;
++        Self::new(scenario, original.population().clone(), space)
++            .with_rest(super::RestPolicy::default())
++    }
++}
+--- a/src/reproduction.rs
++++ b/src/reproduction.rs
+@@ -66,9 +66,10 @@
+     if let Some(tick) = mobile_tick {
+         view.site = view.site.filter(|site| {
+             actor.is_some_and(|actor| {
+-                actor
+-                    .target
+-                    .is_some_and(|target| target.patch == *site &amp;&amp; target.observed_tick == tick)
++                actor.can_forage()
++                    &amp;&amp; actor
++                        .target
++                        .is_some_and(|target| target.patch == *site &amp;&amp; target.observed_tick == tick)
+             }) &amp;&amp; position.is_some_and(|position| cells.get(site) == Some(&amp;position.0))
+         });
+     }
+@@ -276,7 +277,10 @@
+                     "mobile birth event counter exhausted before debit"
+                 );
+                 let cell = cells[&amp;plan.child.feeding_site.expect("accepted birth has a patch")];
+-                (Position(cell), MobileActor::new(mobile.newborn_motion))
++                (
++                    Position(cell),
++                    MobileActor::new(mobile.newborn_motion).with_rest(mobile.rest_enabled),
++                )
+             });
+             if mobile_child.is_some() {
+                 plan.child.feeding_site = None;
+--- a/src/simulation.rs
++++ b/src/simulation.rs
+@@ -76,7 +76,7 @@
+         })
+     }
+ 
+-    /// The complete mobile observation includes both earlier projections and space.
++    /// Spatial projection includes earlier modes; optional rest has its own supplemental report.
+     pub fn mobile_snapshot(&amp;self) -&gt; Option&lt;MobileSnapshot&gt; {
+         let initial = self.initial_mobile.as_ref()?;
+         Some(mobile::snapshot(
+@@ -86,6 +86,11 @@
+             self.population_snapshot()
+                 .expect("mobile mode includes a population policy"),
+         ))
++    }
++
++    /// None means rest is disabled; reading never executes recovery.
++    pub fn rest_snapshot(&amp;self) -&gt; Option&lt;crate::RestSnapshot&gt; {
++        mobile::rest::snapshot(&amp;self.world)
+     }
+ 
+     /// Validate before changing any mode, run identity, or saved reset selection.
+@@ -258,25 +263,36 @@
+     schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+     schedule.add_systems(
+         (
+-            begin_tick,
+-            population::begin_population_tick,
+-            mobile::begin_mobile_tick,
+-            population::mature,
+-            lifecycle::maintain,
+-            supply::grow,
+-            mobile::perception::observe,
+-            mobile::perception::choose,
+-            mobile::movement::travel,
+-            mobile::derive_contacts,
+-            feeding::feed,
+-            lifecycle::starve,
+-            reproduction::resolve_births,
+-            ApplyDeferred,
+-            population::cleanup_dead,
+-            ApplyDeferred,
+-            complete_tick,
+-            population::complete_population_tick,
+-            mobile::complete_mobile_tick,
++            (
++                begin_tick,
++                population::begin_population_tick,
++                mobile::begin_mobile_tick,
++                population::mature,
++                lifecycle::maintain,
++                supply::grow,
++            )
++                .chain(),
++            (
++                mobile::rest::decide,
++                mobile::perception::observe,
++                mobile::perception::choose,
++                mobile::movement::travel,
++                mobile::rest::execute,
++                mobile::derive_contacts,
++                feeding::feed,
++                lifecycle::starve,
++            )
++                .chain(),
++            (
++                reproduction::resolve_births,
++                ApplyDeferred,
++                population::cleanup_dead,
++                ApplyDeferred,
++                complete_tick,
++                population::complete_population_tick,
++                mobile::complete_mobile_tick,
++            )
++                .chain(),
+         )
+             .chain(),
+     );
+@@ -379,3 +395,6 @@
+ mod mobile_tests;
+ #[cfg(test)]
+ mod tests;
++
++#[cfg(test)]
++mod rest_tests;
+--- a/src/simulation/rest_tests.rs
++++ b/src/simulation/rest_tests.rs
+@@ -0,0 +1,170 @@
++//! Late-phase calls deliberately test eligibility and per-execution guards.
++
++use super::*;
++use crate::mobile::rest::{RestActor, RestState};
++use crate::mobile::{MobileActor, PatchTarget, Position};
++use crate::{Activity, Cell, FounderTrait, GrazerPlacement, RestPolicy, SimId, UpkeepTrait};
++use std::panic::{AssertUnwindSafe, catch_unwind};
++
++fn pair() -&gt; CourseWorld {
++    let initial = MobileScenario::resting_journey();
++    let mut scenario = initial.scenario().clone();
++    let mut population = initial.population().clone();
++    let mut space = initial.space().clone();
++    let mut second = scenario.grazers[0].clone();
++    second.id = SimId(2);
++    scenario.grazers.push(second);
++    population.founders.push(FounderTrait {
++        id: SimId(2),
++        upkeep: UpkeepTrait::new(1).unwrap(),
++    });
++    space.grazers[0].cell = space.patches[0].cell;
++    space.grazers.push(GrazerPlacement {
++        id: SimId(2),
++        ..space.grazers[0]
++    });
++    CourseWorld::new_mobile(
++        MobileScenario::new(scenario, population, space).with_rest(RestPolicy::default()),
++    )
++    .unwrap()
++}
++
++#[test]
++fn late_newborn_cannot_transition_or_recover_even_if_given_a_rest_intention() {
++    let mut course = pair();
++    course.step();
++    let child = *course.world.resource::&lt;Roster&gt;().grazers.last().unwrap();
++    let child_id = course.world.get::&lt;Identity&gt;(child).unwrap().0;
++    assert!(child_id.0 &gt; 100);
++    course
++        .world
++        .get_mut::&lt;MobileActor&gt;(child)
++        .unwrap()
++        .rest
++        .as_mut()
++        .unwrap()
++        .fatigue_points = 6;
++    let before = course.rest_snapshot();
++    let mut decide = Schedule::default();
++    decide.add_systems(mobile::rest::decide);
++    decide.run(&amp;mut course.world);
++    assert_eq!(course.rest_snapshot(), before);
++    course
++        .world
++        .get_mut::&lt;MobileActor&gt;(child)
++        .unwrap()
++        .rest
++        .as_mut()
++        .unwrap()
++        .activity = Activity::Resting { remaining_ticks: 2 };
++    let before = course.rest_snapshot();
++    let reserve = course.world.get::&lt;Grazer&gt;(child).unwrap().reserve_units;
++    let mut execute = Schedule::default();
++    execute.add_systems(mobile::rest::execute);
++    execute.run(&amp;mut course.world);
++    assert_eq!(course.rest_snapshot(), before);
++    assert_eq!(
++        course.world.get::&lt;Grazer&gt;(child).unwrap().reserve_units,
++        reserve
++    );
++    assert_eq!(course.rest_snapshot().unwrap().totals.rest_actions, 0);
++}
++
++#[test]
++fn decisions_do_not_spend_commitment_and_repeated_effects_do_not_recover_twice() {
++    let mut course = CourseWorld::new_mobile(MobileScenario::resting_journey()).unwrap();
++    for _ in 0..4 {
++        course.step();
++    }
++    let before = course.rest_snapshot();
++    let mut decide = Schedule::default();
++    decide.add_systems(mobile::rest::decide);
++    for _ in 0..5 {
++        decide.run(&amp;mut course.world);
++        assert_eq!(course.rest_snapshot(), before);
++    }
++    let mut execute = Schedule::default();
++    execute.add_systems(mobile::rest::execute);
++    execute.run(&amp;mut course.world);
++    assert_eq!(course.rest_snapshot(), before);
++    // Advance the clock without running effects: policy evaluation still owes the action.
++    course.world.resource_mut::&lt;Clock&gt;().tick = 5;
++    let before = course.rest_snapshot();
++    for _ in 0..5 {
++        decide.run(&amp;mut course.world);
++        assert_eq!(course.rest_snapshot(), before);
++    }
++    execute.run(&amp;mut course.world);
++    let before = course.rest_snapshot();
++    assert_eq!(
++        before.as_ref().unwrap().grazers[0].activity,
++        Activity::Resting { remaining_ticks: 0 }
++    );
++    decide.run(&amp;mut course.world); // A late decision cannot wake after this tick's effect.
++    assert_eq!(course.rest_snapshot(), before);
++}
++
++#[test]
++fn stale_targets_cannot_grant_resting_meals_or_births() {
++    let mut course = pair();
++    course.world.resource_mut::&lt;Clock&gt;().tick = 1;
++    let mut prepare = Schedule::default();
++    prepare.add_systems(
++        (
++            mobile::perception::observe,
++            mobile::perception::choose,
++            mobile::derive_contacts,
++        )
++            .chain(),
++    );
++    prepare.run(&amp;mut course.world);
++    let entities = course.world.resource::&lt;Roster&gt;().grazers.clone();
++    for entity in entities {
++        course.world.get_mut::&lt;MobileActor&gt;(entity).unwrap().rest = Some(RestActor {
++            fatigue_points: 6,
++            activity: Activity::Resting { remaining_ticks: 2 },
++            ..RestActor::default()
++        });
++    }
++    let before = course.mobile_snapshot();
++    let rest = course.rest_snapshot();
++    let mut actions = Schedule::default();
++    actions.add_systems((feeding::feed, reproduction::resolve_births, ApplyDeferred).chain());
++    actions.run(&amp;mut course.world);
++    actions.apply_deferred(&amp;mut course.world);
++    course.world.flush();
++    assert_eq!(course.mobile_snapshot(), before);
++    assert_eq!(course.rest_snapshot(), rest);
++    assert_eq!(
++        course.world.query::&lt;&amp;Grazer&gt;().iter(&amp;course.world).count(),
++        2
++    );
++}
++
++#[test]
++fn effort_counter_exhaustion_precedes_position_reserve_or_mobile_event_mutation() {
++    let mut course = CourseWorld::new_mobile(MobileScenario::resting_journey()).unwrap();
++    course.world.resource_mut::&lt;Clock&gt;().tick = 1;
++    let actor = course.world.resource::&lt;Roster&gt;().grazers[0];
++    course.world.get_mut::&lt;MobileActor&gt;(actor).unwrap().target = Some(PatchTarget {
++        patch: SimId(100),
++        observed_cell: Cell { x: 5, y: 0 },
++        observed_tick: 1,
++    });
++    course
++        .world
++        .resource_mut::&lt;RestState&gt;()
++        .totals
++        .effort_points = u64::MAX;
++    let mobile = course.mobile_snapshot();
++    let rest = course.rest_snapshot();
++    let mut travel = Schedule::default();
++    travel.add_systems(mobile::movement::travel);
++    assert!(catch_unwind(AssertUnwindSafe(|| travel.run(&amp;mut course.world))).is_err());
++    assert_eq!(course.mobile_snapshot(), mobile);
++    assert_eq!(course.rest_snapshot(), rest);
++    assert_eq!(
++        course.world.get::&lt;Position&gt;(actor).unwrap().0,
++        Cell { x: 0, y: 0 }
++    );
++}
+--- a/tests/rest.rs
++++ b/tests/rest.rs
+@@ -0,0 +1,521 @@
++use moss_course_ecosystem::{
++    Activity, CourseWorld, EventKind, FounderTrait, GrazerPlacement, MobileError, MobileScenario,
++    MobileSnapshot, RestPolicy, SimId, UpkeepTrait,
++};
++
++fn alter(
++    spec: &amp;MobileScenario,
++    f: impl FnOnce(
++        &amp;mut moss_course_ecosystem::Scenario,
++        &amp;mut moss_course_ecosystem::PopulationConfig,
++        &amp;mut moss_course_ecosystem::SpatialConfig,
++    ),
++) -&gt; MobileScenario {
++    let mut scenario = spec.scenario().clone();
++    let mut population = spec.population().clone();
++    let mut space = spec.space().clone();
++    f(&amp;mut scenario, &amp;mut population, &amp;mut space);
++    let mut result =
++        MobileScenario::new(scenario, population, space).with_history_limit(spec.history_limit());
++    if let Some(policy) = spec.rest() {
++        result = result.with_rest(*policy);
++    }
++    result
++}
++
++fn stores(report: &amp;MobileSnapshot) -&gt; u64 {
++    report
++        .base
++        .grazers
++        .iter()
++        .map(|g| u64::from(g.reserve_units))
++        .sum::&lt;u64&gt;()
++        + report
++            .base
++            .patches
++            .iter()
++            .map(|p| u64::from(p.biomass_units))
++            .sum::&lt;u64&gt;()
++}
++
++#[test]
++fn actual_journey_stops_twice_then_wakes_with_a_fresh_local_view() {
++    let mut world = CourseWorld::new_mobile(MobileScenario::resting_journey()).unwrap();
++    for (tick, x, reserve, fatigue, remaining) in [
++        (1, 1, 18, 2, None),
++        (2, 2, 16, 4, None),
++        (3, 3, 14, 6, None),
++        (4, 3, 13, 4, Some(1)),
++        (5, 3, 12, 2, Some(0)),
++        (6, 4, 10, 4, None),
++        (7, 5, 10, 6, None),
++        (8, 5, 9, 4, Some(1)),
++        (9, 5, 8, 2, Some(0)),
++        (10, 5, 9, 2, None),
++    ] {
++        world.step();
++        let mobile = world.mobile_snapshot().unwrap();
++        let rest = world.rest_snapshot().unwrap();
++        assert_eq!(
++            (
++                rest.tick,
++                mobile.grazers[0].cell.x,
++                mobile.base.grazers[0].reserve_units,
++                rest.grazers[0].fatigue_points
++            ),
++            (tick, x, reserve, fatigue)
++        );
++        assert_eq!(
++            rest.grazers[0].activity,
++            remaining.map_or(Activity::Foraging, |remaining_ticks| Activity::Resting {
++                remaining_ticks
++            })
++        );
++        if remaining.is_some() {
++            assert_eq!(mobile.grazers[0].target, None);
++            assert_eq!(mobile.base.grazers[0].feeding_site, None);
++            assert_eq!(mobile.ledger.travel_cells, 0);
++            assert_eq!(mobile.base.ledger.eaten_units, 0);
++            assert_eq!(rest.ledger.rest_actions, 1);
++            assert_eq!(rest.grazers[0].last_rest_tick, Some(tick));
++            assert_eq!(
++                mobile.grazers[0].observed_tick,
++                Some(if tick &lt; 6 { 3 } else { 7 })
++            );
++        } else {
++            assert_eq!(mobile.grazers[0].observed_tick, Some(tick));
++        }
++    }
++    let report = world.rest_snapshot().unwrap();
++    assert_eq!(
++        (
++            report.totals.effort_points,
++            report.totals.recovered_points,
++            report.totals.rest_actions,
++            report.totals.entered_rest,
++            report.totals.woke
++        ),
++        (10, 8, 4, 2, 2)
++    );
++}
++
++#[test]
++fn fast_recovery_still_owes_the_second_committed_action() {
++    let policy = RestPolicy {
++        recovery_points_per_tick: 10,
++        ..Default::default()
++    };
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::resting_journey().with_rest(policy)).unwrap();
++    for _ in 0..4 {
++        world.step();
++    }
++    let fourth = world.rest_snapshot().unwrap();
++    assert_eq!(fourth.grazers[0].fatigue_points, 0);
++    assert_eq!(
++        fourth.grazers[0].activity,
++        Activity::Resting { remaining_ticks: 1 }
++    );
++    for _ in 0..20 {
++        assert_eq!(world.rest_snapshot().unwrap(), fourth);
++    }
++    world.step();
++    let fifth = world.rest_snapshot().unwrap();
++    assert_eq!(
++        fifth.grazers[0].activity,
++        Activity::Resting { remaining_ticks: 0 }
++    );
++    assert_eq!(
++        (fifth.ledger.rest_actions, fifth.ledger.recovered_points),
++        (1, 0)
++    );
++    assert_eq!(world.mobile_snapshot().unwrap().grazers[0].cell.x, 3);
++    world.step();
++    assert_eq!(
++        world.rest_snapshot().unwrap().grazers[0].activity,
++        Activity::Foraging
++    );
++    assert_eq!(world.mobile_snapshot().unwrap().grazers[0].cell.x, 4);
++}
++
++#[test]
++fn exit_threshold_still_requires_actions_after_minimum_is_spent() {
++    let policy = RestPolicy {
++        minimum_rest_ticks: 1,
++        recovery_points_per_tick: 1,
++        ..Default::default()
++    };
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::resting_journey().with_rest(policy)).unwrap();
++    for _ in 0..4 {
++        world.step();
++    }
++    for fatigue in [5, 4, 3, 2] {
++        let state = world.rest_snapshot().unwrap();
++        assert_eq!(
++            state.grazers[0].activity,
++            Activity::Resting { remaining_ticks: 0 }
++        );
++        assert_eq!(state.grazers[0].fatigue_points, fatigue);
++        world.step();
++    }
++    assert_eq!(
++        world.rest_snapshot().unwrap().grazers[0].activity,
++        Activity::Foraging
++    );
++}
++
++#[test]
++fn travel_accepts_only_whole_effort_that_fits_without_overflow() {
++    let spec = alter(&amp;MobileScenario::resting_journey(), |_, _, space| {
++        space.grazers[0].motion.max_cells_per_tick = u32::MAX;
++    })
++    .with_rest(RestPolicy {
++        effort_points_per_cell: 3,
++        ..Default::default()
++    });
++    let mut world = CourseWorld::new_mobile(spec).unwrap();
++    world.step();
++    assert_eq!(world.mobile_snapshot().unwrap().grazers[0].cell.x, 3);
++    let state = world.rest_snapshot().unwrap();
++    assert_eq!(
++        (state.grazers[0].fatigue_points, state.ledger.effort_points),
++        (9, 9)
++    );
++    let extreme = RestPolicy {
++        maximum_fatigue_points: u32::MAX,
++        effort_points_per_cell: u32::MAX,
++        enter_at_points: u32::MAX,
++        exit_at_points: 0,
++        recovery_points_per_tick: u32::MAX,
++        ..Default::default()
++    };
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::resting_journey().with_rest(extreme)).unwrap();
++    world.step();
++    assert_eq!(
++        world.rest_snapshot().unwrap().grazers[0].fatigue_points,
++        u32::MAX
++    );
++    world.step();
++    assert_eq!(world.rest_snapshot().unwrap().grazers[0].fatigue_points, 0);
++}
++
++#[test]
++fn resting_beside_food_can_starve_without_a_hunger_override() {
++    let spec = alter(&amp;MobileScenario::resting_journey(), |scenario, _, space| {
++        scenario.grazers[0].reserve_units = 5;
++        scenario.grazers[0].meal_units_per_tick = 1;
++        space.patches[0].cell.x = 1;
++    })
++    .with_rest(RestPolicy {
++        minimum_rest_ticks: 5,
++        enter_at_points: 2,
++        exit_at_points: 0,
++        ..Default::default()
++    });
++    let mut world = CourseWorld::new_mobile(spec).unwrap();
++    for _ in 0..5 {
++        world.step();
++    }
++    let mobile = world.mobile_snapshot().unwrap();
++    let rest = world.rest_snapshot().unwrap();
++    assert!(mobile.base.grazers.is_empty());
++    assert!(rest.grazers.is_empty());
++    assert_eq!(mobile.population.totals.starvations, 1);
++    assert_eq!(mobile.base.patches[0].biomass_units, 19);
++    assert_eq!(
++        (rest.totals.rest_actions, rest.totals.recovered_points),
++        (4, 2)
++    );
++    assert!(
++        mobile
++            .base
++            .history
++            .events
++            .iter()
++            .any(|e| e.tick == 5 &amp;&amp; matches!(e.kind, EventKind::Starved { .. }))
++    );
++}
++
++#[test]
++fn resting_parents_cannot_reproduce_but_newborns_start_uncommitted() {
++    let spec = alter(
++        &amp;MobileScenario::resting_journey(),
++        |scenario, population, space| {
++            let mut second = scenario.grazers[0].clone();
++            second.id = SimId(2);
++            scenario.grazers.push(second);
++            population.founders.push(FounderTrait {
++                id: SimId(2),
++                upkeep: UpkeepTrait::new(1).unwrap(),
++            });
++            population.cooldown_ticks = 1;
++            space.grazers.push(GrazerPlacement {
++                id: SimId(2),
++                ..space.grazers[0]
++            });
++            space.patches[0].cell.x = 3;
++        },
++    );
++    let mut world = CourseWorld::new_mobile(spec).unwrap();
++    for _ in 0..3 {
++        world.step();
++    }
++    let born = world.mobile_snapshot().unwrap();
++    assert_eq!(born.population.totals.births, 1);
++    let child = born
++        .population
++        .history
++        .events
++        .iter()
++        .find_map(|e| match e.kind {
++            moss_course_ecosystem::PopulationEventKind::Born(record) =&gt; Some(record.child),
++            _ =&gt; None,
++        })
++        .unwrap();
++    let rest = world.rest_snapshot().unwrap();
++    let newborn = rest.grazers.iter().find(|r| r.id == child).unwrap();
++    assert_eq!(
++        (
++            newborn.fatigue_points,
++            newborn.activity,
++            newborn.last_rest_tick,
++            newborn.last_transition_tick
++        ),
++        (0, Activity::Foraging, None, None)
++    );
++    world.step();
++    world.step();
++    let asleep = world.mobile_snapshot().unwrap();
++    assert_eq!(asleep.population.totals.births, 1);
++    assert_eq!(world.rest_snapshot().unwrap().totals.rest_actions, 4);
++}
++
++#[test]
++fn zero_and_bounded_rest_history_preserve_unknown_intervals_and_known_totals() {
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::resting_journey().with_rest(RestPolicy {
++            history_limit: 0,
++            ..Default::default()
++        }))
++        .unwrap();
++    for _ in 0..5 {
++        world.step();
++    }
++    let rest = world.rest_snapshot().unwrap();
++    assert!(rest.history.events.is_empty());
++    assert_eq!(rest.totals.rest_actions, 2);
++    assert_eq!(rest.history.rest_actions_between(1, 5), None);
++    let stationary = alter(&amp;MobileScenario::resting_journey(), |_, _, space| {
++        space.grazers[0].motion.max_cells_per_tick = 0
++    })
++    .with_rest(RestPolicy {
++        history_limit: 0,
++        ..Default::default()
++    });
++    world.reset_with_mobile(stationary).unwrap();
++    world.step();
++    assert_eq!(
++        world
++            .rest_snapshot()
++            .unwrap()
++            .history
++            .rest_actions_between(1, 1),
++        Some(0)
++    );
++}
++
++#[test]
++fn invalid_rest_reset_is_atomic_and_every_mode_switch_clears_old_rest_state() {
++    let spec = MobileScenario::resting_journey();
++    let mut world = CourseWorld::new_mobile(spec.clone()).unwrap();
++    for _ in 0..4 {
++        world.step();
++    }
++    let mobile = world.mobile_snapshot().unwrap();
++    let rest = world.rest_snapshot().unwrap();
++    for bad in [
++        RestPolicy {
++            exit_at_points: 6,
++            ..Default::default()
++        },
++        RestPolicy {
++            enter_at_points: 11,
++            ..Default::default()
++        },
++        RestPolicy {
++            effort_points_per_cell: 0,
++            ..Default::default()
++        },
++        RestPolicy {
++            effort_points_per_cell: 11,
++            ..Default::default()
++        },
++        RestPolicy {
++            minimum_rest_ticks: 0,
++            ..Default::default()
++        },
++        RestPolicy {
++            recovery_points_per_tick: 0,
++            ..Default::default()
++        },
++    ] {
++        assert_eq!(
++            world.reset_with_mobile(spec.clone().with_rest(bad)),
++            Err(MobileError::InvalidRestPolicy)
++        );
++        assert_eq!(world.mobile_snapshot().unwrap(), mobile);
++        assert_eq!(world.rest_snapshot().unwrap(), rest);
++    }
++    world.reset();
++    assert_eq!(world.rest_snapshot().unwrap().run, 2);
++    assert_eq!(world.rest_snapshot().unwrap().totals.rest_actions, 0);
++    world
++        .reset_with_mobile(MobileScenario::short_journey())
++        .unwrap();
++    assert!(world.rest_snapshot().is_none());
++    world
++        .reset_with_population(spec.scenario().clone(), spec.population().clone())
++        .unwrap();
++    assert!(world.rest_snapshot().is_none());
++    world.reset_with(spec.scenario().clone()).unwrap();
++    assert!(world.rest_snapshot().is_none());
++}
++
++#[test]
++fn reports_are_owned_and_complete_order_and_read_frequency_do_not_change_rest() {
++    let spec = MobileScenario::meadow().with_rest(RestPolicy::default());
++    let reversed = alter(&amp;spec, |scenario, population, space| {
++        scenario.grazers.reverse();
++        scenario.patches.reverse();
++        population.founders.reverse();
++        space.grazers.reverse();
++        space.patches.reverse();
++    });
++    let mut first = CourseWorld::new_mobile(spec).unwrap();
++    let mut second = CourseWorld::new_mobile(reversed).unwrap();
++    for _ in 0..120 {
++        first.step();
++        second.step();
++        let mut copy = first.rest_snapshot().unwrap();
++        copy.grazers.clear();
++        copy.history.events.clear();
++        for _ in 0..3 {
++            assert_eq!(first.rest_snapshot(), second.rest_snapshot());
++            assert_eq!(first.mobile_snapshot(), second.mobile_snapshot());
++        }
++    }
++}
++
++#[test]
++fn rested_meadow_preserves_energy_and_census_every_tick_for_both_minimums() {
++    for minimum_rest_ticks in [2, 3] {
++        let mut world = CourseWorld::new_mobile(MobileScenario::meadow().with_rest(RestPolicy {
++            minimum_rest_ticks,
++            ..Default::default()
++        }))
++        .unwrap();
++        let mut before = stores(&amp;world.mobile_snapshot().unwrap());
++        for _ in 0..120 {
++            world.step();
++            let mobile = world.mobile_snapshot().unwrap();
++            let rest = world.rest_snapshot().unwrap();
++            let after = stores(&amp;mobile);
++            assert_eq!(
++                before + mobile.base.ledger.added_units,
++                after
++                    + mobile.base.ledger.maintenance_units
++                    + mobile.ledger.travel_units
++                    + mobile.population.ledger.dissipated_units
++            );
++            assert_eq!(
++                mobile.base.grazers.len() as u64 + mobile.population.totals.starvations,
++                4 + mobile.population.totals.births
++            );
++            assert!(
++                rest.grazers
++                    .iter()
++                    .all(|g| g.fatigue_points &lt;= rest.policy.maximum_fatigue_points)
++            );
++            before = after;
++        }
++        let mobile = world.mobile_snapshot().unwrap();
++        let rest = world.rest_snapshot().unwrap();
++        let observed = (
++            mobile.base.grazers.len(),
++            mobile.population.totals.births,
++            mobile.population.totals.starvations,
++            mobile.totals.travel_cells,
++            rest.totals.rest_actions,
++            rest.totals.effort_points,
++            rest.totals.recovered_points,
++        );
++        assert_eq!(
++            observed,
++            if minimum_rest_ticks == 2 {
++                (0, 7, 11, 36, 21, 72, 42)
++            } else {
++                (1, 10, 13, 71, 53, 142, 106)
++            }
++        );
++    }
++}
++
++#[test]
++fn only_changing_minimum_two_to_three_delays_the_same_journey() {
++    let mut two = CourseWorld::new_mobile(MobileScenario::resting_journey()).unwrap();
++    let mut three =
++        CourseWorld::new_mobile(MobileScenario::resting_journey().with_rest(RestPolicy {
++            minimum_rest_ticks: 3,
++            ..Default::default()
++        }))
++        .unwrap();
++    for _ in 0..6 {
++        two.step();
++        three.step();
++    }
++    let a = two.mobile_snapshot().unwrap();
++    let b = three.mobile_snapshot().unwrap();
++    assert_eq!(
++        (a.grazers[0].cell.x, a.base.grazers[0].reserve_units),
++        (4, 10)
++    );
++    assert_eq!(
++        (b.grazers[0].cell.x, b.base.grazers[0].reserve_units),
++        (3, 11)
++    );
++    assert_eq!(
++        two.rest_snapshot().unwrap().grazers[0].activity,
++        Activity::Foraging
++    );
++    assert_eq!(
++        three.rest_snapshot().unwrap().grazers[0].activity,
++        Activity::Resting { remaining_ticks: 0 }
++    );
++    two.step();
++    three.step();
++    assert_eq!(two.mobile_snapshot().unwrap().base.ledger.eaten_units, 2);
++    assert_eq!(three.mobile_snapshot().unwrap().base.ledger.eaten_units, 0);
++    three.step();
++    assert_eq!(three.mobile_snapshot().unwrap().base.ledger.eaten_units, 2);
++}
++
++#[test]
++fn partial_tick_eviction_does_not_turn_missing_rest_into_zero() {
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::resting_journey().with_rest(RestPolicy {
++            history_limit: 2,
++            ..Default::default()
++        }))
++        .unwrap();
++    for _ in 0..5 {
++        world.step();
++    }
++    let state = world.rest_snapshot().unwrap();
++    assert_eq!(state.history.events.len(), 2);
++    assert_eq!(state.history.complete_after_tick, 4); // Entry4 lost, even though Rested4 remains.
++    assert_eq!(state.history.rest_actions_between(4, 5), None);
++    assert_eq!(state.history.rest_actions_between(5, 5), Some(1));
++    assert_eq!(state.totals.rest_actions, 2);
++}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/hunting/capture.rs · hunting · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="hunting"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">hunting checkpoint</p><h1>src/hunting/capture.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../../hunting.html">← One capture changes the rest of the tick</a>
+<a href="capture.rs" download>Download raw file</a>
+<a href="../../../../downloads/hunting-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="capture.rs">//! Whole-transfer capture preflights both bodies, terminal state, and evidence.
+
+use super::{HuntCounters, HuntEvent, HuntEventKind, HuntState, Hunter};
+use crate::mobile::rest::RestState;
+use crate::mobile::{MobileActor, Position};
+use crate::model::{Body, Clock, Grazer, Identity, Terminal};
+use bevy_ecs::prelude::*;
+use std::collections::BTreeMap;
+
+type Bodies&lt;'a&gt; = (
+    Entity,
+    &amp;'a Identity,
+    &amp;'a mut Body,
+    &amp;'a Position,
+    Option&lt;&amp;'a Grazer&gt;,
+    Option&lt;&amp;'a mut Hunter&gt;,
+    &amp;'a mut MobileActor,
+);
+
+pub(crate) fn capture(
+    clock: Res&lt;Clock&gt;,
+    mut bodies: Query&lt;Bodies&lt;'_&gt;&gt;,
+    state: Option&lt;ResMut&lt;HuntState&gt;&gt;,
+    rest: Option&lt;Res&lt;RestState&gt;&gt;,
+) {
+    let Some(mut state) = state else {
+        return;
+    };
+    let identities: BTreeMap&lt;_, _&gt; = bodies
+        .iter()
+        .map(|(e, id, _, _, _, _, _)| (id.0, e))
+        .collect();
+    let order: Vec&lt;_&gt; = identities
+        .iter()
+        .filter(|(_, e)| bodies.get(**e).expect("listed body").5.is_some())
+        .map(|(id, e)| (*id, *e))
+        .collect();
+    for (hunter_id, hunter_entity) in order {
+        let (_, _, body, position, _, hunter, actor) =
+            bodies.get(hunter_entity).expect("listed hunter");
+        let hunter = hunter.expect("hunter role");
+        if !body.alive()
+            || clock.tick &lt; body.first_eligible_tick
+            || !actor.can_forage()
+            || hunter.last_capture_tick == Some(clock.tick)
+        {
+            continue;
+        }
+        let Some(target) = hunter.target.filter(|t| t.observed_tick == clock.tick) else {
+            continue;
+        };
+        let Some(&amp;prey_entity) = identities
+            .get(&amp;target.prey)
+            .filter(|&amp;&amp;e| e != hunter_entity)
+        else {
+            continue;
+        };
+        let (_, _, prey, prey_position, diet, prey_hunter, _) =
+            bodies.get(prey_entity).expect("listed prey");
+        if diet.is_none()
+            || prey_hunter.is_some()
+            || !prey.alive()
+            || clock.tick &lt; prey.first_eligible_tick
+            || prey.reserve_units == 0
+            || position.0 != prey_position.0
+        {
+            continue;
+        }
+        let Some(after_cost) = body.reserve_units.checked_sub(hunter.attack_units) else {
+            continue;
+        };
+        let transfer = prey.reserve_units;
+        let Some(after_gain) = after_cost
+            .checked_add(transfer)
+            .filter(|&amp;gain| gain &lt;= body.capacity_units)
+        else {
+            continue;
+        };
+        let effort = if let Some(policy) = &amp;rest {
+            let fatigue = actor.rest.expect("rest enabled").fatigue_points;
+            if hunter.attack_effort_points &gt; policy.policy.maximum_fatigue_points - fatigue {
+                continue;
+            }
+            hunter.attack_effort_points
+        } else {
+            0
+        };
+        let attack = hunter.attack_units;
+        let cell = position.0;
+        let planned = state.planned(HuntCounters {
+            captures: 1,
+            transferred_units: u64::from(transfer),
+            attack_units: u64::from(attack),
+            effort_points: u64::from(effort),
+            ..Default::default()
+        });
+        let [
+            (_, _, mut hunter_body, _, _, hunter, mut actor),
+            (_, _, mut prey_body, _, _, _, _),
+        ] = bodies
+            .get_many_mut([hunter_entity, prey_entity])
+            .expect("distinct current bodies");
+        // No fallible biological result remains after this preflight.
+        state.commit(
+            planned,
+            HuntEvent {
+                run: clock.run,
+                tick: clock.tick,
+                kind: HuntEventKind::Captured {
+                    hunter: hunter_id,
+                    prey: target.prey,
+                    cell,
+                    transferred_units: transfer,
+                    attack_units: attack,
+                    effort_points: effort,
+                },
+            },
+        );
+        hunter_body.reserve_units = after_gain;
+        prey_body.reserve_units = 0;
+        prey_body.terminal = Terminal::Captured { hunter: hunter_id };
+        hunter.expect("hunter role").last_capture_tick = Some(clock.tick);
+        if let Some(fatigue) = &amp;mut actor.rest {
+            fatigue.fatigue_points += effort;
+        }
+    }
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

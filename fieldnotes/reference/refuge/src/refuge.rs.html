@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/refuge.rs · refuge · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="refuge"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">refuge checkpoint</p><h1>src/refuge.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../refuge.html">← Give shelter a rule you can test</a>
+<a href="refuge.rs" download>Download raw file</a>
+<a href="../../../downloads/refuge-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="refuge.rs">//! Static protection changes prey eligibility, never movement or resource flows.
+
+use std::collections::{BTreeMap, BTreeSet};
+
+use bevy_ecs::prelude::*;
+
+use crate::mobile::Position;
+use crate::model::{Clock, Grazer, Identity};
+use crate::simulation::Roster;
+use crate::{Cell, GridBounds, MobileError, MobileScenario, SimId};
+
+pub const REFUGE_VERSION: &amp;str = "moss-course-refuge-v1";
+
+/// Static-site IDs have their own namespace and never consume actor identities.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RefugeId(pub u32);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RefugeSeed {
+    pub id: RefugeId,
+    pub cell: Cell,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RefugeConfig {
+    pub sites: Vec&lt;RefugeSeed&gt;,
+}
+
+impl RefugeConfig {
+    /// An empty enabled configuration is valid; world construction validates it.
+    pub fn new(sites: Vec&lt;RefugeSeed&gt;) -&gt; Self {
+        Self { sites }
+    }
+
+    pub(crate) fn validate(&amp;self, bounds: GridBounds) -&gt; Result&lt;(), MobileError&gt; {
+        let mut ids = BTreeSet::new();
+        let mut cells = BTreeSet::new();
+        for site in &amp;self.sites {
+            if site.id.0 == 0 {
+                return Err(MobileError::ZeroRefugeId);
+            }
+            if !ids.insert(site.id) {
+                return Err(MobileError::DuplicateRefugeId(site.id));
+            }
+            if !bounds.contains(site.cell) {
+                return Err(MobileError::RefugeOutOfBounds(site.id));
+            }
+            if !cells.insert(site.cell) {
+                return Err(MobileError::SharedRefugeCell(site.cell));
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct RefugeMembership {
+    pub refuge: Option&lt;RefugeId&gt;,
+    pub assessed_tick: u64,
+}
+
+#[derive(Resource)]
+pub(crate) struct RefugeState {
+    config: RefugeConfig,
+    sites_by_cell: BTreeMap&lt;Cell, RefugeId&gt;,
+}
+
+impl RefugeState {
+    pub(crate) fn membership(&amp;self, cell: Cell, tick: u64) -&gt; RefugeMembership {
+        RefugeMembership {
+            refuge: self.sites_by_cell.get(&amp;cell).copied(),
+            assessed_tick: tick,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RefugeGrazerReading {
+    pub id: SimId,
+    pub cell: Cell,
+    pub refuge: Option&lt;RefugeId&gt;,
+    pub assessed_tick: u64,
+}
+
+/// Current membership only: no claim about time spent inside or evicted events.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RefugeSnapshot {
+    pub version: &amp;'static str,
+    pub run: u64,
+    pub tick: u64,
+    pub config: RefugeConfig,
+    pub grazers: Vec&lt;RefugeGrazerReading&gt;,
+}
+
+pub(crate) fn install(world: &amp;mut World, initial: &amp;MobileScenario) {
+    let Some(config) = initial.refuges() else {
+        return;
+    };
+    let state = RefugeState {
+        config: config.clone(),
+        sites_by_cell: config.sites.iter().map(|s| (s.cell, s.id)).collect(),
+    };
+    let entities = world.resource::&lt;Roster&gt;().grazers.clone();
+    for entity in entities {
+        let cell = world
+            .get::&lt;Position&gt;(entity)
+            .expect("mobile grazer position")
+            .0;
+        world.entity_mut(entity).insert(state.membership(cell, 0));
+    }
+    world.insert_resource(state);
+}
+
+/// Run before local prey observation and again after all travel, before capture.
+/// Decisions and snapshots do not execute this system or confer protection.
+pub(crate) fn refresh_memberships(
+    clock: Res&lt;Clock&gt;,
+    state: Option&lt;Res&lt;RefugeState&gt;&gt;,
+    mut grazers: Query&lt;(&amp;Position, &amp;mut RefugeMembership), With&lt;Grazer&gt;&gt;,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    for (position, mut membership) in &amp;mut grazers {
+        *membership = state.membership(position.0, clock.tick);
+    }
+}
+
+pub(crate) fn snapshot(world: &amp;World) -&gt; Option&lt;RefugeSnapshot&gt; {
+    let state = world.get_resource::&lt;RefugeState&gt;()?;
+    let clock = world.resource::&lt;Clock&gt;();
+    let mut grazers: Vec&lt;_&gt; = world
+        .resource::&lt;Roster&gt;()
+        .grazers
+        .iter()
+        .map(|&amp;entity| {
+            let membership = world
+                .get::&lt;RefugeMembership&gt;(entity)
+                .expect("refuge-mode membership");
+            RefugeGrazerReading {
+                id: world.get::&lt;Identity&gt;(entity).expect("grazer identity").0,
+                cell: world.get::&lt;Position&gt;(entity).expect("grazer position").0,
+                refuge: membership.refuge,
+                assessed_tick: membership.assessed_tick,
+            }
+        })
+        .collect();
+    grazers.sort_by_key(|g| g.id);
+    Some(RefugeSnapshot {
+        version: REFUGE_VERSION,
+        run: clock.run,
+        tick: clock.tick,
+        config: state.config.clone(),
+        grazers,
+    })
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

@@ -1,0 +1,1950 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>changes.patch · refuge · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../assets/source.css?v=45ff3179bc2c">
+<script src="../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="refuge"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">refuge checkpoint</p><h1>changes.patch</h1>
+<p>This review-only diff maps the previous checkpoint to this one. Use it to plan deliberate edits; it is not an automatic migration over your saved project.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../refuge.html">← Give shelter a rule you can test</a>
+<a href="changes.patch" download>Download raw file</a>
+<a href="../../downloads/refuge-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-diff" data-source-file="changes.patch">--- a/.gitignore
++++ b/.gitignore
+@@ -0,0 +1 @@
++/target/
+--- a/HUNTING-NOTES.md
++++ b/HUNTING-NOTES.md
+@@ -0,0 +1,218 @@
++# Checkpoint C native contract and observations
++
++This is the isolated course reference, using Rust 1.93.1 and Bevy ECS 0.18.1. It
++adds finite, mortal, nonreproducing hunters to the same `CourseWorld`. It does not
++activate a live Moss rule or change the learner-owned movement assignment. The
++public investigations and browser guide are authored separately; native, WASM,
++and actual-browser evidence remain distinct.
++
++## API and compatibility
++
++`MobileScenario::with_hunters(HuntConfig)` is additive. Its fields remain private;
++`hunters()` borrows the optional configuration. `HuntConfig::new(Vec&lt;HunterSeed&gt;)`
++sets a journal limit of 128. Its public fields are `hunters` and `history_limit`.
++`HunterSeed` has `id`, reserve/capacity/upkeep units, `attack_units`,
++`attack_effort_points`, `cell`, and `motion`. The two authored presets are
++`MobileScenario::hunting_contention()` and `HuntConfig::meadow()`.
++
++Hunter IDs must be unique across grazers, patches, and all other hunters. Every
++hunter is in bounds with reserve no greater than capacity, positive travel and
++attack costs, and positive capture effort. When fatigue is enabled, capture
++effort must fit its maximum. Validation includes hunter IDs in the initial child
++allocator; an exhausted identity range is rejected. All validation precedes
++replacement of current or saved reset state. Reset repeats the selected policy;
++selecting any prior mode clears hunter state. An empty `HuntConfig` is valid and
++produces a present, empty hunter report.
++
++`CourseWorld::hunt_snapshot()` returns `None` when hunting is disabled. Otherwise
++it returns an owned `HuntSnapshot` with version `moss-course-hunting-c-v1`, run,
++completed tick, canonical initial hunter configuration, initial/living hunter
++counts, stable-ID-sorted hunter readings, latest ledger, lifetime totals, and a
++bounded journal. Each hunter row contains body budget fields, attack settings,
++first eligibility, position/motion, retained prey target, owned local readings
++and their observer origin/tick, optional fatigue, activity, and last rest,
++transition, travel-opportunity, and successful-capture ticks.
++
++`PreyObservation` has prey ID, copied cell, and copied reserve. `PreyTarget` has
++prey ID, observed cell, and observed tick. Missing observation time means
++uncollected; a collected empty list means no eligible local prey was observed.
++After another hunter wins, a loser can still hold a copied reading and target
++for the removed prey. That retained intention is not a reservation or current
++eligibility claim. `last_capture_tick` records an accepted capture only.
++
++The earlier public seeds, reports, ledgers, and event variants keep their shapes.
++Base/population/mobile/rest projections describe grazers and patches; hunter
++flows, fatigue and events are only in the supplemental hunt report. A complete C
++observation combines these reports, including the shared rest policy in the
++mobile initial configuration. In C, the grazer census requires captures as well
++as starvation; the old population report alone cannot establish a closed census.
++
++The private refactor splits `Body` from grazer diet/contact. `Body` holds reserve,
++capacity, upkeep, first eligibility, and a single `Terminal` enum: alive,
++starved, or captured by a named stable hunter. Both roles share upkeep, the pure
++bounded travel calculation, the pure rest transition and recovery calculation,
++and structural cleanup. Role adapters keep earlier event meanings intact.
++
++## Execution and transaction
++
++The single-threaded chained schedule is:
++
++```text
++advance tick / clear ledgers → mature → all-body upkeep → patch growth
++→ grazer/hunter rest decisions → all local observations → target decisions
++→ grazer travel → hunter travel → grazer/hunter rest effects
++→ captures → derive grazer contacts → grazer meals → terminal starvation
++→ grazer births → ApplyDeferred → terminal cleanup → ApplyDeferred
++→ complete all journals
++```
++
++Both observation phases finish before either role travels. The hunter retains an
++eligible target in its current local view, otherwise chooses nearest positive-
++reserve, living, eligible grazer, breaking ties by stable ID. Inspector rows are
++not input to this selector. Travel follows the copied prey cell; a current lookup
++can reject wrong/removed/terminal identity but cannot replace the observed
++destination with a newly fetched global cell. A fleeing policy is absent: an
++ordinary grazer's independent travel already makes stale contact observable.
++
++Capture processes hunters by stable ID. It requires a living eligible active
++hunter and distinct living eligible grazer in the same **current** cell. The
++prey must have positive current reserve. The hunter must afford the positive
++attack cost before receiving anything, have room for the **entire** prey reserve
++after that cost, and fit all capture effort if fatigue is enabled. There is no
++partial credit, scavenging, hunter prey, fallback target inside an action, or
++hunger override. Resting prey may be captured. An enabled fatigue policy charges
++actual travel and accepted capture; disabled fatigue leaves those points absent,
++while energy costs still apply.
++
++All amounts, counters and event headroom are preflighted. One mutable body query
++then obtains the two distinct bodies. The commit pays the hunter cost and adds
++the transfer, zeros prey reserve, sets its predation terminal state immediately,
++and records the successful-action tick. Deferred despawn happens later. A second
++hunter receives nothing from the terminal prey; a late meal, birth, upkeep or
++starvation cannot reinterpret it as alive. Rejection changes no participant,
++reserve, fatigue, cursor, counter or history. Counter/history exhaustion panics
++before that transaction mutates state; it does not roll back earlier completed
++upkeep or other transactions.
++
++The hunter counters are `maintenance_units`, `travel_cells`, `travel_units`,
++`attack_units`, `transferred_units`, `captures`, `hunter_starvations`,
++`target_changes`, `effort_points`, `recovered_points`, `rest_actions`,
++`entered_rest`, and `woke`. `Captured` records both IDs, contact cell, actual
++transfer, attack cost and effort. Other events cover hunter upkeep, targets,
++travel, rest transitions/effects and starvation. The journal reports conservative
++whole-tick coverage; `captures_between` returns unknown for partially evicted,
++future or invalid intervals. Lifetime counts survive journal eviction.
++
++## Literal mechanism observations
++
++`hunting_contention` authors grazers 1/2 at `(0,0)`, reserve 5, capacity 8, upkeep
++1, meal 2. Patch 1000 there holds 10 with no growth. Two hunters 100/101 share that
++cell, reserve 4, capacity 8, upkeep 1, attack 1 and effort 2. All have sensing 1,
++speed 0 and positive travel cost 1; grid `2 × 1`; default rest and population
++policies apply. The no-hunter control produces a funded birth on tick 1.
++
++| Tick | Living grazer reserves | Patch | Hunter 100 reserve / target | Hunter 101 reserve / target | Total captures / transfer / attack |
++| --- | --- | --- | --- | --- | --- |
++| 1 | ID 2: 6 | 8 | 6 / 1 | 3 / 1 | 1 / 4 / 1 |
++| 2 | none | 8 | 5 / 2 | 6 / 2 | 2 / 9 / 2 |
++| 3 | none | 8 | 4 / none | 5 / none | 2 / 9 / 2 |
++
++On tick 1 both hunters copied reserve 4 for each prey after upkeep. Hunter 100
++wins prey 1; the later hunter cannot switch to prey 2. Only grazer 2 eats, and the
++captured parent cannot fund the control's birth. On tick 2, hunter 100 has reserve
++5 after upkeep; paying 1 then taking prey 2's reserve 5 would exceed capacity 8.
++It rejects without payment, allowing hunter 101 to take the whole transfer.
++Changing only hunter 100's initial capacity to 5 also makes it reject on tick 1;
++hunter 101 wins instead. Both cases are public acceptance tests.
++
++A separate actual pursuit begins from `short_journey`, with hunter 50 at `(0,0)`,
++reserve 10, capacity 20, upkeep/attack/travel cost 1, sensing 3, speed 1, capture
++effort 2, and default rest. Tick 1 ends grazer x1/hunter x0; tick 2 ends grazer
++x2/hunter x1. The hunter follows the prey cells copied at x0 then x1, not the new
++positions. Tick 3 reaches the stationary grazer at x2 and captures its current
++reserve 2 before its meal. Hunter reserve is 6 and one patch unit remains.
++Its next two ticks execute committed rest; those events do not pollute the
++grazer rest totals. All of these actions occur in the same persistent world.
++
++## Four matched 120-tick runs
++
++All runs use the unchanged checkpoint-A meadow inputs and the default rest policy
++except minimum 2 versus 3. Hunter-present runs add exactly hunters 100/101 at
++`(5,2)`/`(8,2)`, reserve 16/capacity 24/upkeep 1, sensing 5/speed 1/travel 1,
++attack 1/effort 2. No-hunter runs begin with 96 stored energy units;
++hunter-present runs begin with 128. Patch IDs 1000/1001 keep the child allocator
++identical across this intervention. All history limits are 128.
++
++| Minimum / hunters | Final grazers / hunters | Births | Grazer starvation / captures | Hunter starvation | Grazer / hunter travel | Grazer / hunter rest actions |
++| --- | --- | --- | --- | --- | --- | --- |
++| 2 / none | 0 / 0 | 7 | 11 / 0 | 0 | 36 / 0 | 21 / 0 |
++| 3 / none | 1 / 0 | 10 | 13 / 0 | 0 | 71 / 0 | 53 / 0 |
++| 2 / two | 0 / 0 | 3 | 4 / 3 | 2 | 15 / 13 | 7 / 13 |
++| 3 / two | 0 / 0 | 3 | 3 / 4 | 2 | 14 / 11 | 6 / 15 |
++
++The no-hunter minimum-3 survivor is founder 1. Hunter-present minimum 2 has lost
++all animals by tick 40; minimum 3 still has one hunter with reserve 6 at tick 40,
++then loses it before tick 80. The reference preserves these outcomes. Neither
++run establishes calibration, evolutionary adaptation, balance or enjoyment.
++
++| Minimum / hunters | Growth | Grazer / hunter upkeep | Attack | Birth dissipation | Prey transfer | Final total stores |
++| --- | --- | --- | --- | --- | --- | --- |
++| 2 / none | 98 | 108 / 0 | 0 | 14 | 0 | 36 |
++| 3 / none | 308 | 258 / 0 | 0 | 20 | 0 | 55 |
++| 2 / two | 60 | 53 / 62 | 3 | 6 | 46 | 36 |
++| 3 / two | 74 | 59 / 72 | 4 | 6 | 55 | 36 |
++
++Actual travel costs equal cells in these fixtures. Prey and birth transfers are
++internal, so they are not extra sources or sinks. Every executed tick checks:
++
++```text
++previous stores + accepted growth
++  = current stores + grazer upkeep + hunter upkeep
++    + grazer travel + hunter travel + attack cost + birth dissipation
++
++living grazers + grazer starvation + captures = founders + births
++living hunters + hunter starvation = initial hunters
++```
++
++Both hunter-present runs retain **all five journals** across ticks 1–120:
++`complete_after_tick = 0`, `collected_through_tick = 120`, zero evictions. The
++no-hunter minimum-2 run retains base ticks 3–120 (11 evictions), and the other
++three applicable journals retain 1–120. Minimum 3 without hunters retains base
++69–120 (296 evictions), mobile 7–120 (28), rest 11–120 (31), and population
++1–120. Hunting is disabled there, not an invented empty collection.
++
++The first 12 hunter-present ticks are also a mechanism test: retained evidence
++contains births, maturation, positive upkeep by a descendant after its first
++eligible tick, grazer rest, hunter rest, and successful capture. The finite pilot
++therefore exercises the integrated interactions before extinction. A separate
++current-contact test proves actual prey movement invalidates an earlier view.
++
++## Native verification
++
++The four prior modes were run against independently compiled frozen checkpoint B
++and the new reference: first arc, fixed-contact population, mobile A, and resting
++B, each across ticks 0–120 and reset ticks 0/1. Every preexisting public report
++field and every prior `MobileScenario` input was printed, without comparing a
++new private optional field's debug formatting. The **14,615,890 output bytes are
++identical**, SHA-256:
++`594398d371bfb321dfdebfd731247244d563b2fba149506397e1be843a2c7e5d`.
++Evidence is in `learning/work/ecosystem-hunt-compatibility-rp2aznw_`.
++
++The two exact HTML learner tests decoded from `hunting.html` passed in their own
++copied project and target directory, evidence
++`learning/work/ecosystem-hunt-guide-test-_9u9_ugb/result.txt`. New public tests
++include complete-report reversed insertion/read independence, atomic invalid
++reset, global-ID allocation, optional fatigue, retained-history absence, literal
++contention/pursuit, and per-tick energy/census closure. Private tests inspect
++terminal state before cleanup, deliberately invoke later adapters, inject a
++newborn target, and exhaust capture counters/history before flushing queues.
++
++One initial mutation probe exposed a **test weakness**: removing the per-tick
++successful-capture guard did not fail because the winner lacked room for another
++whole prey. The private fixture now grants capacity 16 before the first claim,
++so the guard is isolated from the capacity check. The production transaction did
++not need a change. Final command and mutant results are recorded in the package
++README after all checks finish.
++
++Predator reproduction, fleeing, obstacles, pathfinding, randomness, scavenging,
++refuge policies, live activation and full-goal completion are outside C.
+--- a/NATIVE-NOTES.md
++++ b/NATIVE-NOTES.md
+@@ -1,218 +1,242 @@
+-# Checkpoint C native contract and observations
+-
+-This is the isolated course reference, using Rust 1.93.1 and Bevy ECS 0.18.1. It
+-adds finite, mortal, nonreproducing hunters to the same `CourseWorld`. It does not
+-activate a live Moss rule or change the learner-owned movement assignment. The
+-public investigations and browser guide are authored separately; native, WASM,
+-and actual-browser evidence remain distinct.
+-
+-## API and compatibility
+-
+-`MobileScenario::with_hunters(HuntConfig)` is additive. Its fields remain private;
+-`hunters()` borrows the optional configuration. `HuntConfig::new(Vec&lt;HunterSeed&gt;)`
+-sets a journal limit of 128. Its public fields are `hunters` and `history_limit`.
+-`HunterSeed` has `id`, reserve/capacity/upkeep units, `attack_units`,
+-`attack_effort_points`, `cell`, and `motion`. The two authored presets are
+-`MobileScenario::hunting_contention()` and `HuntConfig::meadow()`.
+-
+-Hunter IDs must be unique across grazers, patches, and all other hunters. Every
+-hunter is in bounds with reserve no greater than capacity, positive travel and
+-attack costs, and positive capture effort. When fatigue is enabled, capture
+-effort must fit its maximum. Validation includes hunter IDs in the initial child
+-allocator; an exhausted identity range is rejected. All validation precedes
+-replacement of current or saved reset state. Reset repeats the selected policy;
+-selecting any prior mode clears hunter state. An empty `HuntConfig` is valid and
+-produces a present, empty hunter report.
+-
+-`CourseWorld::hunt_snapshot()` returns `None` when hunting is disabled. Otherwise
+-it returns an owned `HuntSnapshot` with version `moss-course-hunting-c-v1`, run,
+-completed tick, canonical initial hunter configuration, initial/living hunter
+-counts, stable-ID-sorted hunter readings, latest ledger, lifetime totals, and a
+-bounded journal. Each hunter row contains body budget fields, attack settings,
+-first eligibility, position/motion, retained prey target, owned local readings
+-and their observer origin/tick, optional fatigue, activity, and last rest,
+-transition, travel-opportunity, and successful-capture ticks.
+-
+-`PreyObservation` has prey ID, copied cell, and copied reserve. `PreyTarget` has
+-prey ID, observed cell, and observed tick. Missing observation time means
+-uncollected; a collected empty list means no eligible local prey was observed.
+-After another hunter wins, a loser can still hold a copied reading and target
+-for the removed prey. That retained intention is not a reservation or current
+-eligibility claim. `last_capture_tick` records an accepted capture only.
+-
+-The earlier public seeds, reports, ledgers, and event variants keep their shapes.
+-Base/population/mobile/rest projections describe grazers and patches; hunter
+-flows, fatigue and events are only in the supplemental hunt report. A complete C
+-observation combines these reports, including the shared rest policy in the
+-mobile initial configuration. In C, the grazer census requires captures as well
+-as starvation; the old population report alone cannot establish a closed census.
+-
+-The private refactor splits `Body` from grazer diet/contact. `Body` holds reserve,
+-capacity, upkeep, first eligibility, and a single `Terminal` enum: alive,
+-starved, or captured by a named stable hunter. Both roles share upkeep, the pure
+-bounded travel calculation, the pure rest transition and recovery calculation,
+-and structural cleanup. Role adapters keep earlier event meanings intact.
+-
+-## Execution and transaction
+-
+-The single-threaded chained schedule is:
++# Native refuge capstone: contract and observations
++
++This additive reference feature is confined to the course ecosystem, with Rust
++1.93.1 and Bevy ECS 0.18.1. It preserves the frozen hunting checkpoint and the live
++Moss assignment. The accompanying learner guide and CLI stage are maintained
++separately. There is no new refuge browser mode: the native investigation is the
++feature's execution surface.
++
++## Public contract and private responsibilities
++
++`MobileScenario::with_refuges(RefugeConfig)` enables the optional policy;
++`refuges()` borrows its configuration. `RefugeConfig::new(Vec&lt;RefugeSeed&gt;)` stores
++raw authored inputs for validation during world construction or replacement.
++Each seed contains a `RefugeId(u32)` and a `Cell`. Existing scenario fields remain
++private, so earlier constructors and callers require no extra argument.
++
++Refuge IDs must be positive and unique, and each cell must be inside the authored
++grid. Two sites cannot name the same cell. The positive-ID requirement is this
++model's chosen contract, not a requirement of Bevy or Rust. Static-site identity
++has a separate namespace from `SimId`; site 1 may coexist with grazer 1, and even
++site `u32::MAX` neither consumes nor exhausts the actor allocator. The errors are
++`ZeroRefugeId`, `DuplicateRefugeId`, `RefugeOutOfBounds`, and `SharedRefugeCell`.
++All validation finishes before the current world, run identity, or saved reset
++configuration is replaced. Site vectors are then sorted by ID for owned reports.
++
++`CourseWorld::refuge_snapshot()` returns `None` when the policy is disabled. An
++enabled configuration with zero sites returns `Some`, with an empty config and
++unprotected living grazers. `RefugeSnapshot` contains version
++`moss-course-refuge-v1`, run, completed tick, an owned canonical config, and
++stable-ID-sorted `RefugeGrazerReading` values. Each reading has `id`, current
++`cell`, `refuge: Option&lt;RefugeId&gt;`, and `assessed_tick`. This report is current
++membership, not a journal or a measurement of time spent protected. A saved
++report stays owned and unchanged after future steps or reset.
++
++`reset()` repeats the saved mode. `reset_with_mobile` can replace it with another
++validated refuge placement or an ordinary mobile scenario, incrementing the same
++run counter. Selecting an earlier course mode removes the optional state.
++
++The feature is deliberately small:
++
++| File | Responsibility |
++| --- | --- |
++| `src/refuge.rs` | Public config/readings; validation; private site lookup and membership component; installation, whole typed membership system, owned report |
++| `src/mobile/config.rs` | Optional private scenario field, builder/accessor, validation and canonical ordering |
++| `src/simulation.rs` | Installation, two ordered system positions, public report method |
++| `src/hunting/perception.rs` | Exclude protected grazers from local eligible prey readings |
++| `src/hunting/capture.rs` | Reject current protected prey before any transaction debit |
++| `src/reproduction.rs` | Initialize a child's membership at its accepted birth cell before deferred insertion |
++| `src/lib.rs` | Explicit exports |
++| `tests/refuge.rs` | Twelve top-level public behavioral tests |
++| `examples/refuges.rs` | Fully declared four-placement experiment and per-tick accounting |
++
++The reproduction system groups its two optional spatial resources in one tuple
++system parameter; this keeps the existing concrete system readable and satisfies
++strict Clippy without an allowance or a new policy framework. No dependency was
++added. The public fields and variants of all earlier seeds/reports/events stay
++unchanged. The manual `MobileScenario` debug formatter omits the absent new
++field, preserving old diagnostic traces while showing enabled refuge input.
++
++## Timing and biological choices
++
++The private `RefugeMembership` stores an optional site and its assessment tick.
++The lookup only maps current cells to authored sites. The refresh system has a
++shared `Clock`, an optional shared `RefugeState`, and a typed query borrowing
++`Position` and mutably borrowing `RefugeMembership` for grazers. It changes no
++body budget, movement, fatigue, decision, journal, or counter.
++
++The existing ordered schedule now includes these boundaries:
+ 
+ ```text
+-advance tick / clear ledgers → mature → all-body upkeep → patch growth
+-→ grazer/hunter rest decisions → all local observations → target decisions
+-→ grazer travel → hunter travel → grazer/hunter rest effects
+-→ captures → derive grazer contacts → grazer meals → terminal starvation
+-→ grazer births → ApplyDeferred → terminal cleanup → ApplyDeferred
+-→ complete all journals
++upkeep / growth / rest decisions
++→ refresh memberships → local grazer and hunter observations → target decisions
++→ grazer travel → hunter travel → refresh memberships
++→ rest effects → current-contact captures → grazer meals → starvation
++→ births with initial membership → ApplyDeferred → cleanup → complete journals
+ ```
+ 
+-Both observation phases finish before either role travels. The hunter retains an
+-eligible target in its current local view, otherwise chooses nearest positive-
+-reserve, living, eligible grazer, breaking ties by stable ID. Inspector rows are
+-not input to this selector. Travel follows the copied prey cell; a current lookup
+-can reject wrong/removed/terminal identity but cannot replace the observed
+-destination with a newly fetched global cell. A fleeing policy is absent: an
+-ordinary grazer's independent travel already makes stale contact observable.
+-
+-Capture processes hunters by stable ID. It requires a living eligible active
+-hunter and distinct living eligible grazer in the same **current** cell. The
+-prey must have positive current reserve. The hunter must afford the positive
+-attack cost before receiving anything, have room for the **entire** prey reserve
+-after that cost, and fit all capture effort if fatigue is enabled. There is no
+-partial credit, scavenging, hunter prey, fallback target inside an action, or
+-hunger override. Resting prey may be captured. An enabled fatigue policy charges
+-actual travel and accepted capture; disabled fatigue leaves those points absent,
+-while energy costs still apply.
+-
+-All amounts, counters and event headroom are preflighted. One mutable body query
+-then obtains the two distinct bodies. The commit pays the hunter cost and adds
+-the transfer, zeros prey reserve, sets its predation terminal state immediately,
+-and records the successful-action tick. Deferred despawn happens later. A second
+-hunter receives nothing from the terminal prey; a late meal, birth, upkeep or
+-starvation cannot reinterpret it as alive. Rejection changes no participant,
+-reserve, fatigue, cursor, counter or history. Counter/history exhaustion panics
+-before that transaction mutates state; it does not roll back earlier completed
+-upkeep or other transactions.
+-
+-The hunter counters are `maintenance_units`, `travel_cells`, `travel_units`,
+-`attack_units`, `transferred_units`, `captures`, `hunter_starvations`,
+-`target_changes`, `effort_points`, `recovered_points`, `rest_actions`,
+-`entered_rest`, and `woke`. `Captured` records both IDs, contact cell, actual
+-transfer, attack cost and effort. Other events cover hunter upkeep, targets,
+-travel, rest transitions/effects and starvation. The journal reports conservative
+-whole-tick coverage; `captures_between` returns unknown for partially evicted,
+-future or invalid intervals. Lifetime counts survive journal eviction.
+-
+-## Literal mechanism observations
+-
+-`hunting_contention` authors grazers 1/2 at `(0,0)`, reserve 5, capacity 8, upkeep
+-1, meal 2. Patch 1000 there holds 10 with no growth. Two hunters 100/101 share that
+-cell, reserve 4, capacity 8, upkeep 1, attack 1 and effort 2. All have sensing 1,
+-speed 0 and positive travel cost 1; grid `2 × 1`; default rest and population
+-policies apply. The no-hunter control produces a funded birth on tick 1.
+-
+-| Tick | Living grazer reserves | Patch | Hunter 100 reserve / target | Hunter 101 reserve / target | Total captures / transfer / attack |
++Founder membership is installed at tick zero. Newborn membership is calculated
++from the actual accepted birth position at the birth tick, then inserted with
++its components. The child still obeys the existing next-tick first eligibility;
++protection does not enable an early meal, action, or prey observation.
++
++The first refresh declares a reassessment boundary before perception. In the
++present static model it is redundant for normal public runs: no position changes
++between the previous post-travel refresh and next perception, and initial and
++newborn memberships are populated correctly. The start-inside test verifies
++protection and observation filtering; it is **not** evidence that removing this
++first refresh alone is detected. The post-travel refresh is independently
++necessary and its omission fails a compiled public test.
++
++A protected grazer is absent from eligible local prey readings, even when the
++global inspector lists it. A hunter cannot restore a hidden target from that
++inspector or acquire new prey during capture. If a previously visible grazer
++enters a refuge during travel, the current capture check rejects the stale
++intention before charging cost or effort. A grazer that leaves refuge after the
++observation phase cannot be targeted until a later fresh local observation.
++Targeting remains governed by the existing local selector.
++
++Protection is passive and applies to the current sampled cell, not every cell
++crossed by a multi-cell movement. Refuges confer no food, reserve, recovery,
++capacity, birth permission, or immunity to starvation. Grazers do not seek refuge
++or flee hunters. There are no obstacles, occupancy limits, pathfinding, random
++choices, hunter reproduction, or calibrated biological claims.
++
++## Literal arrival and departure investigation
++
++The public fixture has grid `2 × 1`, dark supply, grazer 1 at x0 with reserve
++6/capacity 8/upkeep 1/meal 2, sensing 1/speed 1/travel cost 1. Patch 1000 at x1
++contains 5 with capacity 5 and zero growth. Hunter 100 is already at x1 with
++reserve 4/capacity 10/upkeep 1/attack 1, sensing 1/speed 0. The ordinary population
++policy has no partner, and rest is disabled. Initial stores are 15 in every run.
++
++| Configuration / tick | Grazer outcome | Hunter reserve / captures | Patch | Observation meaning |
++| --- | --- | --- | --- | --- |
++| Off, tick 1 | Captured at x1, transfers 4 | 6 / 1 | 5 | Hunter copied prey at x0, then contact becomes real |
++| Refuge x1, tick 1 | Alive at x1, reserve 6 | 3 / 0 | 3 | Same pre-travel reading and current contact; protection alone rejects capture |
++| Refuge x0, tick 1 | Alive at x1, reserve 6 | 3 / 0 | 3 | Empty eligible observation; leaving does not create a target |
++| Refuge x0, tick 2 | Captured at x1, transfers 5 | 6 / 1 | 3 | Fresh tick-2 observation supplies the target |
++
++The arrival control matters: the stationary hunter has actual contact, affordable
++attack, and room for the whole prey in both cases. An unreachable or unaffordable
++control would conceal a broken protection check. In the protected arrival,
++ending stores 12 plus two upkeep units and one travel unit equals starting 15.
++No attack debit or transfer is recorded.
++
++A separate protected `hunting_contention` fixture produces child 1001 at x0 on
++tick 1. Its owned membership is already `Some(RefugeId(1))` at that tick, with
++reserve 4 and no maintenance/meal event. On tick 2 it pays 1 and eats 2, reaching
++5 while still absent from eligible hunter observations. Protected, unfed
++zero-reserve actors still starve. Those tests distinguish eligibility from an
++energy grant.
++
++## Matched 120-tick placement experiment
++
++`examples/refuges.rs` starts every run from the identical C meadow, default rest
++(minimum 2, entry 6, exit 2, recovery 2), and two meadow hunters. Initial stores
++are 128: grazer reserves 72, patch biomass 24, hunter reserves 32. Actor IDs,
++traits, positions, movement, supply, birth rules, rest rules, hunt rules, history
++limits, and horizon are unchanged. Only the optional refuge sites vary. The
++program prints the complete common configuration before execution.
++
++| Placement | Final grazers / hunters | Births | Grazer starvation / captures | Hunter starvation | Final stores |
+ | --- | --- | --- | --- | --- | --- |
+-| 1 | ID 2: 6 | 8 | 6 / 1 | 3 / 1 | 1 / 4 / 1 |
+-| 2 | none | 8 | 5 / 2 | 6 / 2 | 2 / 9 / 2 |
+-| 3 | none | 8 | 4 / none | 5 / none | 2 / 9 / 2 |
+-
+-On tick 1 both hunters copied reserve 4 for each prey after upkeep. Hunter 100
+-wins prey 1; the later hunter cannot switch to prey 2. Only grazer 2 eats, and the
+-captured parent cannot fund the control's birth. On tick 2, hunter 100 has reserve
+-5 after upkeep; paying 1 then taking prey 2's reserve 5 would exceed capacity 8.
+-It rejects without payment, allowing hunter 101 to take the whole transfer.
+-Changing only hunter 100's initial capacity to 5 also makes it reject on tick 1;
+-hunter 101 wins instead. Both cases are public acceptance tests.
+-
+-A separate actual pursuit begins from `short_journey`, with hunter 50 at `(0,0)`,
+-reserve 10, capacity 20, upkeep/attack/travel cost 1, sensing 3, speed 1, capture
+-effort 2, and default rest. Tick 1 ends grazer x1/hunter x0; tick 2 ends grazer
+-x2/hunter x1. The hunter follows the prey cells copied at x0 then x1, not the new
+-positions. Tick 3 reaches the stationary grazer at x2 and captures its current
+-reserve 2 before its meal. Hunter reserve is 6 and one patch unit remains.
+-Its next two ticks execute committed rest; those events do not pollute the
+-grazer rest totals. All of these actions occur in the same persistent world.
+-
+-## Four matched 120-tick runs
+-
+-All runs use the unchanged checkpoint-A meadow inputs and the default rest policy
+-except minimum 2 versus 3. Hunter-present runs add exactly hunters 100/101 at
+-`(5,2)`/`(8,2)`, reserve 16/capacity 24/upkeep 1, sensing 5/speed 1/travel 1,
+-attack 1/effort 2. No-hunter runs begin with 96 stored energy units;
+-hunter-present runs begin with 128. Patch IDs 1000/1001 keep the child allocator
+-identical across this intervention. All history limits are 128.
+-
+-| Minimum / hunters | Final grazers / hunters | Births | Grazer starvation / captures | Hunter starvation | Grazer / hunter travel | Grazer / hunter rest actions |
+-| --- | --- | --- | --- | --- | --- | --- |
+-| 2 / none | 0 / 0 | 7 | 11 / 0 | 0 | 36 / 0 | 21 / 0 |
+-| 3 / none | 1 / 0 | 10 | 13 / 0 | 0 | 71 / 0 | 53 / 0 |
+-| 2 / two | 0 / 0 | 3 | 4 / 3 | 2 | 15 / 13 | 7 / 13 |
+-| 3 / two | 0 / 0 | 3 | 3 / 4 | 2 | 14 / 11 | 6 / 15 |
+-
+-The no-hunter minimum-3 survivor is founder 1. Hunter-present minimum 2 has lost
+-all animals by tick 40; minimum 3 still has one hunter with reserve 6 at tick 40,
+-then loses it before tick 80. The reference preserves these outcomes. Neither
+-run establishes calibration, evolutionary adaptation, balance or enjoyment.
+-
+-| Minimum / hunters | Growth | Grazer / hunter upkeep | Attack | Birth dissipation | Prey transfer | Final total stores |
+-| --- | --- | --- | --- | --- | --- | --- |
+-| 2 / none | 98 | 108 / 0 | 0 | 14 | 0 | 36 |
+-| 3 / none | 308 | 258 / 0 | 0 | 20 | 0 | 55 |
+-| 2 / two | 60 | 53 / 62 | 3 | 6 | 46 | 36 |
+-| 3 / two | 74 | 59 / 72 | 4 | 6 | 55 | 36 |
+-
+-Actual travel costs equal cells in these fixtures. Prey and birth transfers are
+-internal, so they are not extra sources or sinks. Every executed tick checks:
++| Disabled | 0 / 0 | 3 | 4 / 3 | 2 | 36 |
++| Food cell `(3,2)` | 1 / 0 | 3 | 5 / 1 | 2 | 55 |
++| Transit cell `(4,2)` | 0 / 0 | 3 | 4 / 3 | 2 | 36 |
++| Both food cells `(3,2)`, `(7,2)` | 1 / 0 | 3 | 5 / 1 | 2 | 55 |
++
++| Placement | Accepted growth | Grazer upkeep / travel | Hunter upkeep / travel / attack | Prey transfer | Grazer / hunter rest actions |
++| --- | --- | --- | --- | --- | --- |
++| Disabled | 60 | 53 / 15 | 62 / 13 / 3 | 46 | 7 / 13 |
++| Food cell | 168 | 171 / 17 | 38 / 8 / 1 | 15 | 10 / 6 |
++| Transit cell | 55 | 51 / 15 | 62 / 10 / 3 | 43 | 7 / 11 |
++| Both food cells | 168 | 171 / 17 | 38 / 8 / 1 | 15 | 10 / 6 |
++
++Each run transfers 12 parental units into newborns and dissipates 6 in birth
++costs. No otherwise eligible pair is blocked by the population cap in these
++runs: both blocked-pair and blocked-tick counters are zero. Equal authored supply
++does not imply equal accepted growth: different consumption leaves different
++headroom under each patch's capacity.
++
++In the food-cell run, tick 4 has six living grazers, all protected, after three
++births and one starvation. By tick 8 only two remain; neither is currently
++protected, four have starved, and one has been captured. By tick 12 grazer 2 is
++the single survivor in the food refuge, with five total starvations and one
++capture. At tick 120 it has reserve 24 at `(3,2)`, membership site 1 assessed on
++tick 120; patch biomasses are 13 and 18. Both hunters have starved. Adding the
++second food-cell refuge produces the same measured outcomes and flows here;
++that null difference is retained.
++
++Transit protection changes timing and costs without preventing extinction: the
++last grazer is gone by tick 12, earlier than in the disabled pilot. Final patch
++biomass is 18 each in both extinct runs. These outcomes show an interaction
++between contact protection, foraging, finite supply and maintenance; they do not
++establish that any placement generally improves survival. Lower capture and
++higher starvation can coexist.
++
++The example checks energy and grazer census after every tick:
+ 
+ ```text
+ previous stores + accepted growth
+-  = current stores + grazer upkeep + hunter upkeep
+-    + grazer travel + hunter travel + attack cost + birth dissipation
+-
+-living grazers + grazer starvation + captures = founders + births
+-living hunters + hunter starvation = initial hunters
++ = current stores + grazer upkeep + hunter upkeep
++   + grazer travel + hunter travel + attack cost + birth dissipation
++
++living grazers + grazer starvations + captures = founders + births
+ ```
+ 
+-Both hunter-present runs retain **all five journals** across ticks 1–120:
+-`complete_after_tick = 0`, `collected_through_tick = 120`, zero evictions. The
+-no-hunter minimum-2 run retains base ticks 3–120 (11 evictions), and the other
+-three applicable journals retain 1–120. Minimum 3 without hunters retains base
+-69–120 (296 evictions), mobile 7–120 (28), rest 11–120 (31), and population
+-1–120. Hunting is disabled there, not an invented empty collection.
+-
+-The first 12 hunter-present ticks are also a mechanism test: retained evidence
+-contains births, maturation, positive upkeep by a descendant after its first
+-eligible tick, grazer rest, hunter rest, and successful capture. The finite pilot
+-therefore exercises the integrated interactions before extinction. A separate
+-current-contact test proves actual prey movement invalidates an earlier view.
+-
+-## Native verification
+-
+-The four prior modes were run against independently compiled frozen checkpoint B
+-and the new reference: first arc, fixed-contact population, mobile A, and resting
+-B, each across ticks 0–120 and reset ticks 0/1. Every preexisting public report
+-field and every prior `MobileScenario` input was printed, without comparing a
+-new private optional field's debug formatting. The **14,615,890 output bytes are
+-identical**, SHA-256:
+-`594398d371bfb321dfdebfd731247244d563b2fba149506397e1be843a2c7e5d`.
+-Evidence is in `learning/work/ecosystem-hunt-compatibility-rp2aznw_`.
+-
+-The two exact HTML learner tests decoded from `hunting.html` passed in their own
+-copied project and target directory, evidence
+-`learning/work/ecosystem-hunt-guide-test-_9u9_ugb/result.txt`. New public tests
+-include complete-report reversed insertion/read independence, atomic invalid
+-reset, global-ID allocation, optional fatigue, retained-history absence, literal
+-contention/pursuit, and per-tick energy/census closure. Private tests inspect
+-terminal state before cleanup, deliberately invoke later adapters, inject a
+-newborn target, and exhaust capture counters/history before flushing queues.
+-
+-One initial mutation probe exposed a **test weakness**: removing the per-tick
+-successful-capture guard did not fail because the winner lacked room for another
+-whole prey. The private fixture now grants capacity 16 before the first claim,
+-so the guard is isolated from the capacity check. The production transaction did
+-not need a change. Final command and mutant results are recorded in the package
+-README after all checks finish.
+-
+-Predator reproduction, fleeing, obstacles, pathfinding, randomness, scavenging,
+-refuge policies, live activation and full-goal completion are outside C.
++Birth and prey transfers remain internal. There is no refuge source/sink to add.
++
++Coverage remains separate from lifetime totals. Disabled and transit runs retain
++all five journals over ticks 1–120, with zero evictions. Food and both-food runs
++retain base history only over ticks 69–120 (`complete_after_tick=68`, 209 evicted
++events); their population, mobile, rest and hunt journals retain all 120 ticks.
++The full-run base starvation query therefore returns `None` despite a known
++lifetime count of 5. Full-run capture queries return `Some(1)` for those runs and
++`Some(3)` for the extinct runs. A current refuge reading cannot fill the missing
++base journal. Separately, the zero-capacity history test distinguishes a known
++retained zero captures from an unavailable interval with zero lifetime captures.
++
++## Verification and evidence
++
++The final reference suite has 106 native tests: 18 internal cases and the
++unchanged public suites (19 first-arc, 15 population, 15 mobile, 12 rest, 15
++hunting), plus 12 refuge cases. The five older public test files retain their
++original bytes. The two exact tests decoded from the guide's
++`code[data-refuge-test="arrival-and-departure"]` also passed in a separate project.
++
++Four isolated mutations compiled and then failed behavioral tests: exposing
++protected prey in observation, omitting the current capture protection guard,
++omitting the post-travel refresh, and omitting newborn membership insertion.
++Restoring the reference passed all 12 refuge tests plus the two guide tests.
++These probes used one sequential scratch copy and a reused private target;
++compile failures were not counted as test evidence.
++
++All five earlier modes—first arc, fixed-contact population, mobile, resting, and
++hunting—were independently compiled against frozen C and the new reference.
++Every existing public report was printed for ticks 0–120 plus reset ticks 0/1.
++The **19,872,248 bytes are identical**, SHA-256
++`da1586195115d6a55be8d7032742ca19441cae1fa5aa35e2f6651be7dce0746f`.
++This includes old `MobileScenario` debug output and all future-relevant fields in
++those old reports, rather than an endpoint-only comparison.
++
++Evidence paths relative to the repository:
++
++- `learning/work/ecosystem-refuge-observed.txt`: full declared four-placement run.
++- `learning/work/ecosystem-refuge-probes.json` and matching `mutant-*.txt`: exact mutation outcomes.
++- `learning/work/ecosystem-refuge-probe-restored.txt`: restored canonical and guide tests.
++- `learning/work/ecosystem-refuge-compatibility/{result.txt,before.txt,after.txt}`: complete off-mode witness.
++- `learning/work/ecosystem-refuge-original-tests.json`: frozen earlier suite hashes.
++
++Pinned commands from the repository root:
++
++```sh
++cargo +1.93.1 fmt --manifest-path learning/ecosystem/Cargo.toml --all -- --check
++CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 test --offline --locked --manifest-path learning/ecosystem/Cargo.toml
++CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 clippy --offline --locked --manifest-path learning/ecosystem/Cargo.toml --all-targets -- -D warnings
++CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 run --offline --locked --manifest-path learning/ecosystem/Cargo.toml --example refuges
++```
++
++Native evidence does not claim a new browser integration or full-goal completion.
++The capstone's learner-authored implementation and independent hypothesis remain
++separate from reproducing the supplied investigation.
+--- a/README.md
++++ b/README.md
+@@ -26,7 +26,7 @@
+ already contain those locked dependencies. No browser, renderer, or live Moss
+ dependency is needed for these commands.
+ 
+-From this directory (`learning/ecosystem`):
++From the directory containing this README:
+ 
+ ```sh
+ cargo +1.93.1 test --offline --locked
+@@ -37,7 +37,7 @@
+ cargo +1.93.1 clippy --offline --locked --all-targets -- -D warnings
+ ```
+ 
+-The private target directory keeps these builds away from live-project and
++The package has its own target directory, separate from live-project and
+ single-file lesson artifacts. Native tests establish Rust and installed-schedule
+ behavior. This package does not itself supply a WASM host or browser observation;
+ those are separate integration work.
+@@ -753,7 +753,7 @@
+ This code is an API excerpt; run the complete native example with:
+ 
+ ```sh
+-CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 run --offline --locked --manifest-path learning/ecosystem/Cargo.toml --example resting
++cargo +1.93.1 run --offline --locked --example resting
+ ```
+ 
+ `RestPolicy` fields and defaults are `maximum_fatigue_points: 10`,
+@@ -962,13 +962,13 @@
+ Stable-ID order determines contention. Hunters cannot obtain a new destination
+ from the global inspector or switch prey inside a failed action.
+ 
+-[Native hunting contract and observations](NATIVE-NOTES.md)
++[Native hunting contract and observations](HUNTING-NOTES.md)
+ records the exact API, modules, phase ordering, literal two-hunter fixture,
+ actual moving-prey counterexample, four matched 120-tick experiments, per-tick
+ budgets/censuses, and history coverage. Run the complete declared experiments:
+ 
+ ```sh
+-CARGO_TARGET_DIR=learning/work/ecosystem-target cargo +1.93.1 run --offline --locked --manifest-path learning/ecosystem/Cargo.toml --example hunting
++cargo +1.93.1 run --offline --locked --example hunting
+ ```
+ 
+ The hunter-present pilot ends with no animals in both minimum-rest variants;
+@@ -1000,3 +1000,59 @@
+ and strict all-target `clippy` listed for B, plus `--example hunting`. Native
+ verification does not substitute for the separately owned WASM or browser checks.
+ The full learning goal remains active.
++
++## Refuge capstone: protection changes eligibility
++
++The optional `MobileScenario::with_refuges(RefugeConfig)` adds authored static
++sites to the same world. `RefugeId` is a positive, separate site identity; it does
++not consume an actor ID. Construction and replacement validate unique IDs,
++unique in-bounds cells, then canonicalize site order before installation. A
++failed reset preserves the entire old run and its saved configuration.
++
++A private typed system records current grazer membership before local perception
++and after travel. Protected prey is absent from eligible hunter observations;
++current protection also rejects a previously observed same-cell capture before
++any debit. A newborn receives membership at its accepted birth cell while
++keeping its next-tick action deadline. Refuges change no reserve, recovery,
++foraging target, birth rule, or starvation rule. There is no refuge-seeking or
++fleeing behavior.
++
++`CourseWorld::refuge_snapshot()` returns an owned, sorted current-membership
++report, including run, tick, canonical sites, and each living grazer's current
++cell, optional site and assessment tick. Disabled is `None`; enabled with zero
++sites is a present empty configuration. This report is not a history and cannot
++supply missing past evidence. All earlier public reports retain their meaning.
++
++[Native refuge contract and observations](NATIVE-NOTES.md)
++records the complete API, source map, phase choices, literal arrival/departure
++investigation, four matched placements, accounting and coverage. Run the native
++comparison from this package directory:
++
++```sh
++cargo +1.93.1 run --offline --locked --example refuges
++```
++
++All four runs begin with identical actors, positions and 128 stored units and
++continue for 120 ticks. Disabled and transit-cell protection end with no animals;
++protection at the first food cell leaves one grazer. Protecting both food cells
++produces the same measured outcome as protecting the first in this fixture.
++Food-cell protection reduces captures from three to one while grazer starvation
++increases from four to five. These results describe the declared model and
++placement, not a general survival guarantee. Every tick closes the full energy
++budget and grazer census; accepted growth may differ because feeding creates
++capacity headroom.
++
++The native suite passes **106 tests**, including twelve new public refuge cases;
++the 76 prior public cases remain byte-identical. Two exact guide investigation
++tests pass separately. Four compiled defects fail their intended assertions:
++missing observation filtering, missing capture revalidation, missing post-travel
++refresh, and missing newborn membership. The pre-perception refresh is an
++explicit reassessment boundary but is redundant in current normal static runs;
++its removal alone is not claimed as independently detected.
++
++Five prior modes match frozen hunting C across all old public reports for ticks
++0–120 and reset ticks 0/1: **19,872,248 identical bytes**, SHA-256
++`da1586195115d6a55be8d7032742ca19441cae1fa5aa35e2f6651be7dce0746f`.
++Formatting, the pinned offline suite, and strict all-target Clippy are the same
++required native checks as C. This capstone has no new browser mode; native,
++learner-workspace, and course presentation checks remain distinct.
+--- a/examples/refuges.rs
++++ b/examples/refuges.rs
+@@ -0,0 +1,168 @@
++//! Matched deterministic placements; protection is neither food nor a survival guarantee.
++
++use moss_course_ecosystem::{
++    Cell, CourseWorld, HuntConfig, MobileScenario, RefugeConfig, RefugeId, RefugeSeed, RestPolicy,
++};
++
++fn stores(world: &amp;CourseWorld) -&gt; u64 {
++    let s = world.snapshot();
++    s.grazers
++        .iter()
++        .map(|g| u64::from(g.reserve_units))
++        .sum::&lt;u64&gt;()
++        + s.patches
++            .iter()
++            .map(|p| u64::from(p.biomass_units))
++            .sum::&lt;u64&gt;()
++        + world
++            .hunt_snapshot()
++            .unwrap()
++            .hunters
++            .iter()
++            .map(|h| u64::from(h.reserve_units))
++            .sum::&lt;u64&gt;()
++}
++
++fn main() {
++    let common = MobileScenario::meadow()
++        .with_rest(RestPolicy::default())
++        .with_hunters(HuntConfig::meadow());
++    println!(
++        "Matched placements, horizon120, initial stores128 (grazer72 + biomass24 + hunter32). No random draws."
++    );
++    println!(
++        "Every actor, position, trait, supply, birth/rest/hunt rule and history limit is identical: {common:?}"
++    );
++    println!(
++        "Only refuge configuration changes; the selector neither seeks refuge nor flees. Transit protection applies at current cells, not every crossed cell."
++    );
++    for (label, cells) in [
++        ("disabled", None),
++        ("food-cell", Some(vec![Cell { x: 3, y: 2 }])),
++        ("transit-cell", Some(vec![Cell { x: 4, y: 2 }])),
++        (
++            "both-food-cells",
++            Some(vec![Cell { x: 3, y: 2 }, Cell { x: 7, y: 2 }]),
++        ),
++    ] {
++        let spec = match cells {
++            None =&gt; common.clone(),
++            Some(cells) =&gt; common.clone().with_refuges(RefugeConfig::new(
++                cells
++                    .into_iter()
++                    .enumerate()
++                    .map(|(i, cell)| RefugeSeed {
++                        id: RefugeId(i as u32 + 1),
++                        cell,
++                    })
++                    .collect(),
++            )),
++        };
++        println!("\n{label}: sites={:?}", spec.refuges());
++        let mut world = CourseWorld::new_mobile(spec).unwrap();
++        assert_eq!(stores(&amp;world), 128);
++        let (mut growth, mut upkeep, mut birth_transfer, mut birth_cost) = (0, 0, 0, 0);
++        for tick in 1..=120 {
++            let before = stores(&amp;world);
++            world.step();
++            let m = world.mobile_snapshot().unwrap();
++            let h = world.hunt_snapshot().unwrap();
++            growth += m.base.ledger.added_units;
++            upkeep += m.base.ledger.maintenance_units;
++            birth_transfer += m.population.ledger.transferred_units;
++            birth_cost += m.population.ledger.dissipated_units;
++            assert_eq!(
++                stores(&amp;world)
++                    + m.base.ledger.maintenance_units
++                    + m.ledger.travel_units
++                    + m.population.ledger.dissipated_units
++                    + h.ledger.maintenance_units
++                    + h.ledger.travel_units
++                    + h.ledger.attack_units,
++                before + m.base.ledger.added_units
++            );
++            assert_eq!(
++                m.population.living as u64 + m.population.totals.starvations + h.totals.captures,
++                4 + m.population.totals.births
++            );
++            if [1, 2, 4, 8, 12, 40, 80, 120].contains(&amp;tick) {
++                let protected = world
++                    .refuge_snapshot()
++                    .map(|r| r.grazers.iter().filter(|g| g.refuge.is_some()).count());
++                println!(
++                    "t{tick} living{} protected{protected:?} hunters{} births{} starvations{} captures{} hunter_starvations{} stores{}",
++                    m.population.living,
++                    h.living_hunters,
++                    m.population.totals.births,
++                    m.population.totals.starvations,
++                    h.totals.captures,
++                    h.totals.hunter_starvations,
++                    stores(&amp;world)
++                );
++            }
++        }
++        let m = world.mobile_snapshot().unwrap();
++        let h = world.hunt_snapshot().unwrap();
++        let r = world.rest_snapshot().unwrap();
++        println!(
++            "actual growth{growth} upkeep{upkeep} grazer_travel{} birth_transfer{birth_transfer} birth_cost{birth_cost} hunter_upkeep{} hunter_travel{} attack{} prey_transfer{} cap_pairs{} cap_ticks{}",
++            m.totals.travel_units,
++            h.totals.maintenance_units,
++            h.totals.travel_units,
++            h.totals.attack_units,
++            h.totals.transferred_units,
++            m.population.totals.capacity_blocked_pairs,
++            m.population.totals.capacity_blocked_ticks
++        );
++        println!(
++            "final grazers={:?}; patches={:?}; hunters={:?}; memberships={:?}",
++            m.base
++                .grazers
++                .iter()
++                .map(|g| (g.id, g.reserve_units))
++                .collect::&lt;Vec&lt;_&gt;&gt;(),
++            m.base
++                .patches
++                .iter()
++                .map(|p| (p.id, p.biomass_units))
++                .collect::&lt;Vec&lt;_&gt;&gt;(),
++            h.hunters
++                .iter()
++                .map(|h| (h.id, h.reserve_units))
++                .collect::&lt;Vec&lt;_&gt;&gt;(),
++            world.refuge_snapshot().map(|r| r.grazers)
++        );
++        println!(
++            "rest actions grazer{} hunter{}; complete histories (after,through,lost): base{:?} population{:?} mobile{:?} rest{:?} hunt{:?}; captures1..120={:?}; starvations1..120={:?}",
++            r.totals.rest_actions,
++            h.totals.rest_actions,
++            (
++                m.base.history.complete_after_tick,
++                m.base.history.collected_through_tick,
++                m.base.history.evicted_events
++            ),
++            (
++                m.population.history.complete_after_tick,
++                m.population.history.collected_through_tick,
++                m.population.history.evicted_events
++            ),
++            (
++                m.history.complete_after_tick,
++                m.history.collected_through_tick,
++                m.history.evicted_events
++            ),
++            (
++                r.history.complete_after_tick,
++                r.history.collected_through_tick,
++                r.history.evicted_events
++            ),
++            (
++                h.history.complete_after_tick,
++                h.history.collected_through_tick,
++                h.history.evicted_events
++            ),
++            h.history.captures_between(1, 120),
++            m.base.history.starvations_between(1, 120)
++        );
++    }
++}
+--- a/src/hunting/capture.rs
++++ b/src/hunting/capture.rs
+@@ -4,6 +4,7 @@
+ use crate::mobile::rest::RestState;
+ use crate::mobile::{MobileActor, Position};
+ use crate::model::{Body, Clock, Grazer, Identity, Terminal};
++use crate::refuge::RefugeMembership;
+ use bevy_ecs::prelude::*;
+ use std::collections::BTreeMap;
+ 
+@@ -15,6 +16,7 @@
+     Option&lt;&amp;'a Grazer&gt;,
+     Option&lt;&amp;'a mut Hunter&gt;,
+     &amp;'a mut MobileActor,
++    Option&lt;&amp;'a RefugeMembership&gt;,
+ );
+ 
+ pub(crate) fn capture(
+@@ -28,7 +30,7 @@
+     };
+     let identities: BTreeMap&lt;_, _&gt; = bodies
+         .iter()
+-        .map(|(e, id, _, _, _, _, _)| (id.0, e))
++        .map(|(e, id, _, _, _, _, _, _)| (id.0, e))
+         .collect();
+     let order: Vec&lt;_&gt; = identities
+         .iter()
+@@ -36,7 +38,7 @@
+         .map(|(id, e)| (*id, *e))
+         .collect();
+     for (hunter_id, hunter_entity) in order {
+-        let (_, _, body, position, _, hunter, actor) =
++        let (_, _, body, position, _, hunter, actor, _) =
+             bodies.get(hunter_entity).expect("listed hunter");
+         let hunter = hunter.expect("hunter role");
+         if !body.alive()
+@@ -55,9 +57,10 @@
+         else {
+             continue;
+         };
+-        let (_, _, prey, prey_position, diet, prey_hunter, _) =
++        let (_, _, prey, prey_position, diet, prey_hunter, _, membership) =
+             bodies.get(prey_entity).expect("listed prey");
+         if diet.is_none()
++            || membership.is_some_and(|membership| membership.refuge.is_some())
+             || prey_hunter.is_some()
+             || !prey.alive()
+             || clock.tick &lt; prey.first_eligible_tick
+@@ -95,8 +98,8 @@
+             ..Default::default()
+         });
+         let [
+-            (_, _, mut hunter_body, _, _, hunter, mut actor),
+-            (_, _, mut prey_body, _, _, _, _),
++            (_, _, mut hunter_body, _, _, hunter, mut actor, _),
++            (_, _, mut prey_body, _, _, _, _, _),
+         ] = bodies
+             .get_many_mut([hunter_entity, prey_entity])
+             .expect("distinct current bodies");
+--- a/src/hunting/perception.rs
++++ b/src/hunting/perception.rs
+@@ -5,11 +5,12 @@
+ };
+ use crate::mobile::{MobileActor, Position};
+ use crate::model::{Body, Clock, Grazer, Identity};
++use crate::refuge::RefugeMembership;
+ use bevy_ecs::prelude::*;
+ 
+ pub(crate) fn observe(
+     clock: Res&lt;Clock&gt;,
+-    prey: Query&lt;(&amp;Identity, &amp;Body, &amp;Position), With&lt;Grazer&gt;&gt;,
++    prey: Query&lt;(&amp;Identity, &amp;Body, &amp;Position, Option&lt;&amp;RefugeMembership&gt;), With&lt;Grazer&gt;&gt;,
+     mut hunters: Query&lt;(&amp;Body, &amp;Position, &amp;MobileActor, &amp;mut Hunter)&gt;,
+ ) {
+     for (body, position, actor, mut hunter) in &amp;mut hunters {
+@@ -18,13 +19,14 @@
+         }
+         let mut visible: Vec&lt;_&gt; = prey
+             .iter()
+-            .filter(|(_, body, cell)| {
++            .filter(|(_, body, cell, membership)| {
+                 body.alive()
++                    &amp;&amp; membership.is_none_or(|membership| membership.refuge.is_none())
+                     &amp;&amp; clock.tick &gt;= body.first_eligible_tick
+                     &amp;&amp; body.reserve_units &gt; 0
+                     &amp;&amp; position.0.distance(cell.0) &lt;= u64::from(actor.motion.sensing_radius)
+             })
+-            .map(|(id, body, cell)| PreyObservation {
++            .map(|(id, body, cell, _)| PreyObservation {
+                 prey: id.0,
+                 cell: cell.0,
+                 reserve_units: body.reserve_units,
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -17,7 +17,11 @@
+ mod mobile;
+ mod model;
+ mod population;
++mod refuge;
+ mod reproduction;
++pub use refuge::{
++    REFUGE_VERSION, RefugeConfig, RefugeGrazerReading, RefugeId, RefugeSeed, RefugeSnapshot,
++};
+ mod simulation;
+ mod supply;
+ 
+--- a/src/mobile/config.rs
++++ b/src/mobile/config.rs
+@@ -60,7 +60,7 @@
+ 
+ /// Construct raw authored inputs here; CourseWorld validates before installation.
+ /// Private fields permit later optional policies without changing struct literals.
+-#[derive(Clone, Debug, PartialEq, Eq)]
++#[derive(Clone, PartialEq, Eq)]
+ pub struct MobileScenario {
+     scenario: Scenario,
+     population: PopulationConfig,
+@@ -68,6 +68,25 @@
+     history_limit: usize,
+     rest: Option&lt;RestPolicy&gt;,
+     hunters: Option&lt;crate::HuntConfig&gt;,
++    refuges: Option&lt;crate::RefugeConfig&gt;,
++}
++
++impl fmt::Debug for MobileScenario {
++    fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
++        let mut debug = f.debug_struct("MobileScenario");
++        debug
++            .field("scenario", &amp;self.scenario)
++            .field("population", &amp;self.population)
++            .field("space", &amp;self.space)
++            .field("history_limit", &amp;self.history_limit)
++            .field("rest", &amp;self.rest)
++            .field("hunters", &amp;self.hunters);
++        // Keep existing off-mode report traces unchanged.
++        if let Some(refuges) = &amp;self.refuges {
++            debug.field("refuges", refuges);
++        }
++        debug.finish()
++    }
+ }
+ 
+ impl MobileScenario {
+@@ -79,7 +98,16 @@
+             history_limit: 128,
+             rest: None,
+             hunters: None,
+-        }
++            refuges: None,
++        }
++    }
++
++    pub fn with_refuges(mut self, config: crate::RefugeConfig) -&gt; Self {
++        self.refuges = Some(config);
++        self
++    }
++    pub fn refuges(&amp;self) -&gt; Option&lt;&amp;crate::RefugeConfig&gt; {
++        self.refuges.as_ref()
+     }
+ 
+     pub fn with_hunters(mut self, config: crate::HuntConfig) -&gt; Self {
+@@ -196,6 +224,10 @@
+         if let Some(config) = &amp;mut self.hunters {
+             config.hunters.sort_by_key(|hunter| hunter.id);
+         }
++        if let Some(config) = &amp;mut self.refuges {
++            config.validate(bounds)?;
++            config.sites.sort_by_key(|site| site.id);
++        }
+         Ok(next_id)
+     }
+ }
+@@ -205,6 +237,10 @@
+     Population(PopulationError),
+     InvalidBounds,
+     InvalidRestPolicy,
++    ZeroRefugeId,
++    DuplicateRefugeId(crate::RefugeId),
++    RefugeOutOfBounds(crate::RefugeId),
++    SharedRefugeCell(Cell),
+     DuplicateHunterId(SimId),
+     HunterOverCapacity(SimId),
+     InvalidAttack(SimId),
+--- a/src/refuge.rs
++++ b/src/refuge.rs
+@@ -0,0 +1,156 @@
++//! Static protection changes prey eligibility, never movement or resource flows.
++
++use std::collections::{BTreeMap, BTreeSet};
++
++use bevy_ecs::prelude::*;
++
++use crate::mobile::Position;
++use crate::model::{Clock, Grazer, Identity};
++use crate::simulation::Roster;
++use crate::{Cell, GridBounds, MobileError, MobileScenario, SimId};
++
++pub const REFUGE_VERSION: &amp;str = "moss-course-refuge-v1";
++
++/// Static-site IDs have their own namespace and never consume actor identities.
++#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
++pub struct RefugeId(pub u32);
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct RefugeSeed {
++    pub id: RefugeId,
++    pub cell: Cell,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RefugeConfig {
++    pub sites: Vec&lt;RefugeSeed&gt;,
++}
++
++impl RefugeConfig {
++    /// An empty enabled configuration is valid; world construction validates it.
++    pub fn new(sites: Vec&lt;RefugeSeed&gt;) -&gt; Self {
++        Self { sites }
++    }
++
++    pub(crate) fn validate(&amp;self, bounds: GridBounds) -&gt; Result&lt;(), MobileError&gt; {
++        let mut ids = BTreeSet::new();
++        let mut cells = BTreeSet::new();
++        for site in &amp;self.sites {
++            if site.id.0 == 0 {
++                return Err(MobileError::ZeroRefugeId);
++            }
++            if !ids.insert(site.id) {
++                return Err(MobileError::DuplicateRefugeId(site.id));
++            }
++            if !bounds.contains(site.cell) {
++                return Err(MobileError::RefugeOutOfBounds(site.id));
++            }
++            if !cells.insert(site.cell) {
++                return Err(MobileError::SharedRefugeCell(site.cell));
++            }
++        }
++        Ok(())
++    }
++}
++
++#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) struct RefugeMembership {
++    pub refuge: Option&lt;RefugeId&gt;,
++    pub assessed_tick: u64,
++}
++
++#[derive(Resource)]
++pub(crate) struct RefugeState {
++    config: RefugeConfig,
++    sites_by_cell: BTreeMap&lt;Cell, RefugeId&gt;,
++}
++
++impl RefugeState {
++    pub(crate) fn membership(&amp;self, cell: Cell, tick: u64) -&gt; RefugeMembership {
++        RefugeMembership {
++            refuge: self.sites_by_cell.get(&amp;cell).copied(),
++            assessed_tick: tick,
++        }
++    }
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct RefugeGrazerReading {
++    pub id: SimId,
++    pub cell: Cell,
++    pub refuge: Option&lt;RefugeId&gt;,
++    pub assessed_tick: u64,
++}
++
++/// Current membership only: no claim about time spent inside or evicted events.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RefugeSnapshot {
++    pub version: &amp;'static str,
++    pub run: u64,
++    pub tick: u64,
++    pub config: RefugeConfig,
++    pub grazers: Vec&lt;RefugeGrazerReading&gt;,
++}
++
++pub(crate) fn install(world: &amp;mut World, initial: &amp;MobileScenario) {
++    let Some(config) = initial.refuges() else {
++        return;
++    };
++    let state = RefugeState {
++        config: config.clone(),
++        sites_by_cell: config.sites.iter().map(|s| (s.cell, s.id)).collect(),
++    };
++    let entities = world.resource::&lt;Roster&gt;().grazers.clone();
++    for entity in entities {
++        let cell = world
++            .get::&lt;Position&gt;(entity)
++            .expect("mobile grazer position")
++            .0;
++        world.entity_mut(entity).insert(state.membership(cell, 0));
++    }
++    world.insert_resource(state);
++}
++
++/// Run before local prey observation and again after all travel, before capture.
++/// Decisions and snapshots do not execute this system or confer protection.
++pub(crate) fn refresh_memberships(
++    clock: Res&lt;Clock&gt;,
++    state: Option&lt;Res&lt;RefugeState&gt;&gt;,
++    mut grazers: Query&lt;(&amp;Position, &amp;mut RefugeMembership), With&lt;Grazer&gt;&gt;,
++) {
++    let Some(state) = state else {
++        return;
++    };
++    for (position, mut membership) in &amp;mut grazers {
++        *membership = state.membership(position.0, clock.tick);
++    }
++}
++
++pub(crate) fn snapshot(world: &amp;World) -&gt; Option&lt;RefugeSnapshot&gt; {
++    let state = world.get_resource::&lt;RefugeState&gt;()?;
++    let clock = world.resource::&lt;Clock&gt;();
++    let mut grazers: Vec&lt;_&gt; = world
++        .resource::&lt;Roster&gt;()
++        .grazers
++        .iter()
++        .map(|&amp;entity| {
++            let membership = world
++                .get::&lt;RefugeMembership&gt;(entity)
++                .expect("refuge-mode membership");
++            RefugeGrazerReading {
++                id: world.get::&lt;Identity&gt;(entity).expect("grazer identity").0,
++                cell: world.get::&lt;Position&gt;(entity).expect("grazer position").0,
++                refuge: membership.refuge,
++                assessed_tick: membership.assessed_tick,
++            }
++        })
++        .collect();
++    grazers.sort_by_key(|g| g.id);
++    Some(RefugeSnapshot {
++        version: REFUGE_VERSION,
++        run: clock.run,
++        tick: clock.tick,
++        config: state.config.clone(),
++        grazers,
++    })
++}
+--- a/src/reproduction.rs
++++ b/src/reproduction.rs
+@@ -219,8 +219,12 @@
+     patches: Query&lt;(&amp;Identity, Option&lt;&amp;Position&gt;), With&lt;Patch&gt;&gt;,
+     mut roster: ResMut&lt;Roster&gt;,
+     mut state: ResMut&lt;PopulationState&gt;,
+-    mut mobile_state: Option&lt;ResMut&lt;MobileState&gt;&gt;,
++    spatial: (
++        Option&lt;ResMut&lt;MobileState&gt;&gt;,
++        Option&lt;Res&lt;crate::refuge::RefugeState&gt;&gt;,
++    ),
+ ) {
++    let (mut mobile_state, refuges) = spatial;
+     let sites: BTreeSet&lt;_&gt; = patches.iter().map(|(id, _)| id.0).collect();
+     let cells: BTreeMap&lt;_, _&gt; = patches
+         .iter()
+@@ -298,6 +302,11 @@
+             if mobile_child.is_some() {
+                 plan.diet.feeding_site = None;
+             }
++            let refuge_child = mobile_child.as_ref().and_then(|(position, _)| {
++                refuges
++                    .as_ref()
++                    .map(|state| state.membership(position.0, clock.tick))
++            });
+             {
+                 let [
+                     (_, _, mut first, _, mut first_stage, _, _),
+@@ -340,6 +349,9 @@
+                     });
+                 child.insert((position, actor));
+             }
++            if let Some(membership) = refuge_child {
++                child.insert(membership);
++            }
+             let entity = child.id();
+             roster.grazers.push(entity);
+         }
+--- a/src/simulation.rs
++++ b/src/simulation.rs
+@@ -92,6 +92,11 @@
+     /// Hunter evidence supplements the grazer-only projections in hunting mode.
+     pub fn hunt_snapshot(&amp;self) -&gt; Option&lt;crate::HuntSnapshot&gt; {
+         crate::hunting::snapshot(&amp;self.world)
++    }
++
++    /// None means refuge mode is disabled; enabled empty sites remain observable.
++    pub fn refuge_snapshot(&amp;self) -&gt; Option&lt;crate::RefugeSnapshot&gt; {
++        crate::refuge::snapshot(&amp;self.world)
+     }
+ 
+     /// None means rest is disabled; reading never executes recovery.
+@@ -263,6 +268,7 @@
+     population::install(&amp;mut world, initial.population().clone(), next_child_id);
+     mobile::install(&amp;mut world, initial);
+     crate::hunting::install(&amp;mut world, initial);
++    crate::refuge::install(&amp;mut world, initial);
+     world
+ }
+ 
+@@ -284,12 +290,14 @@
+             (
+                 mobile::rest::decide,
+                 crate::hunting::activity::decide,
++                crate::refuge::refresh_memberships,
+                 mobile::perception::observe,
+                 crate::hunting::perception::observe,
+                 mobile::perception::choose,
+                 crate::hunting::perception::choose,
+                 mobile::movement::travel,
+                 crate::hunting::movement::travel,
++                crate::refuge::refresh_memberships,
+                 mobile::rest::execute,
+                 crate::hunting::activity::execute,
+                 crate::hunting::capture::capture,
+--- a/tests/refuge.rs
++++ b/tests/refuge.rs
+@@ -0,0 +1,559 @@
++use moss_course_ecosystem::{
++    Cell, CourseWorld, EventKind, HuntConfig, HunterSeed, MobileError, MobileScenario, Motion,
++    RefugeConfig, RefugeId, RefugeSeed, RestPolicy, Scenario, SimId,
++};
++
++fn refuge(x: u32) -&gt; RefugeConfig {
++    RefugeConfig::new(vec![RefugeSeed {
++        id: RefugeId(1),
++        cell: Cell { x, y: 0 },
++    }])
++}
++
++fn crossing() -&gt; MobileScenario {
++    let original = MobileScenario::short_journey();
++    let mut scenario = original.scenario().clone();
++    scenario.grazers[0].reserve_units = 6;
++    scenario.patches[0].id = SimId(1000);
++    scenario.patches[0].biomass_units = 5;
++    scenario.patches[0].capacity_units = 5;
++    let mut space = original.space().clone();
++    space.bounds.width_cells = 2;
++    space.bounds.height_cells = 1;
++    space.grazers[0].motion.sensing_radius = 1;
++    space.patches[0].id = SimId(1000);
++    space.patches[0].cell = Cell { x: 1, y: 0 };
++    MobileScenario::new(scenario, original.population().clone(), space).with_hunters(
++        HuntConfig::new(vec![HunterSeed {
++            id: SimId(100),
++            reserve_units: 4,
++            capacity_units: 10,
++            maintenance_units_per_tick: 1,
++            attack_units: 1,
++            attack_effort_points: 2,
++            cell: Cell { x: 1, y: 0 },
++            motion: Motion {
++                sensing_radius: 1,
++                max_cells_per_tick: 0,
++                travel_units_per_cell: 1,
++            },
++        }]),
++    )
++}
++
++fn reports(world: &amp;CourseWorld) -&gt; String {
++    format!(
++        "{:?}{:?}{:?}{:?}{:?}",
++        world.snapshot(),
++        world.population_snapshot(),
++        world.mobile_snapshot(),
++        world.rest_snapshot(),
++        (world.hunt_snapshot(), world.refuge_snapshot())
++    )
++}
++
++fn stores(world: &amp;CourseWorld) -&gt; u64 {
++    let s = world.snapshot();
++    s.grazers
++        .iter()
++        .map(|g| u64::from(g.reserve_units))
++        .sum::&lt;u64&gt;()
++        + s.patches
++            .iter()
++            .map(|p| u64::from(p.biomass_units))
++            .sum::&lt;u64&gt;()
++        + world.hunt_snapshot().map_or(0, |h| {
++            h.hunters.iter().map(|h| u64::from(h.reserve_units)).sum()
++        })
++}
++
++#[test]
++fn protected_prey_are_absent_from_the_local_observation_and_target() {
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::hunting_contention().with_refuges(refuge(0)))
++            .unwrap();
++    let initial = world.refuge_snapshot().unwrap();
++    assert_eq!(initial.grazers.len(), 2);
++    assert!(
++        initial
++            .grazers
++            .iter()
++            .all(|g| g.refuge == Some(RefugeId(1)) &amp;&amp; g.assessed_tick == 0)
++    );
++    world.step();
++    let h = world.hunt_snapshot().unwrap();
++    assert_eq!(h.hunters.len(), 2);
++    assert!(
++        h.hunters
++            .iter()
++            .all(|h| h.observed_tick == Some(1) &amp;&amp; h.visible_prey.is_empty() &amp;&amp; h.target.is_none())
++    );
++    assert_eq!(
++        (
++            h.totals.captures,
++            h.totals.attack_units,
++            h.totals.effort_points
++        ),
++        (0, 0, 0)
++    );
++    assert_eq!(world.population_snapshot().unwrap().totals.births, 1);
++}
++
++#[test]
++fn arrival_after_observation_rejects_a_funded_same_cell_capture() {
++    let mut exposed = CourseWorld::new_mobile(crossing()).unwrap();
++    let mut protected = CourseWorld::new_mobile(crossing().with_refuges(refuge(1))).unwrap();
++    exposed.step();
++    protected.step();
++    let old = exposed.hunt_snapshot().unwrap();
++    let h = protected.hunt_snapshot().unwrap();
++    let m = protected.mobile_snapshot().unwrap();
++    assert_eq!(old.totals.captures, 1);
++    assert_eq!(old.hunters[0].reserve_units, 6);
++    assert!(exposed.snapshot().grazers.is_empty());
++    assert_eq!(h.hunters[0].visible_prey, old.hunters[0].visible_prey);
++    assert_eq!(h.hunters[0].visible_prey[0].cell, Cell { x: 0, y: 0 });
++    assert_eq!(h.hunters[0].target.unwrap().prey, SimId(1));
++    assert_eq!(h.hunters[0].cell, m.grazers[0].cell);
++    assert_eq!(m.grazers[0].cell, Cell { x: 1, y: 0 });
++    assert_eq!(
++        (
++            h.hunters[0].reserve_units,
++            h.ledger.attack_units,
++            h.ledger.transferred_units
++        ),
++        (3, 0, 0)
++    );
++    assert_eq!(h.totals.captures, 0);
++    assert_eq!(
++        (
++            m.base.grazers[0].reserve_units,
++            m.base.patches[0].biomass_units
++        ),
++        (6, 3)
++    );
++    assert_eq!(
++        protected.refuge_snapshot().unwrap().grazers[0].refuge,
++        Some(RefugeId(1))
++    );
++    assert_eq!(
++        stores(&amp;protected)
++            + m.base.ledger.maintenance_units
++            + m.ledger.travel_units
++            + h.ledger.maintenance_units,
++        15
++    );
++}
++
++#[test]
++fn departing_protection_waits_for_the_next_fresh_local_observation() {
++    let mut world = CourseWorld::new_mobile(crossing().with_refuges(refuge(0))).unwrap();
++    world.step();
++    let first = world.hunt_snapshot().unwrap();
++    let r = world.refuge_snapshot().unwrap();
++    assert_eq!(r.grazers[0].cell, Cell { x: 1, y: 0 });
++    assert_eq!(r.grazers[0].refuge, None);
++    assert_eq!(r.grazers[0].assessed_tick, 1);
++    assert_eq!(first.hunters[0].observed_tick, Some(1));
++    assert!(first.hunters[0].visible_prey.is_empty());
++    assert!(first.hunters[0].target.is_none());
++    assert_eq!(first.totals.captures, 0);
++    world.step();
++    let second = world.hunt_snapshot().unwrap();
++    assert_eq!(second.hunters[0].observed_tick, Some(2));
++    assert_eq!(second.hunters[0].target.unwrap().observed_tick, 2);
++    assert_eq!(second.hunters[0].visible_prey[0].prey, SimId(1));
++    assert_eq!(
++        (second.totals.captures, second.totals.transferred_units),
++        (1, 5)
++    );
++    assert!(world.refuge_snapshot().unwrap().grazers.is_empty());
++}
++
++#[test]
++fn a_newborn_has_membership_at_birth_but_no_early_action_or_prey_eligibility() {
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::hunting_contention().with_refuges(refuge(0)))
++            .unwrap();
++    world.step();
++    let first = world.refuge_snapshot().unwrap();
++    assert_eq!(
++        first.grazers.iter().map(|g| g.id).collect::&lt;Vec&lt;_&gt;&gt;(),
++        vec![SimId(1), SimId(2), SimId(1001)]
++    );
++    assert!(
++        first
++            .grazers
++            .iter()
++            .all(|g| g.refuge == Some(RefugeId(1)) &amp;&amp; g.assessed_tick == 1)
++    );
++    let s = world.snapshot();
++    assert_eq!(s.grazers[2].reserve_units, 4);
++    assert!(!s.history.events.iter().any(|e| matches!(
++        e.kind,
++        EventKind::Maintenance {
++            grazer: SimId(1001),
++            ..
++        } | EventKind::Meal {
++            grazer: SimId(1001),
++            ..
++        }
++    )));
++    world.step();
++    assert_eq!(world.snapshot().grazers[2].reserve_units, 5);
++    assert!(world.snapshot().history.events.iter().any(|e| e.tick == 2
++        &amp;&amp; matches!(
++            e.kind,
++            EventKind::Meal {
++                grazer: SimId(1001),
++                units: 2,
++                ..
++            }
++        )));
++    assert!(
++        world
++            .hunt_snapshot()
++            .unwrap()
++            .hunters
++            .iter()
++            .all(|h| h.visible_prey.is_empty())
++    );
++    assert_eq!(world.hunt_snapshot().unwrap().totals.captures, 0);
++}
++
++#[test]
++fn invalid_refuge_resets_preserve_all_reports_and_the_saved_mode() {
++    let spec = crossing().with_refuges(refuge(1));
++    let mut world = CourseWorld::new_mobile(spec.clone()).unwrap();
++    world.step();
++    let before = reports(&amp;world);
++    let cases = [
++        (
++            vec![RefugeSeed {
++                id: RefugeId(0),
++                cell: Cell { x: 0, y: 0 },
++            }],
++            MobileError::ZeroRefugeId,
++        ),
++        (
++            vec![RefugeSeed {
++                id: RefugeId(1),
++                cell: Cell { x: 2, y: 0 },
++            }],
++            MobileError::RefugeOutOfBounds(RefugeId(1)),
++        ),
++        (
++            vec![
++                RefugeSeed {
++                    id: RefugeId(1),
++                    cell: Cell { x: 0, y: 0 },
++                },
++                RefugeSeed {
++                    id: RefugeId(1),
++                    cell: Cell { x: 1, y: 0 },
++                },
++            ],
++            MobileError::DuplicateRefugeId(RefugeId(1)),
++        ),
++        (
++            vec![
++                RefugeSeed {
++                    id: RefugeId(1),
++                    cell: Cell { x: 0, y: 0 },
++                },
++                RefugeSeed {
++                    id: RefugeId(2),
++                    cell: Cell { x: 0, y: 0 },
++                },
++            ],
++            MobileError::SharedRefugeCell(Cell { x: 0, y: 0 }),
++        ),
++    ];
++    for (sites, expected) in cases {
++        let invalid = crossing().with_refuges(RefugeConfig::new(sites));
++        assert_eq!(world.reset_with_mobile(invalid.clone()), Err(expected));
++        assert_eq!(reports(&amp;world), before);
++        assert!(matches!(CourseWorld::new_mobile(invalid), Err(error) if error == expected));
++    }
++    world.reset();
++    let reset = world.refuge_snapshot().unwrap();
++    assert_eq!((reset.run, reset.tick), (2, 0));
++    assert_eq!(reset.config, spec.refuges().unwrap().clone());
++    world.reset_with_mobile(crossing()).unwrap();
++    assert!(world.refuge_snapshot().is_none());
++    assert_eq!(world.snapshot().run, 3);
++}
++
++#[test]
++fn reports_are_owned_and_repeated_reads_neither_advance_nor_protect() {
++    let spec = crossing().with_refuges(refuge(1));
++    let mut observed = CourseWorld::new_mobile(spec.clone()).unwrap();
++    let mut quiet = CourseWorld::new_mobile(spec).unwrap();
++    let mut saved = observed.refuge_snapshot().unwrap();
++    saved.grazers[0].refuge = Some(RefugeId(99));
++    saved.config.sites.clear();
++    for _ in 0..3 {
++        let before = reports(&amp;observed);
++        for _ in 0..100 {
++            assert_eq!(reports(&amp;observed), before);
++        }
++        observed.step();
++        quiet.step();
++        assert_eq!(reports(&amp;observed), reports(&amp;quiet));
++    }
++    assert_eq!((saved.run, saved.tick), (1, 0));
++    observed.reset();
++    assert_eq!(saved.grazers[0].refuge, Some(RefugeId(99)));
++    assert_eq!(observed.refuge_snapshot().unwrap().run, 2);
++}
++
++#[test]
++fn enabled_empty_is_distinct_from_disabled_without_changing_existing_outcomes() {
++    let spec = MobileScenario::hunting_contention();
++    let mut off = CourseWorld::new_mobile(spec.clone()).unwrap();
++    let mut empty = CourseWorld::new_mobile(spec.with_refuges(RefugeConfig::new(vec![]))).unwrap();
++    assert!(off.refuge_snapshot().is_none());
++    let r = empty.refuge_snapshot().unwrap();
++    assert!(r.config.sites.is_empty());
++    assert!(r.grazers.iter().all(|g| g.refuge.is_none()));
++    for _ in 0..6 {
++        off.step();
++        empty.step();
++        assert_eq!(off.snapshot(), empty.snapshot());
++        assert_eq!(off.population_snapshot(), empty.population_snapshot());
++        assert_eq!(off.rest_snapshot(), empty.rest_snapshot());
++        assert_eq!(off.hunt_snapshot(), empty.hunt_snapshot());
++        let a = off.mobile_snapshot().unwrap();
++        let b = empty.mobile_snapshot().unwrap();
++        assert_eq!(
++            (a.grazers, a.ledger, a.totals, a.history),
++            (b.grazers, b.ledger, b.totals, b.history)
++        );
++    }
++    let mut basic = CourseWorld::new(Scenario::limited_supply()).unwrap();
++    assert!(basic.refuge_snapshot().is_none());
++    basic
++        .reset_with_mobile(crossing().with_refuges(refuge(1)))
++        .unwrap();
++    assert!(basic.refuge_snapshot().is_some());
++    basic.reset_with(Scenario::limited_supply()).unwrap();
++    assert!(basic.refuge_snapshot().is_none());
++}
++
++#[test]
++fn static_site_ids_do_not_consume_child_ids_or_change_non_hunting_costs() {
++    let spec = MobileScenario::hunting_contention();
++    let ordinary = MobileScenario::new(
++        spec.scenario().clone(),
++        spec.population().clone(),
++        spec.space().clone(),
++    )
++    .with_rest(RestPolicy::default());
++    let mut off = CourseWorld::new_mobile(ordinary.clone()).unwrap();
++    let mut protected =
++        CourseWorld::new_mobile(ordinary.with_refuges(RefugeConfig::new(vec![RefugeSeed {
++            id: RefugeId(u32::MAX),
++            cell: Cell { x: 0, y: 0 },
++        }])))
++        .unwrap();
++    for _ in 0..8 {
++        off.step();
++        protected.step();
++        assert_eq!(off.snapshot(), protected.snapshot());
++        assert_eq!(off.population_snapshot(), protected.population_snapshot());
++        assert_eq!(off.rest_snapshot(), protected.rest_snapshot());
++    }
++    assert!(protected.population_snapshot().unwrap().totals.births &gt; 0);
++    assert!(
++        protected
++            .snapshot()
++            .history
++            .events
++            .iter()
++            .any(|e| matches!(e.kind, EventKind::Maintenance { .. }))
++    );
++}
++
++#[test]
++fn protection_does_not_prevent_starvation_or_create_missing_food() {
++    let base = crossing();
++    let mut scenario = base.scenario().clone();
++    scenario.grazers[0].reserve_units = 2;
++    scenario.patches[0].biomass_units = 0;
++    let spec = MobileScenario::new(scenario, base.population().clone(), base.space().clone())
++        .with_hunters(base.hunters().unwrap().clone())
++        .with_refuges(refuge(0));
++    let mut world = CourseWorld::new_mobile(spec).unwrap();
++    world.step();
++    assert_eq!(world.snapshot().grazers[0].reserve_units, 1);
++    assert_eq!(
++        world.refuge_snapshot().unwrap().grazers[0].refuge,
++        Some(RefugeId(1))
++    );
++    world.step();
++    assert!(world.refuge_snapshot().unwrap().grazers.is_empty());
++    assert_eq!(world.population_snapshot().unwrap().totals.starvations, 1);
++    assert_eq!(world.hunt_snapshot().unwrap().totals.captures, 0);
++    assert_eq!(world.snapshot().ledger.eaten_units, 0);
++}
++
++#[test]
++fn current_protection_does_not_turn_unretained_capture_history_into_zero() {
++    let spec = crossing().with_refuges(refuge(1));
++    let mut retained = CourseWorld::new_mobile(spec.clone()).unwrap();
++    let mut config = spec.hunters().unwrap().clone();
++    config.history_limit = 0;
++    let mut absent = CourseWorld::new_mobile(spec.with_hunters(config)).unwrap();
++    retained.step();
++    absent.step();
++    assert_eq!(retained.refuge_snapshot(), absent.refuge_snapshot());
++    assert_eq!(
++        retained
++            .hunt_snapshot()
++            .unwrap()
++            .history
++            .captures_between(1, 1),
++        Some(0)
++    );
++    let h = absent.hunt_snapshot().unwrap();
++    assert_eq!(h.totals.captures, 0);
++    assert!(h.history.events.is_empty());
++    assert!(h.history.evicted_events &gt; 0);
++    assert_eq!(h.history.captures_between(1, 1), None);
++    assert_eq!(
++        retained
++            .hunt_snapshot()
++            .unwrap()
++            .history
++            .captures_between(1, 2),
++        None
++    );
++}
++
++#[test]
++fn authored_site_and_actor_order_does_not_change_complete_reports() {
++    let mut spec = MobileScenario::hunting_contention();
++    let sites = RefugeConfig::new(vec![
++        RefugeSeed {
++            id: RefugeId(7),
++            cell: Cell { x: 1, y: 0 },
++        },
++        RefugeSeed {
++            id: RefugeId(1),
++            cell: Cell { x: 0, y: 0 },
++        },
++    ]);
++    let mut scenario = spec.scenario().clone();
++    scenario.grazers.reverse();
++    scenario.patches.reverse();
++    let mut population = spec.population().clone();
++    population.founders.reverse();
++    let mut space = spec.space().clone();
++    space.grazers.reverse();
++    space.patches.reverse();
++    let mut hunters = spec.hunters().unwrap().clone();
++    hunters.hunters.reverse();
++    let mut reverse_sites = sites.clone();
++    reverse_sites.sites.reverse();
++    let reversed = MobileScenario::new(scenario, population, space)
++        .with_rest(*spec.rest().unwrap())
++        .with_hunters(hunters)
++        .with_refuges(reverse_sites);
++    spec = spec.with_refuges(sites);
++    let mut a = CourseWorld::new_mobile(spec).unwrap();
++    let mut b = CourseWorld::new_mobile(reversed).unwrap();
++    for _ in 0..8 {
++        assert_eq!(reports(&amp;a), reports(&amp;b));
++        a.step();
++        b.step();
++    }
++}
++
++#[test]
++fn matched_placements_change_literal_population_outcomes_without_resource_gifts() {
++    for (cell, expected) in [
++        (None, (0, 4, 3, 60, 53, 15, 62, 13, 36)),
++        (
++            Some(Cell { x: 3, y: 2 }),
++            (1, 5, 1, 168, 171, 17, 38, 8, 55),
++        ),
++        (Some(Cell { x: 4, y: 2 }), (0, 4, 3, 55, 51, 15, 62, 10, 36)),
++    ] {
++        let mut spec = MobileScenario::meadow()
++            .with_rest(RestPolicy::default())
++            .with_hunters(HuntConfig::meadow());
++        if let Some(cell) = cell {
++            spec = spec.with_refuges(RefugeConfig::new(vec![RefugeSeed {
++                id: RefugeId(1),
++                cell,
++            }]));
++        }
++        let mut world = CourseWorld::new_mobile(spec).unwrap();
++        assert_eq!(stores(&amp;world), 128);
++        let (mut growth, mut upkeep) = (0, 0);
++        for _ in 0..120 {
++            let before = stores(&amp;world);
++            world.step();
++            let m = world.mobile_snapshot().unwrap();
++            let h = world.hunt_snapshot().unwrap();
++            growth += m.base.ledger.added_units;
++            upkeep += m.base.ledger.maintenance_units;
++            assert_eq!(
++                stores(&amp;world)
++                    + m.base.ledger.maintenance_units
++                    + m.ledger.travel_units
++                    + m.population.ledger.dissipated_units
++                    + h.ledger.maintenance_units
++                    + h.ledger.travel_units
++                    + h.ledger.attack_units,
++                before + m.base.ledger.added_units
++            );
++            assert_eq!(
++                m.population.living as u64 + m.population.totals.starvations + h.totals.captures,
++                4 + m.population.totals.births
++            );
++        }
++        let m = world.mobile_snapshot().unwrap();
++        let h = world.hunt_snapshot().unwrap();
++        assert_eq!(
++            (
++                m.population.living,
++                m.population.totals.starvations,
++                h.totals.captures,
++                growth,
++                upkeep,
++                m.totals.travel_units,
++                h.totals.maintenance_units,
++                h.totals.travel_units,
++                stores(&amp;world)
++            ),
++            expected
++        );
++        assert_eq!(
++            (
++                m.population.totals.births,
++                m.population.totals.capacity_blocked_pairs,
++                m.population.totals.capacity_blocked_ticks,
++                h.totals.hunter_starvations
++            ),
++            (3, 0, 0, 2)
++        );
++        assert_eq!(h.history.captures_between(1, 120), Some(expected.2));
++        if expected.0 == 1 {
++            assert_eq!(
++                (m.base.grazers[0].id, m.base.grazers[0].reserve_units),
++                (SimId(2), 24)
++            );
++            assert_eq!(
++                (
++                    m.base.history.complete_after_tick,
++                    m.base.history.evicted_events
++                ),
++                (68, 209)
++            );
++            assert_eq!(m.base.history.starvations_between(1, 120), None);
++        } else {
++            assert_eq!(m.base.history.starvations_between(1, 120), Some(4));
++        }
++    }
++}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

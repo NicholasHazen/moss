@@ -1,0 +1,33 @@
+{
+  "api": 1,
+  "mode": "ecosystem",
+  "sourceKind": "learner",
+  "sourcePath": "verified-course-project",
+  "sourceHash": "2ae9855a1ba77d93e5b45fad33661261b8347fdb3f937dd7776c37511faa37aa",
+  "buildHash": "7e7ed42bc3d2f742b7858d763cedad5456ed32be07de8b2a76e55efb105b671f",
+  "wasm": "ecosystem-7e7ed42bc3d2f742b7858d763cedad5456ed32be07de8b2a76e55efb105b671f.wasm",
+  "wasmHash": "c8d3b9edb53458c021a78d049e851a735914d57af74041fbd3df0c6c96886e34",
+  "rust": "1.93.1",
+  "acceptanceHash": "1968bd2f287779574689c63cc6476610827a4c07f1086fa69a7e0e99b6e1bb9c",
+  "requiredTests": [
+    "actual_ledger_accounts_for_stores_across_lit_dark_and_terminal_ticks",
+    "all_dark_and_all_lit_days_change_supply_only_on_executed_ticks",
+    "changing_only_supply_changes_twelve_tick_population_outcomes",
+    "competing_consumers_deplete_once_and_cannot_receive_a_second_reward",
+    "configuration_rejects_duplicate_cross_kind_ids_and_invalid_bounds",
+    "empty_world_and_zero_capacity_patch_still_have_completed_tick_evidence",
+    "full_or_zero_demand_consumer_leaves_food_for_the_next_eligible_consumer",
+    "full_reserve_can_eat_after_upkeep_creates_capacity",
+    "global_inspector_visibility_does_not_grant_a_local_feeding_contact",
+    "history_eviction_makes_partial_ticks_unknown_without_erasing_life_state",
+    "integer_limits_are_bounded_before_growth_and_meal_addition",
+    "limited_supply_has_a_literal_phase_sensitive_five_tick_trace",
+    "reads_are_owned_and_do_not_change_fixed_tick_results",
+    "reset_restores_configuration_and_run_scoped_history_then_can_step_again",
+    "reversing_spawn_order_preserves_claims_snapshots_and_event_order",
+    "scenario_switch_is_validated_atomically_and_keeps_the_run_sequence",
+    "starvation_is_permanent_even_when_food_arrives_after_the_terminal_tick",
+    "zero_history_limit_distinguishes_lost_events_from_a_later_known_empty_tick",
+    "zero_reserve_receives_lit_supply_before_starvation_is_decided"
+  ]
+}

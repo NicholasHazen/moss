@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/hunting/history.rs · hunting · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="hunting"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">hunting checkpoint</p><h1>src/hunting/history.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../../hunting.html">← One capture changes the rest of the tick</a>
+<a href="history.rs" download>Download raw file</a>
+<a href="../../../../downloads/hunting-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="history.rs">//! Hunter outcomes have their own bounded history and conservative tick coverage.
+
+use crate::{Cell, SimId};
+use std::collections::VecDeque;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HuntEventKind {
+    Maintenance {
+        hunter: SimId,
+        units: u32,
+    },
+    TargetChanged {
+        hunter: SimId,
+        from: Option&lt;SimId&gt;,
+        to: Option&lt;SimId&gt;,
+    },
+    Travelled {
+        hunter: SimId,
+        from: Cell,
+        to: Cell,
+        cells: u32,
+        spent_units: u32,
+        effort_points: u32,
+    },
+    Captured {
+        hunter: SimId,
+        prey: SimId,
+        cell: Cell,
+        transferred_units: u32,
+        attack_units: u32,
+        effort_points: u32,
+    },
+    HunterStarved {
+        hunter: SimId,
+    },
+    EnteredRest {
+        hunter: SimId,
+        fatigue_points: u32,
+        committed_ticks: u32,
+    },
+    Woke {
+        hunter: SimId,
+        fatigue_points: u32,
+    },
+    Rested {
+        hunter: SimId,
+        recovered_points: u32,
+        fatigue_after: u32,
+        remaining_ticks: u32,
+    },
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HuntEvent {
+    pub run: u64,
+    pub tick: u64,
+    pub kind: HuntEventKind,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HuntHistorySnapshot {
+    pub events: Vec&lt;HuntEvent&gt;,
+    pub limit: usize,
+    pub evicted_events: u64,
+    pub complete_after_tick: u64,
+    pub collected_through_tick: u64,
+}
+impl HuntHistorySnapshot {
+    pub fn captures_between(&amp;self, first: u64, last: u64) -&gt; Option&lt;u64&gt; {
+        if first == 0
+            || first &gt; last
+            || first &lt;= self.complete_after_tick
+            || last &gt; self.collected_through_tick
+        {
+            return None;
+        }
+        Some(
+            self.events
+                .iter()
+                .filter(|e| {
+                    (first..=last).contains(&amp;e.tick)
+                        &amp;&amp; matches!(e.kind, HuntEventKind::Captured { .. })
+                })
+                .count() as u64,
+        )
+    }
+}
+pub(crate) struct HuntHistory {
+    events: VecDeque&lt;HuntEvent&gt;,
+    limit: usize,
+    evicted_events: u64,
+    complete_after_tick: u64,
+    pub collected_through_tick: u64,
+}
+impl HuntHistory {
+    pub fn new(limit: usize) -&gt; Self {
+        Self {
+            events: VecDeque::new(),
+            limit,
+            evicted_events: 0,
+            complete_after_tick: 0,
+            collected_through_tick: 0,
+        }
+    }
+    pub fn can_record(&amp;self) -&gt; bool {
+        self.events.len() &lt; self.limit || self.evicted_events.checked_add(1).is_some()
+    }
+    pub fn record(&amp;mut self, event: HuntEvent) {
+        assert!(self.can_record(), "hunt event eviction counter exhausted");
+        self.events.push_back(event);
+        if self.events.len() &gt; self.limit {
+            let old = self.events.pop_front().expect("just appended");
+            self.complete_after_tick = self.complete_after_tick.max(old.tick);
+            self.evicted_events += 1;
+        }
+    }
+    pub fn snapshot(&amp;self) -&gt; HuntHistorySnapshot {
+        HuntHistorySnapshot {
+            events: self.events.iter().copied().collect(),
+            limit: self.limit,
+            evicted_events: self.evicted_events,
+            complete_after_tick: self.complete_after_tick,
+            collected_through_tick: self.collected_through_tick,
+        }
+    }
+    #[cfg(test)]
+    pub fn exhaust_for_test(&amp;mut self) {
+        self.events.clear();
+        self.limit = 0;
+        self.evicted_events = u64::MAX;
+    }
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

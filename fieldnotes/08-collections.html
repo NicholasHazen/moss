@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Turn borrowed observations into owned report rows, with explicit ordering and honest missing data."><meta name="color-scheme" content="light dark">
+<title>Collect a report, release the world · Moss Fieldnotes</title><link rel="stylesheet" href="assets/fieldnotes.css?v=45ff3179bc2c">
+<script src="assets/records.js?v=45ff3179bc2c" defer></script><script src="assets/models.js?v=45ff3179bc2c" defer></script><script src="assets/terrarium.js?v=45ff3179bc2c" defer></script><script src="assets/evidence.js?v=45ff3179bc2c" defer></script><script src="assets/ecosystem.js?v=45ff3179bc2c" defer></script><script src="assets/population.js?v=45ff3179bc2c" defer></script><script src="assets/mobile.js?v=45ff3179bc2c" defer></script><script src="assets/fieldnotes.js?v=45ff3179bc2c" defer></script></head>
+<body data-page="08-collections"><a class="skip-link" href="#reading">Skip to reading</a>
+<header class="masthead"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">m</span><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">Moss · Fieldnotes 0.2.1</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></header>
+<div class="workspace"><aside class="sidebar"><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><ol><li class="nav-group"><details><summary>Start with evidence</summary><ol><li><a href="01-observe.html"><span class="number">01</span><span>A tick is a promise<small>25 min · values</small></span><span class="progress-dot" data-progress-for="01-observe" aria-hidden="true"></span></a></li><li><a href="02-ownership.html"><span class="number">02</span><span>Who owns the next change?<small>35 min · ownership</small></span><span class="progress-dot" data-progress-for="02-ownership" aria-hidden="true"></span></a></li><li><a href="03-queries.html"><span class="number">03</span><span>Ask the world a typed question<small>35 min · components</small></span><span class="progress-dot" data-progress-for="03-queries" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details open><summary>Everyday Rust</summary><ol><li><a href="04-units.html"><span class="number">04</span><span>Give the number a unit<small>30 min · newtypes</small></span><span class="progress-dot" data-progress-for="04-units" aria-hidden="true"></span></a></li><li><a href="05-options.html"><span class="number">05</span><span>Missing is a different state<small>30 min · enums</small></span><span class="progress-dot" data-progress-for="05-options" aria-hidden="true"></span></a></li><li><a href="06-results.html"><span class="number">06</span><span>A rejected request has a reason<small>35 min · Result</small></span><span class="progress-dot" data-progress-for="06-results" aria-hidden="true"></span></a></li><li><a href="07-modules.html"><span class="number">07</span><span>Put the boundary in the code<small>30 min · modules</small></span><span class="progress-dot" data-progress-for="07-modules" aria-hidden="true"></span></a></li><li><a href="08-collections.html" aria-current="page"><span class="number">08</span><span>Collect a report, release the world<small>35 min · Vec</small></span><span class="progress-dot" data-progress-for="08-collections" aria-hidden="true"></span></a></li><li><a href="09-traits.html"><span class="number">09</span><span>A trait is a promise you can use<small>35 min · traits</small></span><span class="progress-dot" data-progress-for="09-traits" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>The ECS contract</summary><ol><li><a href="10-borrows.html"><span class="number">10</span><span>Prove that the borrows cannot meet<small>35 min · disjoint queries</small></span><span class="progress-dot" data-progress-for="10-borrows" aria-hidden="true"></span></a></li><li><a href="11-schedules.html"><span class="number">11</span><span>Give the observations an order<small>35 min · schedules</small></span><span class="progress-dot" data-progress-for="11-schedules" aria-hidden="true"></span></a></li><li><a href="12-commands.html"><span class="number">12</span><span>Change structure at a known boundary<small>40 min · Commands</small></span><span class="progress-dot" data-progress-for="12-commands" aria-hidden="true"></span></a></li><li><a href="13-evidence.html"><span class="number">13</span><span>Make a test disagree with a plausible mistake<small>40 min · testing</small></span><span class="progress-dot" data-progress-for="13-evidence" aria-hidden="true"></span></a></li><li><a href="14-movement.html"><span class="number">14</span><span>Connect one affordable action to the world<small>35 min · movement bridge</small></span><span class="progress-dot" data-progress-for="14-movement" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>Ecosystem depth</summary><ol><li><a href="15-meals.html"><span class="number">15</span><span>A finite meal has two sides<small>40 min · finite transfers</small></span><span class="progress-dot" data-progress-for="15-meals" aria-hidden="true"></span></a></li><li><a href="16-targets.html"><span class="number">16</span><span>Choose, then revalidate a target<small>40 min · local observations</small></span><span class="progress-dot" data-progress-for="16-targets" aria-hidden="true"></span></a></li><li><a href="17-variation.html"><span class="number">17</span><span>Compare individuals fairly<small>40 min · authored populations</small></span><span class="progress-dot" data-progress-for="17-variation" aria-hidden="true"></span></a></li><li><a href="18-growth.html"><span class="number">18</span><span>Let environmental input change supply<small>45 min · bounded growth</small></span><span class="progress-dot" data-progress-for="18-growth" aria-hidden="true"></span></a></li><li><a href="19-history.html"><span class="number">19</span><span>Keep a disappearance explainable<small>45 min · lifecycle</small></span><span class="progress-dot" data-progress-for="19-history" aria-hidden="true"></span></a></li><li><a href="20-predation.html"><span class="number">20</span><span>Consume once, even before removal<small>45 min · predation</small></span><span class="progress-dot" data-progress-for="20-predation" aria-hidden="true"></span></a></li><li><a href="21-rest.html"><span class="number">21</span><span>Make rest a commitment you can inspect<small>40 min · state machines</small></span><span class="progress-dot" data-progress-for="21-rest" aria-hidden="true"></span></a></li><li><a href="22-births.html"><span class="number">22</span><span>Commit both parents before creating a child<small>45 min · paired transactions</small></span><span class="progress-dot" data-progress-for="22-births" aria-hidden="true"></span></a></li><li><a href="23-inheritance.html"><span class="number">23</span><span>Keep inheritance distinct from selection<small>45 min · inheritance</small></span><span class="progress-dot" data-progress-for="23-inheritance" aria-hidden="true"></span></a></li><li><a href="24-experiments.html"><span class="number">24</span><span>Make a comparison explain its denominator<small>45 min · controlled comparisons</small></span><span class="progress-dot" data-progress-for="24-experiments" aria-hidden="true"></span></a></li></ol></details></li><li class="nav-group"><details><summary>A selective Rust survey</summary><ol><li><a href="25-lifetimes.html"><span class="number">25</span><span>Let a view borrow exactly what it needs<small>40 min · lifetimes</small></span><span class="progress-dot" data-progress-for="25-lifetimes" aria-hidden="true"></span></a></li><li><a href="26-indirection.html"><span class="number">26</span><span>Choose the owner before the abstraction<small>45 min · Box</small></span><span class="progress-dot" data-progress-for="26-indirection" aria-hidden="true"></span></a></li><li><a href="27-async.html"><span class="number">27</span><span>Accept asynchronous results at a tick boundary<small>45 min · concurrency</small></span><span class="progress-dot" data-progress-for="27-async" aria-hidden="true"></span></a></li><li><a href="28-macros.html"><span class="number">28</span><span>Read the code a macro asks Rust to check<small>40 min · macro_rules</small></span><span class="progress-dot" data-progress-for="28-macros" aria-hidden="true"></span></a></li></ol></details></li></ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+<div class="search-control" hidden><label for="search">Find an idea</label><input id="search" type="search" placeholder="ownership, ticks, queries…" autocomplete="off"><div id="search-results" aria-live="polite"></div></div>
+<p class="sidebar-caption">Small experiments.<br>Complete explanations.<br>A world you can account for.</p></aside>
+<main id="reading" tabindex="-1"><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span></div>
+<article><p class="eyebrow">Everyday Rust · 35 minutes</p><h1 data-narration="0">Collect a report, release the world</h1><p class="lesson-lead" data-narration="1">Flint appears first in one report and Fern appears first in the next, even though neither animal changed. If you're comparing the two reports, that rearrangement makes you do extra work to discover that the world is the same. We'll collect a report whose rows own their observations and appear in a deliberate identity order, while keeping an unavailable measurement distinct from a measured zero.</p>
+<aside class="scope-note"><p data-narration="2"><strong>Isolated collection lab.</strong> This continues <a href="07-modules.html">the inspector boundary</a> and <a href="02-ownership.html">owned readings</a>. The inputs are plain structs, not a second ECS or a new population system. Complete one function in a separate file. The live movement assignment remains unchanged.</p></aside>
+<h2 id="three-questions-for-a-report" data-narration="3">Choose membership, ownership, then order</h2>
+<p data-narration="4">Our input arrives as Flint, Fern, Meadow, and Unmeasured. It contains three creatures and one display source: Meadow isn't a creature, so it shouldn't become a report row. Among the creatures, Fern has 57 reserve units, Flint has a measured zero, and Unmeasured has no collected reserve. The finished report should keep all three creatures and order them by numeric ID: 3, 5, then 9.</p>
+<p data-narration="5">To produce that result, we need to make three decisions. We first select which sources belong in the report, then construct an owned <code>Row</code> for each selected source, and finally put those rows in display order. Keeping the stages visible gives us a useful way to diagnose a wrong result. Meadow appearing in the report points to membership; a historical name changing later points to ownership; shuffled rows point to ordering.</p>
+<p data-narration="6">The collector only needs to inspect the caller's existing sequence, so its input is a borrowed slice, <code>&amp;[Source]</code>. A vector, an array, or a smaller contiguous view can supply that slice without handing over ownership or letting the collector grow the source sequence. The output has a different job: an owned <code>Vec&lt;Row&gt;</code> gathers the selected rows into a growable sequence that the caller can keep after collection ends.</p>
+<p data-narration="7">Owning the vector alone wouldn't make the report independent. A <code>Vec&lt;&amp;Source&gt;</code> owns the sequence of references, but every reference still borrows a source value. We need each row to own its <code>String</code> and contain copied numeric data instead. Then dropping the source vector removes the original observations without removing the information saved in the report.</p>
+<h2 id="read-the-iterator" data-narration="8">Read an iterator as a sequence of decisions</h2>
+<p data-narration="9">We can express those first two decisions as an iterator chain. Start with <code>sources.iter()</code>, which yields shared references to the source values. <code>filter</code> keeps the sources marked as creatures, and <code>map</code> describes how each one becomes a row. Those adapters describe work; <code>collect</code> is what asks the chain for results and builds the output vector. As it consumes the iterator, each source is examined and each selected source becomes an owned row. Without a consuming operation, constructing the chain wouldn't produce a completed report.</p>
+<p data-narration="10">The small expression <code>|source| source.creature</code> tells <code>filter</code> how to make its decision. It is a closure: a function expression whose argument is supplied by the iterator and whose result is the creature flag. The compiler can infer the argument type from that surrounding use. At the other end of the chain, the <code>Vec&lt;Row&gt;</code> annotation tells <code>collect</code> which kind of collection should receive the results.</p>
+<p data-narration="11">Inside <code>map</code>, cloning <code>source.name</code> gives the row its own text storage. The ID and <code>Option&lt;u32&gt;</code> can be copied directly. Notice what copying the option preserves: <code>None</code> is still absence, and <code>Some(0)</code> is still an available measurement whose value is zero. We don't have to invent a number for Unmeasured to keep that creature in the report.</p>
+<p data-narration="12">You might reach for <code>filter_map</code> when an input contains an option. That adapter transforms each item and discards results that are <code>None</code>, which would suit a request for only available measurements. Our question is different: which creatures were present, and what did we know about their reserves? Filtering on the reserve option would remove Unmeasured entirely. Select on the creature flag and carry the option into the row so its absence remains visible.</p>
+<h2 id="make-order-an-explicit-output" data-narration="13">Make order part of the output contract</h2>
+<p data-narration="14">After collection, sort the rows by numeric ID. Fern then occupies the same place in the report even if the source sequence was reversed. This order is a presentation choice: it doesn't claim that a lower ID is older, closer, or entitled to food first. A later rule that resolves competition would need its own reason for choosing an order.</p>
+<p data-narration="15">There is a subtle limit to what sorting can guarantee. <code>sort_by_key</code> is stable, meaning equal keys retain their previous relative order. If two different rows share the same ID, reversing the input could therefore reverse those two rows in the output as well. More fundamentally, the report couldn't say which row that ID identifies. Rather than treating a stable sort as a solution to ambiguous identity, this lab rejects duplicate selected IDs.</p>
+<p data-narration="16">Sorting makes that validation easier: every repeated ID must sit beside another equal ID. <code>windows(2)</code> lends each adjacent pair so the function can compare their IDs and return <code>ReportError::DuplicateId(id)</code> on a collision. If no pair collides, return <code>Ok(rows)</code>. An empty input naturally produces an empty vector with no adjacent pairs to inspect.</p>
+<p data-narration="17">Before opening the worked answer, predict where the two optional-reserve cases will appear. Fern comes first with <code>Some(57)</code>, Unmeasured comes second with <code>None</code>, and Flint comes third with <code>Some(0)</code>; Meadow contributes no row. Reverse the fixture mentally and check that every one of those statements remains true. That's the output contract your function needs to preserve.</p>
+<h2 id="build-the-owned-report" data-narration="18">Build the owned report</h2>
+<p data-narration="19">The starter leaves <code>collect_report</code> unfinished while supplying the fixture and lookup function. Your function will select the creature rows, give them owned fields, order them, and reject duplicate IDs. Prepare it in a new practice directory and run the first check; reaching its intentional <code>todo!</code> shows that the runner got as far as your unfinished collector.</p>
+<pre><code class="language-sh">python3 learning/scripts/labs.py prepare collections --dest work/collections-practice
+python3 learning/scripts/labs.py check collections --file work/collections-practice/collections.rs</code></pre>
+<details><summary>Hint 1: make a complete row for each selected source</summary><p>Begin with <code>sources.iter()</code>. Filter using the creature flag, then map to <code>Row</code>. Clone the name, copy the ID, and copy the optional reserve. Collect into an explicitly typed mutable vector so you can sort afterward.</p></details>
+<details><summary>Hint 2: validation follows ordering</summary><p>Sort by <code>row.id</code>, inspect adjacent pairs, and return the duplicate-ID error if either pair shares an ID. Otherwise return the whole vector inside <code>Ok</code>. Do not discard a row merely because its reserve is absent.</p></details>
+<details><summary>Complete starter file: collections.rs</summary>
+<pre><code class="language-rust" data-starter="collections">#[derive(Debug)]
+struct Source {
+    id: u64,
+    name: String,
+    reserve: Option&lt;u32&gt;,
+    creature: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Row { id: u64, name: String, reserve: Option&lt;u32&gt; }
+
+#[derive(Debug, PartialEq, Eq)]
+enum ReportError { DuplicateId(u64) }
+
+fn collect_report(sources: &amp;[Source]) -&gt; Result&lt;Vec&lt;Row&gt;, ReportError&gt; {
+    let _ = sources;
+    todo!(&quot;own the selected readings, sort by ID, and reject duplicate IDs&quot;)
+}
+
+fn find_row(rows: &amp;[Row], id: u64) -&gt; Option&lt;&amp;Row&gt; {
+    rows.iter().find(|row| row.id == id)
+}
+
+fn fixture() -&gt; Vec&lt;Source&gt; {
+    vec![
+        Source { id: 9, name: &quot;Flint&quot;.into(), reserve: Some(0), creature: true },
+        Source { id: 3, name: &quot;Fern&quot;.into(), reserve: Some(57), creature: true },
+        Source { id: 7, name: &quot;Meadow&quot;.into(), reserve: None, creature: false },
+        Source { id: 5, name: &quot;Unmeasured&quot;.into(), reserve: None, creature: true },
+    ]
+}
+
+fn main() {
+    let rows = collect_report(&amp;fixture()).expect(&quot;fixture IDs are unique&quot;);
+    for row in &amp;rows {
+        println!(&quot;#{} {}: {:?}&quot;, row.id, row.name, row.reserve);
+    }
+    assert!(find_row(&amp;rows, 404).is_none());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_input_is_a_valid_empty_report() {
+        assert_eq!(collect_report(&amp;[]), Ok(vec![]));
+    }
+    #[test]
+    fn reordered_input_has_one_canonical_report() {
+        let mut sources = fixture();
+        let first = collect_report(&amp;sources).unwrap();
+        sources.reverse();
+        assert_eq!(collect_report(&amp;sources).unwrap(), first);
+        assert_eq!(first.iter().map(|row| row.id).collect::&lt;Vec&lt;_&gt;&gt;(), vec![3, 5, 9]);
+    }
+    #[test]
+    fn unknown_zero_and_unselected_are_different() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert_eq!(find_row(&amp;rows, 5).unwrap().reserve, None);
+        assert_eq!(find_row(&amp;rows, 9).unwrap().reserve, Some(0));
+        assert!(find_row(&amp;rows, 7).is_none());
+        assert!(find_row(&amp;rows, 404).is_none());
+    }
+    #[test]
+    fn saved_rows_own_their_text_and_measurements() {
+        let mut sources = fixture();
+        let rows = collect_report(&amp;sources).unwrap();
+        sources[0].name.clear();
+        sources[0].reserve = Some(80);
+        drop(sources);
+        let saved = find_row(&amp;rows, 9).unwrap();
+        assert_eq!(saved.name, &quot;Flint&quot;);
+        assert_eq!(saved.reserve, Some(0));
+    }
+    #[test]
+    fn duplicate_identity_is_rejected_instead_of_overwritten() {
+        let mut sources = fixture();
+        sources[0].id = 3;
+        assert_eq!(collect_report(&amp;sources), Err(ReportError::DuplicateId(3)));
+    }
+    #[test]
+    fn lookup_borrows_a_row_already_in_the_report() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert!(std::ptr::eq(find_row(&amp;rows, 3).unwrap(), &amp;rows[0]));
+    }
+}</code></pre>
+</details>
+<details><summary>Complete worked answer: collections.rs</summary>
+<pre><code class="language-rust" data-runnable="collections">#[derive(Debug)]
+struct Source {
+    id: u64,
+    name: String,
+    reserve: Option&lt;u32&gt;,
+    creature: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Row { id: u64, name: String, reserve: Option&lt;u32&gt; }
+
+#[derive(Debug, PartialEq, Eq)]
+enum ReportError { DuplicateId(u64) }
+
+fn collect_report(sources: &amp;[Source]) -&gt; Result&lt;Vec&lt;Row&gt;, ReportError&gt; {
+    let mut rows: Vec&lt;Row&gt; = sources.iter()
+        .filter(|source| source.creature)
+        .map(|source| Row {
+            id: source.id,
+            name: source.name.clone(),
+            reserve: source.reserve,
+        })
+        .collect();
+    rows.sort_by_key(|row| row.id);
+    for pair in rows.windows(2) {
+        if pair[0].id == pair[1].id {
+            return Err(ReportError::DuplicateId(pair[0].id));
+        }
+    }
+    Ok(rows)
+}
+
+fn find_row(rows: &amp;[Row], id: u64) -&gt; Option&lt;&amp;Row&gt; {
+    rows.iter().find(|row| row.id == id)
+}
+
+fn fixture() -&gt; Vec&lt;Source&gt; {
+    vec![
+        Source { id: 9, name: &quot;Flint&quot;.into(), reserve: Some(0), creature: true },
+        Source { id: 3, name: &quot;Fern&quot;.into(), reserve: Some(57), creature: true },
+        Source { id: 7, name: &quot;Meadow&quot;.into(), reserve: None, creature: false },
+        Source { id: 5, name: &quot;Unmeasured&quot;.into(), reserve: None, creature: true },
+    ]
+}
+
+fn main() {
+    let rows = collect_report(&amp;fixture()).expect(&quot;fixture IDs are unique&quot;);
+    for row in &amp;rows {
+        println!(&quot;#{} {}: {:?}&quot;, row.id, row.name, row.reserve);
+    }
+    assert!(find_row(&amp;rows, 404).is_none());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_input_is_a_valid_empty_report() {
+        assert_eq!(collect_report(&amp;[]), Ok(vec![]));
+    }
+    #[test]
+    fn reordered_input_has_one_canonical_report() {
+        let mut sources = fixture();
+        let first = collect_report(&amp;sources).unwrap();
+        sources.reverse();
+        assert_eq!(collect_report(&amp;sources).unwrap(), first);
+        assert_eq!(first.iter().map(|row| row.id).collect::&lt;Vec&lt;_&gt;&gt;(), vec![3, 5, 9]);
+    }
+    #[test]
+    fn unknown_zero_and_unselected_are_different() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert_eq!(find_row(&amp;rows, 5).unwrap().reserve, None);
+        assert_eq!(find_row(&amp;rows, 9).unwrap().reserve, Some(0));
+        assert!(find_row(&amp;rows, 7).is_none());
+        assert!(find_row(&amp;rows, 404).is_none());
+    }
+    #[test]
+    fn saved_rows_own_their_text_and_measurements() {
+        let mut sources = fixture();
+        let rows = collect_report(&amp;sources).unwrap();
+        sources[0].name.clear();
+        sources[0].reserve = Some(80);
+        drop(sources);
+        let saved = find_row(&amp;rows, 9).unwrap();
+        assert_eq!(saved.name, &quot;Flint&quot;);
+        assert_eq!(saved.reserve, Some(0));
+    }
+    #[test]
+    fn duplicate_identity_is_rejected_instead_of_overwritten() {
+        let mut sources = fixture();
+        sources[0].id = 3;
+        assert_eq!(collect_report(&amp;sources), Err(ReportError::DuplicateId(3)));
+    }
+    #[test]
+    fn lookup_borrows_a_row_already_in_the_report() {
+        let rows = collect_report(&amp;fixture()).unwrap();
+        assert!(std::ptr::eq(find_row(&amp;rows, 3).unwrap(), &amp;rows[0]));
+    }
+}</code></pre>
+</details>
+<p data-narration="20">Check the printed reference with <code>python3 learning/scripts/labs.py check collections</code>. Its expected result is six passing tests and the three lines below. Use the earlier <code>--file</code> command for your own copy. These checks concern a native reporting function; they do not establish browser rendering or an installed ECS system.</p>
+<pre><code class="language-text">#3 Fern: Some(57)
+#5 Unmeasured: None
+#9 Flint: Some(0)</code></pre>
+<h2 id="see-the-same-work-in-a-loop" data-narration="21">A loop can express the same ownership decision</h2>
+<p data-narration="22">The iterator chain is useful when you can read it as those collection decisions. If it still feels dense, try the following <strong>alternative fragment inside the completed function</strong>, keeping sorting and validation afterwards. The loop performs the same temporary borrow of each source and the same construction of an owned row. Comparing the two forms can make it easier to see where selection ends and ownership of the output begins.</p>
+<pre><code class="language-rust">let mut rows = Vec::new();
+for source in sources {
+    if source.creature {
+        rows.push(Row {
+            id: source.id,
+            name: source.name.clone(),
+            reserve: source.reserve,
+        });
+    }
+}</code></pre>
+<p data-narration="23">Use the same six assertions after substituting the loop. They should pass because the report's contract hasn't changed. Reordering the input checks that sorting still happens, while absence versus zero checks that selection hasn't erased missing measurements. The ownership test goes further: it edits the source nickname and reserve, then drops the whole source vector. The saved row can remain usable because it contains its own fields rather than borrowed links into that vector.</p>
+<h2 id="lookup-is-a-different-question" data-narration="24">Lookup is a different question from display order</h2>
+<p data-narration="25">Once we have a report, a caller may want one creature's row rather than the whole ordered display. <code>find_row</code> returns <code>Option&lt;&amp;Row&gt;</code>, where the outer option answers whether that ID appears in the report. The row's reserve is a separate option. ID 404 has no row at all; ID 5 has a row that records an unavailable reserve. Those are different answers, even though both involve absence.</p>
+<p data-narration="26">A successful lookup lends a row already stored in the report. It doesn't clone the name or collect another snapshot, and the pointer-identity assertion checks that it returns the existing row. While the caller continues using that reference, it can't make a conflicting change to the vector that owns it. If the caller only needs the small reserve value, copying that value lets the borrow end sooner.</p>
+<p data-narration="27">A linear search is enough for this small report. If a consumer repeatedly looks up many IDs, a map can provide an index after the collector has validated uniqueness. The following <strong>separate exploration fragment</strong> builds a borrowed index: the map owns its keys and references, while the vector continues owning the rows they point to.</p>
+<pre><code class="language-rust">use std::collections::HashMap;
+let by_id: HashMap&lt;_, _&gt; = rows.iter().map(|row| (row.id, row)).collect();
+assert_eq!(by_id.get(&amp;9).unwrap().reserve, Some(0));</code></pre>
+<p data-narration="28">The index answers where to find an ID, but it doesn't inherit the vector's display order. Iterating that <code>HashMap</code> need not reproduce the sorted report. Keep using the vector for presentation and the map for lookup, or choose a collection with the ordering contract you need. Since a borrowed index also has a lifetime and a cost to rebuild, add one when an actual consumer benefits from those repeated lookups.</p>
+<h2 id="retain-the-right-evidence" data-narration="29">Retain a reading without freezing the world</h2>
+<p data-narration="30">We started with a display that changed when its input order changed. The completed collector makes the output order deliberate and owns enough information for the report to survive its sources. A later lookup can borrow from that report for as long as the caller needs a row. These two ownership choices let the world continue changing while a user reads or sorts a saved panel.</p>
+<details><summary>Recall answer: why not replace every None with zero?</summary><p>A zero reserve is an observed number. An absent reserve is a gap in the observation. Replacing absence with zero would turn the unmeasured creature into evidence of depletion, even though the collector never recorded such a measurement. The row's identity survives both cases; the measurement's meaning does not.</p></details>
+<p data-narration="31">Reverse the inputs once more, then change their names and drop them: the saved report should keep the same ordered rows and the same distinction between zero and absence. <a href="09-traits.html">The next lesson</a> takes a closer look at the ID those rows rely on. We'll give identity its own type and decide what equality, copying, and ordering should mean for it.</p>
+<p class="source-note" data-narration="32">Optional references: <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html">Iterator</a> documents the adapters; <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.sort_by_key">slice sorting</a> specifies stability; <a href="https://doc.rust-lang.org/std/collections/struct.HashMap.html">HashMap</a> explains lookup and iteration contracts. This original example targets Rust 1.93.1 with edition 2024 and uses only the standard library.</p>
+</article><nav class="chapter-nav" aria-label="Lesson navigation"><a href="07-modules.html">← Put the boundary in the code</a><a href="09-traits.html">A trait is a promise you can use →</a></nav></main>
+<aside class="field-desk"><p class="eyebrow">On your desk</p><p class="desk-boundary">The browser is your reading and experiment space. Rust edits run in your local workbench.</p><section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
+      <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
+      <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
+      <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
+      <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section>
+<section class="data-controls" hidden><h2>Take your notes with you</h2><button type="button" id="export-progress">Export reading record</button><button type="button" id="export-recovery" hidden>Download unreadable saved data</button><label class="file-label">Import reading record<input id="import-progress" type="file" accept="application/json,.json"></label><details><summary>Use copy and paste</summary><button type="button" id="copy-record">Copy reading record</button><label for="paste-record">Paste a reading record (JSON)</label><textarea id="paste-record" rows="4" spellcheck="false"></textarea><button type="button" id="import-pasted">Import pasted record</button></details><p id="data-status" role="status"></p><p class="quiet">Saved in this browser, on this origin. Export before clearing browser data or changing ports.</p></section>
+<details><summary>What is live in Moss?</summary><p>Maintenance is live. Movement remains the learner-owned edit in <code>NOW.md</code>. Later biology is proposed or isolated reference work. Reading a lesson never activates a rule.</p></details></aside></div>
+<footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
+<noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>
+</body></html>

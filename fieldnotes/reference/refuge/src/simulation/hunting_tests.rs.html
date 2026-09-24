@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/simulation/hunting_tests.rs · refuge · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="refuge"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">refuge checkpoint</p><h1>src/simulation/hunting_tests.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../../refuge.html">← Give shelter a rule you can test</a>
+<a href="hunting_tests.rs" download>Download raw file</a>
+<a href="../../../../downloads/refuge-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="hunting_tests.rs">//! Deliberate late adapters expose transaction atomicity before structural cleanup.
+
+use super::*;
+use crate::hunting::{self, HuntState, Hunter, PreyTarget};
+use crate::mobile::rest::RestActor;
+use crate::mobile::{MobileActor, Position};
+use crate::{Activity, Cell, SimId};
+use std::panic::{AssertUnwindSafe, catch_unwind};
+
+fn prepared() -&gt; CourseWorld {
+    let mut course = CourseWorld::new_mobile(MobileScenario::hunting_contention()).unwrap();
+    let mut schedule = Schedule::default();
+    schedule.add_systems(
+        (
+            begin_tick,
+            lifecycle::maintain,
+            mobile::perception::observe,
+            hunting::perception::observe,
+            mobile::perception::choose,
+            hunting::perception::choose,
+            mobile::derive_contacts,
+        )
+            .chain(),
+    );
+    schedule.run(&amp;mut course.world);
+    course
+}
+fn capture(course: &amp;mut CourseWorld) {
+    let mut schedule = Schedule::default();
+    schedule.add_systems(hunting::capture::capture);
+    schedule.run(&amp;mut course.world);
+}
+
+#[test]
+fn immediate_capture_blocks_repeat_reward_late_meal_and_second_terminal_cause() {
+    let mut course = prepared();
+    let prey = course.world.resource::&lt;Roster&gt;().grazers[0];
+    let winner = course.world.resource::&lt;Roster&gt;().hunters[0];
+    // Leave room for a second whole prey so capacity cannot mask the action guard.
+    course.world.get_mut::&lt;Body&gt;(winner).unwrap().capacity_units = 16;
+    capture(&amp;mut course);
+    assert_eq!(
+        course.world.get::&lt;Body&gt;(prey).unwrap().terminal,
+        Terminal::Captured { hunter: SimId(100) }
+    );
+    assert_eq!(course.world.get::&lt;Body&gt;(prey).unwrap().reserve_units, 0);
+    let before = (course.mobile_snapshot(), course.hunt_snapshot());
+    capture(&amp;mut course);
+    assert_eq!((course.mobile_snapshot(), course.hunt_snapshot()), before);
+    // Even a bad late target edit cannot buy a second accepted action this tick.
+    course.world.get_mut::&lt;Hunter&gt;(winner).unwrap().target = Some(PreyTarget {
+        prey: SimId(2),
+        observed_cell: Cell { x: 0, y: 0 },
+        observed_tick: 1,
+    });
+    let before = course.hunt_snapshot();
+    capture(&amp;mut course);
+    assert_eq!(course.hunt_snapshot(), before);
+    let mut later = Schedule::default();
+    later.add_systems(
+        (
+            feeding::feed,
+            lifecycle::starve,
+            reproduction::resolve_births,
+            ApplyDeferred,
+        )
+            .chain(),
+    );
+    later.run(&amp;mut course.world);
+    assert_eq!(
+        course.world.get::&lt;Body&gt;(prey).unwrap().terminal,
+        Terminal::Captured { hunter: SimId(100) }
+    );
+    assert_eq!(course.snapshot().ledger.starvations, 0);
+    assert_eq!(course.population_snapshot().unwrap().totals.births, 0);
+    assert_eq!(course.world.get::&lt;Body&gt;(prey).unwrap().reserve_units, 0);
+}
+
+#[test]
+fn exhausted_capture_evidence_leaves_every_participant_counter_and_queue_unchanged() {
+    for history in [false, true] {
+        let mut course = prepared();
+        if history {
+            course
+                .world
+                .resource_mut::&lt;HuntState&gt;()
+                .history
+                .exhaust_for_test();
+        } else {
+            course.world.resource_mut::&lt;HuntState&gt;().totals.captures = u64::MAX;
+        }
+        let before = (
+            course.mobile_snapshot(),
+            course.rest_snapshot(),
+            course.hunt_snapshot(),
+        );
+        let mut schedule = Schedule::default();
+        schedule.set_apply_final_deferred(false);
+        schedule.add_systems(hunting::capture::capture);
+        assert!(catch_unwind(AssertUnwindSafe(|| schedule.run(&amp;mut course.world))).is_err());
+        schedule.apply_deferred(&amp;mut course.world);
+        course.world.flush();
+        assert_eq!(
+            (
+                course.mobile_snapshot(),
+                course.rest_snapshot(),
+                course.hunt_snapshot()
+            ),
+            before
+        );
+        assert_eq!(course.world.query::&lt;&amp;Body&gt;().iter(&amp;course.world).count(), 4);
+    }
+}
+
+#[test]
+fn remaining_effort_and_resting_activity_reject_before_cost_or_reward() {
+    for resting in [false, true] {
+        let mut course = prepared();
+        let entities = course.world.resource::&lt;Roster&gt;().hunters.clone();
+        for entity in entities {
+            course.world.get_mut::&lt;MobileActor&gt;(entity).unwrap().rest = Some(RestActor {
+                fatigue_points: 9,
+                activity: if resting {
+                    Activity::Resting { remaining_ticks: 2 }
+                } else {
+                    Activity::Foraging
+                },
+                ..Default::default()
+            });
+        }
+        let before = (
+            course.mobile_snapshot(),
+            course.rest_snapshot(),
+            course.hunt_snapshot(),
+        );
+        capture(&amp;mut course);
+        assert_eq!(
+            (
+                course.mobile_snapshot(),
+                course.rest_snapshot(),
+                course.hunt_snapshot()
+            ),
+            before
+        );
+    }
+}
+
+#[test]
+fn a_resting_prey_is_eligible_but_a_visible_newborn_is_not() {
+    let mut course = prepared();
+    let prey = course.world.resource::&lt;Roster&gt;().grazers[0];
+    course
+        .world
+        .get_mut::&lt;MobileActor&gt;(prey)
+        .unwrap()
+        .rest
+        .as_mut()
+        .unwrap()
+        .activity = Activity::Resting { remaining_ticks: 2 };
+    capture(&amp;mut course);
+    assert_eq!(course.hunt_snapshot().unwrap().totals.captures, 1);
+    let initial = MobileScenario::hunting_contention();
+    let mut config = initial.hunters().unwrap().clone();
+    for hunter in &amp;mut config.hunters {
+        hunter.cell = Cell { x: 1, y: 0 };
+        hunter.motion.sensing_radius = 0;
+    }
+    let mut course = CourseWorld::new_mobile(initial.with_hunters(config)).unwrap();
+    course.step();
+    let child = *course.world.resource::&lt;Roster&gt;().grazers.last().unwrap();
+    let id = course.world.get::&lt;Identity&gt;(child).unwrap().0;
+    assert_eq!(id, SimId(1001));
+    let hunters = course.world.resource::&lt;Roster&gt;().hunters.clone();
+    for hunter in hunters {
+        course.world.get_mut::&lt;Position&gt;(hunter).unwrap().0 = Cell { x: 0, y: 0 };
+        course.world.get_mut::&lt;Hunter&gt;(hunter).unwrap().target = Some(PreyTarget {
+            prey: id,
+            observed_cell: Cell { x: 0, y: 0 },
+            observed_tick: 1,
+        });
+    }
+    let before = (
+        course.mobile_snapshot(),
+        course.rest_snapshot(),
+        course.hunt_snapshot(),
+    );
+    capture(&amp;mut course);
+    assert_eq!(
+        (
+            course.mobile_snapshot(),
+            course.rest_snapshot(),
+            course.hunt_snapshot()
+        ),
+        before
+    );
+    assert_eq!(course.world.get::&lt;Body&gt;(child).unwrap().reserve_units, 4);
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

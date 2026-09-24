@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/mobile/scenarios.rs · hunting · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="hunting"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">hunting checkpoint</p><h1>src/mobile/scenarios.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../../hunting.html">← One capture changes the rest of the tick</a>
+<a href="scenarios.rs" download>Download raw file</a>
+<a href="../../../../downloads/hunting-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="scenarios.rs">//! Fully declared course fixtures, shared by native examples and preview callers.
+
+use super::{
+    Cell, GrazerPlacement, GridBounds, MobileScenario, Motion, PatchPlacement, SpatialConfig,
+};
+use crate::{
+    Daylight, FounderTrait, GrazerSeed, PatchSeed, PopulationConfig, Scenario, SimId, UpkeepTrait,
+};
+
+impl MobileScenario {
+    /// One grazer: two paid steps to three finite units, with no renewal.
+    pub fn short_journey() -&gt; Self {
+        let motion = Motion {
+            sensing_radius: 3,
+            max_cells_per_tick: 1,
+            travel_units_per_cell: 1,
+        };
+        Self::new(
+            Scenario {
+                daylight: Daylight::new(1, 0).unwrap(),
+                grazers: vec![GrazerSeed {
+                    id: SimId(1),
+                    reserve_units: 5,
+                    capacity_units: 8,
+                    maintenance_units_per_tick: 1,
+                    meal_units_per_tick: 2,
+                    feeding_site: None,
+                }],
+                patches: vec![PatchSeed {
+                    id: SimId(100),
+                    biomass_units: 3,
+                    capacity_units: 3,
+                    growth_units_per_lit_tick: 0,
+                }],
+                history_limit: 128,
+            },
+            PopulationConfig::new(vec![FounderTrait {
+                id: SimId(1),
+                upkeep: UpkeepTrait::new(1).unwrap(),
+            }]),
+            SpatialConfig {
+                bounds: GridBounds {
+                    width_cells: 4,
+                    height_cells: 2,
+                },
+                grazers: vec![GrazerPlacement {
+                    id: SimId(1),
+                    cell: Cell { x: 0, y: 0 },
+                    motion,
+                }],
+                patches: vec![PatchPlacement {
+                    id: SimId(100),
+                    cell: Cell { x: 2, y: 0 },
+                }],
+                newborn_motion: motion,
+            },
+        )
+    }
+
+    /// Four founders, two renewable patches, inherited upkeep, and a grazer cap10.
+    pub fn meadow() -&gt; Self {
+        let cells = [
+            Cell { x: 2, y: 2 },
+            Cell { x: 3, y: 1 },
+            Cell { x: 2, y: 3 },
+            Cell { x: 3, y: 2 },
+        ];
+        let founders: Vec&lt;_&gt; = [1, 1, 2, 2]
+            .into_iter()
+            .enumerate()
+            .map(|(index, value)| FounderTrait {
+                id: SimId(index as u32 + 1),
+                upkeep: UpkeepTrait::new(value).unwrap(),
+            })
+            .collect();
+        let motion = Motion {
+            sensing_radius: 5,
+            max_cells_per_tick: 1,
+            travel_units_per_cell: 1,
+        };
+        let scenario = Scenario {
+            daylight: Daylight::new(8, 4).unwrap(),
+            grazers: founders
+                .iter()
+                .map(|founder| GrazerSeed {
+                    id: founder.id,
+                    reserve_units: 18,
+                    capacity_units: 24,
+                    maintenance_units_per_tick: founder.upkeep.units(),
+                    meal_units_per_tick: 5,
+                    feeding_site: None,
+                })
+                .collect(),
+            patches: vec![
+                PatchSeed {
+                    id: SimId(1000),
+                    biomass_units: 6,
+                    capacity_units: 18,
+                    growth_units_per_lit_tick: 8,
+                },
+                PatchSeed {
+                    id: SimId(1001),
+                    biomass_units: 18,
+                    capacity_units: 18,
+                    growth_units_per_lit_tick: 4,
+                },
+            ],
+            history_limit: 128,
+        };
+        let space = SpatialConfig {
+            bounds: GridBounds {
+                width_cells: 11,
+                height_cells: 5,
+            },
+            grazers: founders
+                .iter()
+                .zip(cells)
+                .map(|(founder, cell)| GrazerPlacement {
+                    id: founder.id,
+                    cell,
+                    motion,
+                })
+                .collect(),
+            patches: vec![
+                PatchPlacement {
+                    id: SimId(1000),
+                    cell: Cell { x: 3, y: 2 },
+                },
+                PatchPlacement {
+                    id: SimId(1001),
+                    cell: Cell { x: 7, y: 2 },
+                },
+            ],
+            newborn_motion: motion,
+        };
+        let mut population = PopulationConfig::new(founders);
+        population.max_living = 10;
+        Self::new(scenario, population, space)
+    }
+}
+
+impl MobileScenario {
+    /// One funded traveler reaches the rest threshold before a patch at x=5.
+    pub fn resting_journey() -&gt; Self {
+        let original = Self::short_journey();
+        let mut scenario = original.scenario().clone();
+        scenario.grazers[0].reserve_units = 20;
+        scenario.grazers[0].capacity_units = 24;
+        scenario.patches[0].biomass_units = 20;
+        scenario.patches[0].capacity_units = 20;
+        let mut space = original.space().clone();
+        space.bounds.width_cells = 6;
+        space.grazers[0].motion.sensing_radius = 5;
+        space.patches[0].cell.x = 5;
+        Self::new(scenario, original.population().clone(), space)
+            .with_rest(super::RestPolicy::default())
+    }
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

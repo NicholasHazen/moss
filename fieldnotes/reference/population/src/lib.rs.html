@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/lib.rs · population · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="population"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">population checkpoint</p><h1>src/lib.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../population.html">← Let the next generation enter the same world</a>
+<a href="lib.rs" download>Download raw file</a>
+<a href="../../../downloads/population-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="lib.rs">//! A proposed course ecology, isolated from the learner-owned live Moss world.
+//!
+//! One ordered Bevy world combines upkeep, bounded daylight supply, competing
+//! meals, and starvation. An opt-in population policy adds funded births,
+//! maturation, and inherited upkeep. Travel, rest, and predation remain later arcs.
+
+mod feeding;
+mod history;
+mod lifecycle;
+mod model;
+mod population;
+mod reproduction;
+mod simulation;
+mod supply;
+
+pub use history::{Event, EventKind, HistorySnapshot};
+pub use model::{
+    Daylight, GrazerReading, GrazerSeed, Life, PatchReading, PatchSeed, Scenario, ScenarioError,
+    SimId, Snapshot, TickLedger,
+};
+pub use population::{
+    BirthOrigin, BirthRecord, FounderTrait, INHERITANCE_ALGORITHM, POPULATION_VERSION,
+    PopulationConfig, PopulationError, PopulationEvent, PopulationEventKind,
+    PopulationHistorySnapshot, PopulationLedger, PopulationReading, PopulationSnapshot,
+    PopulationTotals, Stage, UpkeepTrait,
+};
+pub use simulation::CourseWorld;
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

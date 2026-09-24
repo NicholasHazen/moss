@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>src/lifecycle.rs · shared-meadow · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../../assets/source.css?v=45ff3179bc2c">
+<script src="../../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="shared-meadow"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">shared-meadow checkpoint</p><h1>src/lifecycle.rs</h1>
+<p>This complete file is a worked answer. Open it beside the same file in your saved project; keep your own investigation and tests.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../../fieldwork.html">← One meadow, several consequences</a>
+<a href="lifecycle.rs" download>Download raw file</a>
+<a href="../../../downloads/shared-meadow-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-rust" data-source-file="lifecycle.rs">//! Upkeep before feeding, then permanent starvation after the chance to eat.
+
+use bevy_ecs::prelude::*;
+
+use crate::history::{EventKind, History};
+use crate::model::{Clock, Grazer, Identity, Life, TickLedger};
+
+pub(crate) fn maintain(
+    clock: Res&lt;Clock&gt;,
+    mut grazers: Query&lt;(Entity, &amp;Identity, &amp;mut Grazer)&gt;,
+    mut ledger: ResMut&lt;TickLedger&gt;,
+    mut history: ResMut&lt;History&gt;,
+) {
+    let mut order: Vec&lt;_&gt; = grazers
+        .iter()
+        .map(|(entity, id, _)| (id.0, entity))
+        .collect();
+    order.sort_by_key(|(id, _)| *id);
+    for (id, entity) in order {
+        let (_, _, mut grazer) = grazers.get_mut(entity).expect("listed grazer still exists");
+        if grazer.life != Life::Alive {
+            continue;
+        }
+        let paid = grazer.reserve_units.min(grazer.maintenance_units_per_tick);
+        grazer.reserve_units -= paid;
+        ledger.maintenance_units = ledger
+            .maintenance_units
+            .checked_add(u64::from(paid))
+            .expect("maintenance ledger exhausted");
+        if paid &gt; 0 {
+            history.record(
+                &amp;clock,
+                EventKind::Maintenance {
+                    grazer: id,
+                    units: paid,
+                },
+            );
+        }
+    }
+}
+
+pub(crate) fn starve(
+    clock: Res&lt;Clock&gt;,
+    mut grazers: Query&lt;(Entity, &amp;Identity, &amp;mut Grazer)&gt;,
+    mut ledger: ResMut&lt;TickLedger&gt;,
+    mut history: ResMut&lt;History&gt;,
+) {
+    let mut order: Vec&lt;_&gt; = grazers
+        .iter()
+        .map(|(entity, id, _)| (id.0, entity))
+        .collect();
+    order.sort_by_key(|(id, _)| *id);
+    for (id, entity) in order {
+        let (_, _, mut grazer) = grazers.get_mut(entity).expect("listed grazer still exists");
+        if grazer.life == Life::Alive &amp;&amp; grazer.reserve_units == 0 {
+            grazer.life = Life::Dead;
+            ledger.starvations = ledger
+                .starvations
+                .checked_add(1)
+                .expect("starvation ledger exhausted");
+            history.record(&amp;clock, EventKind::Starved { grazer: id });
+        }
+    }
+}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>

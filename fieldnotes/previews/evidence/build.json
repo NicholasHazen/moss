@@ -1,0 +1,9 @@
+{
+  "api": 1,
+  "sourceKind": "reference",
+  "sourcePath": null,
+  "sourceHash": "9d9896d746ff015fe4ddf2236cff85c71e61805eeb32775253db27f7211eca41",
+  "wasm": "evidence-9d9896d746ff015fe4ddf2236cff85c71e61805eeb32775253db27f7211eca41.wasm",
+  "rust": "1.93.1",
+  "bevyEcs": "0.18.1"
+}

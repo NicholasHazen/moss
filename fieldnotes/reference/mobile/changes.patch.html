@@ -1,0 +1,2627 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>changes.patch · mobile · Moss Fieldnotes</title>
+<link rel="stylesheet" href="../../assets/source.css?v=45ff3179bc2c">
+<script src="../../assets/source.js?v=45ff3179bc2c" defer></script></head>
+<body data-source-view="mobile"><a class="skip-link" href="#source">Skip to source</a>
+<header><a href="../../index.html">Moss Fieldnotes</a><span>Complete course reference</span></header>
+<main id="source" tabindex="-1"><p class="eyebrow">mobile checkpoint</p><h1>changes.patch</h1>
+<p>This review-only diff maps the previous checkpoint to this one. Use it to plan deliberate edits; it is not an automatic migration over your saved project.</p>
+<nav class="source-actions" aria-label="Source file actions"><a href="../../mobile.html">← A patch in sight is not a meal</a>
+<a href="changes.patch" download>Download raw file</a>
+<a href="../../downloads/mobile-reference.zip" download>Download checkpoint ZIP</a>
+<button type="button" data-copy-source hidden>Copy complete file</button></nav>
+<p id="copy-status" role="status" aria-live="polite"></p>
+<p class="source-help" id="source-help">The source below is selectable text. Long lines scroll horizontally. The raw download preserves the original file bytes.</p>
+<pre tabindex="0" role="region" aria-label="Complete source file" aria-describedby="source-help"><code id="source-code" class="language-diff" data-source-file="changes.patch">--- a/.gitignore
++++ b/.gitignore
+@@ -1 +0,0 @@
+-/target/
+--- a/README.md
++++ b/README.md
+@@ -6,15 +6,16 @@
+ a chance to eat. Owned snapshots and bounded event history make those interactions
+ inspectable. It is an explicitly proposed course game model. It does not change
+ the live `moss-sim` crate, its schedule, or the movement assignment in
+-`NOW.md`.
+-
+-The original first-arc mode remains unchanged. An explicit population mode now
+-extends this same world with maturation, funded births, and inherited upkeep; its
+-API and policies are documented below. Neither mode completes the ecosystem
+-curriculum. There is no travel, target selection, predation, fatigue, randomness,
+-or spatial density model yet. Every feeding contact is authored directly. These
+-are repeatable authored comparisons, not calibrated ecology or evidence of
+-long-term population stability.
++`NOW.md` in live Moss.
++
++The original first-arc mode remains unchanged. Explicit population mode extends
++this same world with maturation, funded births, and inherited upkeep. Mobile
++checkpoint A adds local choice, paid grid travel, current contact, and spatial
++births. Their APIs and policies are documented below. Rest, predation, randomness,
++and biological calibration remain outside this reference. The first two modes
++use authored feeding contacts; mobile mode derives them from actual positions.
++These are repeatable authored comparisons, not evidence of long-term stability
++or completion of the ecosystem curriculum.
+ 
+ ## Run the native reference
+ 
+@@ -24,12 +25,13 @@
+ already contain those locked dependencies. No browser, renderer, or live Moss
+ dependency is needed for these commands.
+ 
+-From this directory (the extracted `population` folder, or `learning/checkpoints/population`):
++From the extracted checkpoint directory:
+ 
+ ```sh
+ cargo +1.93.1 test --offline --locked
+ cargo +1.93.1 run --offline --locked --example compare
+ cargo +1.93.1 run --offline --locked --example populations
++cargo +1.93.1 run --offline --locked --example mobile
+ cargo +1.93.1 fmt --all -- --check
+ cargo +1.93.1 clippy --offline --locked --all-targets -- -D warnings
+ ```
+@@ -458,7 +460,7 @@
+ 
+ ## Population verification and remaining boundary
+ 
+-The pinned offline native run passed **38 tests**: the unchanged 19 first-arc
++At the population checkpoint, the pinned offline native run passed **38 tests**: the unchanged 19 first-arc
+ acceptance cases, 15 top-level population acceptance cases, and 4 focused internal
+ tests. Population cases cover literal phases, inheritance changing actual upkeep,
+ clamped deltas and donor alternation, immediate maturity eligibility, real versus
+@@ -490,6 +492,233 @@
+ `tests/acceptance.rs` still has SHA-256
+ `1968bd2f287779574689c63cc6476610827a4c07f1086fa69a7e0e99b6e1bb9c`.
+ This native extension does not itself validate a browser adapter, a learner's
+-later implementation, or the complete course. Rest, predation, spatial target
+-validity, and movement remain subsequent interacting work. The live Moss crate
+-and active movement assignment are untouched.
++later implementation, or the complete course. Rest and predation remain subsequent
++interacting work; mobile checkpoint A below adds spatial choice and travel. The
++live Moss crate and active movement assignment are untouched.
++
++## Mobile checkpoint A: local choice and paid travel
++
++This mode carries the same population and its inherited upkeep into a bounded
++integer grid. It adds no rest, fatigue, hunting, pathfinding, random exploration,
++collision avoidance, or new inherited attributes. Animals may share cells;
++patches have distinct cells. `MobileScenario::short_journey()` and `::meadow()`
++are complete authored presets defined in
++[`src/mobile/scenarios.rs`](src/mobile/scenarios.rs), shared by the native example
++and callers that want the same preview input.
++
++```rust
++use moss_course_ecosystem::{CourseWorld, MobileScenario};
++
++let mut course = CourseWorld::new_mobile(MobileScenario::short_journey()).unwrap();
++course.step();
++let report = course.mobile_snapshot().unwrap();
++assert_eq!(report.grazers[0].cell.x, 1);
++assert_eq!(report.base.grazers[0].reserve_units, 3);
++course.reset(); // same complete mobile selection, next run ID, tick zero
++course.reset_with_mobile(MobileScenario::meadow()).unwrap();
++```
++
++`MobileScenario::new(scenario, population, space)` takes the existing `Scenario`
++and `PopulationConfig`, plus a `SpatialConfig`. Its fields are private so later
++optional policies need not add mandatory struct-literal arguments. Borrowed
++`scenario()`, `population()`, and `space()` accessors expose authored inputs;
++`history_limit()` reads the mobile journal bound, and `with_history_limit(limit)`
++selects a bound, default 128. The constructor records raw inputs; `new_mobile` and
++`reset_with_mobile` validate the whole configuration and return `MobileError`.
++
++The spatial types are `Cell { x, y }`, `GridBounds { width_cells, height_cells }`,
++`Motion { sensing_radius, max_cells_per_tick, travel_units_per_cell }`,
++`GrazerPlacement { id, cell, motion }`, and `PatchPlacement { id, cell }`.
++`SpatialConfig` holds `bounds`, grazer/patch placement vectors, and `newborn_motion`.
++Coordinates and rates are `u32`. Bounds must be positive; cells must be inside
++them. Each authored entity needs exactly one matching placement, and two patches
++cannot occupy one cell. Zero speed permits a stationary actor; radius zero sees
++only its own cell. Travel cost must be positive, including the newborn template.
++Initial grazer `feeding_site` must be `None`: a fixed token cannot grant remote
++contact in this mode. The old two constructors keep their previous meanings.
++
++Invalid mobile configuration preserves current state, run ID, journals, and the
++saved reset selection. `reset_with_population` explicitly returns to fixed-contact
++population mode; `reset_with` selects the first arc. `mobile_snapshot` returns
++`None` in either older mode. A mobile `reset` recreates both the scenario and its
++spatial configuration with empty observations/targets and fresh counters.
++
++| File | Mobile responsibility |
++| --- | --- |
++| [`src/mobile/config.rs`](src/mobile/config.rs) | Public authored types and validation/normalization. |
++| [`src/mobile.rs`](src/mobile.rs) | Spatial components, installation, contact projection, and complete owned report. |
++| [`src/mobile/perception.rs`](src/mobile/perception.rs) | Copied local observations, retained-target policy, and target-change outcomes. |
++| [`src/mobile/movement.rs`](src/mobile/movement.rs) | Affordable bounded x-then-y movement, actual costs, and a per-tick action guard. |
++| [`src/mobile/history.rs`](src/mobile/history.rs) | Target changes, completed travel, and birth placement with retained coverage. |
++| [`tests/mobile.rs`](tests/mobile.rs) | Fifteen additional public acceptance cases. |
++| [`src/simulation/mobile_tests.rs`](src/simulation/mobile_tests.rs) | Intervening changes, current-contact revalidation, and late newborn/preflight probes. |
++
++The shared feeding and reproduction adapters now read optional mobile components.
++Their fixed-contact paths remain unchanged. Small named query-data aliases keep
++those concrete access lists readable; they introduce no generic rule registry or
++second biology implementation.
++
++### One tick and three kinds of knowledge
++
++The single-threaded schedule advances the tick and clears all ledgers, matures
++juveniles, charges upkeep, grows patches, collects **all** local observations,
++chooses targets, travels, derives current contacts, feeds, resolves starvation,
++resolves births, applies queued births, removes dead entities, applies cleanup,
++then completes the three journals. The observation phase therefore precedes
++every actor's movement; it is not recomputed opportunistically for each claimant.
++
++Local sensing uses Manhattan distance with widened arithmetic. The adapter copies
++all patches within the actor's radius, including empty ones, and sorts them by
++stable ID. The selector receives that owned local view. It retains a current
++target while that patch is still locally observed and nonempty; otherwise it
++chooses the smallest `(distance, stable ID)` among eligible readings. No local
++opportunity means no target and no wandering. The global inspector may still
++show distant food. Knowledge in that table is not actor perception.
++
++`PatchTarget` records `patch`, `observed_cell`, and `observed_tick`. It describes
++an intention based on this tick's observation, not reserved food. Travel follows
++that observed destination and checks that the target still has a current patch
++identity; it does not steer from a newly fetched global position. Positive
++biomass is rechecked for the meal, not guaranteed by the old reading. Current
++contact requires the selected patch's actual cell to equal the grazer's cell at
++feeding time. The feed adapter rechecks this even if an earlier derived contact
++token has gone stale. Missing/empty/wrong-contact targets do not redirect the
++action toward another patch in the same tick.
++
++Movement accepts the minimum of remaining Manhattan distance, the configured
++cell budget, and affordable whole steps. It takes x steps first, then y; arithmetic
++computes this bounded prefix directly rather than looping an unbounded number of
++times. The actual accepted distance alone spends reserve. Zero speed, no target,
++arrival, a removed patch, and unaffordable movement spend zero travel units.
++Spending the last reserve on arrival is permitted: a same-tick meal may rescue
++the grazer before starvation, just as upkeep at zero can be rescued in the
++earlier modes.
++
++The per-actor `last_travel_tick` records the last **travel-phase opportunity**,
++even if it accepted zero cells. It prevents a second late invocation from moving
++again in that tick. It is not the timestamp of the last nonzero movement; use
++actual `Travelled` events for that question. First-eligible guards apply to
++observation, choice, movement, contact, and the existing energy actions.
++
++Spatial births keep the same two-parent payment, cooldown, inheritance, allocator,
++and cap rules. Both parents must currently be at their selected real shared patch
++cell, revalidated during the birth transaction. The patch may have become empty
++after their meals. A child receives that cell, the configured newborn motion,
++inherited upkeep, and next-tick eligibility. Its target, local observation, and
++travel-opportunity timestamp start absent; its derived feeding contact starts
++`None`. Birth placement and mobile journal headroom are prepared before either
++parent pays. Deferred spawning never leaves a completed-tick child without its
++spatial components.
++
++### Complete reports and actual outcomes
++
++`MobileSnapshot` is version `moss-course-mobile-a-v1`. It includes run/tick,
++canonical complete `initial: MobileScenario`, `base: Snapshot`,
++`population: PopulationSnapshot`, sorted mobile grazer rows and patch placements,
++latest `MobileLedger`, lifetime `MobileTotals`, and `MobileHistorySnapshot`.
++Each mobile grazer row includes its cell/motion, target, observation timestamp
++and `observed_cell` (its own position when that view was collected), copied visible
++patches, and travel-opportunity timestamp. `None` observation means
++uncollected; an observed empty vector means no local patch was seen. Mutating any
++owned report cannot change the world. All authored ID arrays are normalized,
++including the arrays inside the report's initial configuration.
++
++Both mobile ledger and totals expose actual `travel_cells`, `travel_units`, and
++`target_changes`. Target ID changes are journaled; refreshing the same target's
++observation timestamp does not invent another change. New events are
++`TargetChanged`, `Travelled`, and `BornAt`, each with run/tick and stable IDs.
++`travelled_cells_between` returns `None` for invalid, future, or incomplete
++coverage and `Some(0)` for a fully covered interval without travel. Mobile costs
++are additional sinks, not modifications to the old ledger's meaning:
++
++```text
++stores_after + actual_upkeep + actual_travel_cost + birth_dissipation
++    = stores_before + accepted_growth
++```
++
++The observed short journey starts at `(0,0)`, reserve 5, upkeep 1, capacity 8,
++meal request 2, sight 3, speed 1, and travel cost 1. Patch 100 at `(2,0)` contains
++three units with no renewal:
++
++| Tick | Cell | Reserve | Biomass | Travel cells / cost | Meal |
++| --- | --- | --- | --- | --- | --- |
++| 1 | `(1,0)` | 3 | 3 | 1 / 1 | 0 |
++| 2 | `(2,0)` | 3 | 1 | 1 / 1 | 2 |
++| 3 | `(2,0)` | 3 | 0 | 0 / 0 | 1 |
++
++At tick 1 the copied view has `observed_cell = Some(Cell { x: 0, y: 0 })`
++while the current cell is `(1,0)`. At tick 2 those values are `(1,0)` and
++`(2,0)`. The owned report keeps both facts, without reconstructing the observation
++origin from a potentially evicted travel event.
++
++The longer `meadow` preset declares bounds `11 × 5`; grazers 1–4 at `(2,2)`,
++`(3,1)`, `(2,3)`, `(3,2)` with reserve 18, capacity 24, meal 5, upkeep
++`[1,1,2,2]`, sight 5, speed 1, and travel cost 1. Patches 1000/1001 at `(3,2)`/
++`(7,2)` have capacity 18, initial biomass 6/18, and growth 8/4 on the first four
++ticks of each eight-tick day. The grazer cap is 10; other population defaults
++remain unchanged. Newborns use sight 5/speed 1/cost 1 and the population default
++reserve contribution, capacity 8, and meal 2. All three history limits are 128.
++
++The native example ran exactly 120 ticks on September 23, 2026:
++
++| Tick | Living / juvenile | Total births / starvations | Travel cells (cost equals cells) | Reserve sum / biomass |
++| --- | --- | --- | --- | --- |
++| 1 | 5 / 1 | 1 / 0 | 3 | 75 / 18 |
++| 2 | 6 / 2 | 2 / 0 | 4 | 73 / 18 |
++| 4 | 6 / 1 | 3 / 1 | 4 | 69 / 18 |
++| 8 | 4 / 1 | 4 / 4 | 21 | 39 / 3 |
++| 12 | 3 / 1 | 5 / 6 | 21 | 38 / 18 |
++| 40 | 3 / 1 | 12 / 13 | 63 | 37 / 6 |
++| 80 | 3 / 1 | 22 / 23 | 116 | 34 / 8 |
++| 120 | 4 / 1 | 32 / 32 | 173 | 42 / 4 |
++
++Final IDs 1, 2, 1031, and 1033 are at `(7,2)`. Accepted growth totals 606, actual
++upkeep 419, birth transfer 128, birth dissipation 64, target changes 89, and
++cap-denied pairs/ticks zero. Initial stores 96 plus growth 606 equal final stores
++46 plus upkeep 419, travel 173, and birth cost 64. This is one authored run with
++repeated travel and turnover, not calibrated ecology, measured evolution, or a
++claim about long-run stability.
++
++At tick 120, the base journal has complete `(99,120]` coverage with 592 evictions,
++population history retains `(0,120]` with zero evictions, and mobile history has
++`(69,120]` with 166 evictions. Full-range travel history is therefore unknown even
++though its lifetime counter is known to be 173. Current positions cannot explain
++every earlier journey after the relevant events are lost.
++
++### Mobile verification boundary
++
++The current pinned offline run passed **59 tests**: the unchanged nineteen
++first-arc tests, unchanged fifteen population tests, fifteen public mobile tests,
++and ten internal tests including the six new spatial probes. They cover literal
++travel, partial/zero speed, extreme bounds, local versus global visibility,
++retained targets when nearer supply renews, real competing consumption, spatial
++births, current-contact rejection, invalid reset atomicity, all mode switches,
++complete-report insertion-order independence, history coverage, and per-tick
++120-tick accounting. Current rustfmt and strict Clippy passed.
++
++The exact learner-authored test in `learning/content/mobile.html` was decoded and
++compiled in a separate project with its own target directory: one test passed.
++Its two grazers move from cell 0 to 1, both having observed two units at patch 100.
++Only the first eats, yielding reserve 4/2. Patch 101 at cell 2 was outside that
++initial local view. On the next tick both can observe it, travel there, and end at
++reserve 4/2 again. This verifies the proposed lesson answer without replacing the
++learner's independent test-writing task.
++
++Five isolated negative copies compiled and then failed the intended check:
++removing the travel debit broke the literal journey; trusting a stale contact
++cell broke the feeding revalidation probe; removing the first-eligible travel
++guard let a newborn act; skipping spatial parent revalidation admitted a birth
++from a stale contact; and making the observer's grazer `Position` access mutable
++conflicted with its patch-position query. That last change failed at Bevy schedule
++initialization with `error[B0001]`, rather than a Rust borrowing diagnostic.
++Restoring `&amp;Position` repairs it because observation changes `MobileActor`, not
++the actor's position. Every copy used a separate Cargo target directory. These
++probes establish that the checks distinguish the tested defects; they do not
++prove all possible schedules or future spatial policies correct.
++
++`tests/acceptance.rs` remains byte-identical with the SHA above;
++`tests/population.rs` remains byte-identical with SHA-256
++`5185f6dc7a22ef368935be82151ca2896100c7975f248b113514fd413ee64fe4`.
++Browser adapters, rendered map/keyboard checks, later rest/predation, and the full
++goal remain separate work. No live source, learner-owned current movement helper,
++or assignment was changed by this checkpoint.
+--- a/examples/mobile.rs
++++ b/examples/mobile.rs
+@@ -0,0 +1,85 @@
++use moss_course_ecosystem::{CourseWorld, MobileScenario};
++
++fn main() {
++    let mut short = CourseWorld::new_mobile(MobileScenario::short_journey()).unwrap();
++    println!(
++        "short: reserve5, upkeep1, speed1/cost1, sight3, capacity8/meal2; patch100 at(2,0), biomass3, no growth"
++    );
++    for _ in 0..3 {
++        short.step();
++        let state = short.mobile_snapshot().unwrap();
++        println!(
++            "tick{} cell={:?} reserve{} biomass{} travelled{} paid{} meal{}",
++            state.tick,
++            state.grazers[0].cell,
++            state.base.grazers[0].reserve_units,
++            state.base.patches[0].biomass_units,
++            state.ledger.travel_cells,
++            state.ledger.travel_units,
++            state.base.ledger.eaten_units
++        );
++    }
++    let initial = MobileScenario::meadow();
++    println!("meadow horizon120; complete authored inputs={initial:?}");
++    let mut world = CourseWorld::new_mobile(initial).unwrap();
++    let (mut growth, mut upkeep, mut transferred, mut cost) = (0, 0, 0, 0);
++    for _ in 0..120 {
++        world.step();
++        let state = world.mobile_snapshot().unwrap();
++        growth += state.base.ledger.added_units;
++        upkeep += state.base.ledger.maintenance_units;
++        transferred += state.population.ledger.transferred_units;
++        cost += state.population.ledger.dissipated_units;
++        if [1, 2, 4, 8, 12, 40, 80, 120].contains(&amp;state.tick) {
++            let positions: Vec&lt;_&gt; = state
++                .grazers
++                .iter()
++                .map(|actor| (actor.id.0, actor.cell.x, actor.cell.y))
++                .collect();
++            let reserves: u64 = state
++                .base
++                .grazers
++                .iter()
++                .map(|actor| u64::from(actor.reserve_units))
++                .sum();
++            let biomass: u64 = state
++                .base
++                .patches
++                .iter()
++                .map(|patch| u64::from(patch.biomass_units))
++                .sum();
++            println!(
++                "tick{} living{} juvenile{} births{} deaths{} travel_cells{} travel_units{} target_changes{} reserves{} biomass{} positions={positions:?}",
++                state.tick,
++                state.population.living,
++                state.population.juveniles,
++                state.population.totals.births,
++                state.population.totals.starvations,
++                state.totals.travel_cells,
++                state.totals.travel_units,
++                state.totals.target_changes,
++                reserves,
++                biomass
++            );
++        }
++    }
++    let state = world.mobile_snapshot().unwrap();
++    println!(
++        "actual growth{growth} upkeep{upkeep} birth_transfer{transferred} birth_cost{cost} cap_pairs{} cap_ticks{}",
++        state.population.totals.capacity_blocked_pairs,
++        state.population.totals.capacity_blocked_ticks
++    );
++    println!(
++        "coverage base({},{}] lost{}; population({},{}] lost{}; mobile({},{}] lost{}; full-range travel={:?}",
++        state.base.history.complete_after_tick,
++        state.base.history.collected_through_tick,
++        state.base.history.evicted_events,
++        state.population.history.complete_after_tick,
++        state.population.history.collected_through_tick,
++        state.population.history.evicted_events,
++        state.history.complete_after_tick,
++        state.history.collected_through_tick,
++        state.history.evicted_events,
++        state.history.travelled_cells_between(1, 120)
++    );
++}
+--- a/src/feeding.rs
++++ b/src/feeding.rs
+@@ -5,26 +5,36 @@
+ use bevy_ecs::prelude::*;
+ 
+ use crate::history::{EventKind, History};
++use crate::mobile::{MobileActor, Position};
+ use crate::model::{Clock, Grazer, Identity, Life, Patch, TickLedger};
++
++type FeedingAccess&lt;'a&gt; = (
++    Entity,
++    &amp;'a Identity,
++    &amp;'a mut Grazer,
++    Option&lt;&amp;'a Position&gt;,
++    Option&lt;&amp;'a MobileActor&gt;,
++);
+ 
+ pub(crate) fn feed(
+     clock: Res&lt;Clock&gt;,
+-    mut grazers: Query&lt;(Entity, &amp;Identity, &amp;mut Grazer)&gt;,
+-    mut patches: Query&lt;(Entity, &amp;Identity, &amp;mut Patch)&gt;,
++    mut grazers: Query&lt;FeedingAccess&lt;'_&gt;&gt;,
++    mut patches: Query&lt;(Entity, &amp;Identity, &amp;mut Patch, Option&lt;&amp;Position&gt;)&gt;,
+     mut ledger: ResMut&lt;TickLedger&gt;,
+     mut history: ResMut&lt;History&gt;,
+ ) {
+     let sites: BTreeMap&lt;_, _&gt; = patches
+         .iter()
+-        .map(|(entity, id, _)| (id.0, entity))
++        .map(|(entity, id, _, _)| (id.0, entity))
+         .collect();
+     let mut order: Vec&lt;_&gt; = grazers
+         .iter()
+-        .map(|(entity, id, _)| (id.0, entity))
++        .map(|(entity, id, _, _, _)| (id.0, entity))
+         .collect();
+     order.sort_by_key(|(id, _)| *id);
+     for (id, entity) in order {
+-        let (_, _, mut grazer) = grazers.get_mut(entity).expect("listed grazer still exists");
++        let (_, _, mut grazer, position, actor) =
++            grazers.get_mut(entity).expect("listed grazer still exists");
+         if grazer.life != Life::Alive || clock.tick &lt; grazer.first_eligible_tick {
+             continue;
+         }
+@@ -34,9 +44,17 @@
+         let Some(patch_entity) = sites.get(&amp;site) else {
+             continue;
+         };
+-        let (_, _, mut patch) = patches
++        let (_, _, mut patch, patch_position) = patches
+             .get_mut(*patch_entity)
+             .expect("listed patch still exists");
++        if let Some(actor) = actor {
++            let current_target = actor
++                .target
++                .is_some_and(|target| target.patch == site &amp;&amp; target.observed_tick == clock.tick);
++            if !current_target || position.is_none() || position != patch_position {
++                continue;
++            }
++        }
+         let eaten = grazer
+             .meal_units_per_tick
+             .min(patch.biomass_units)
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -2,11 +2,13 @@
+ //!
+ //! One ordered Bevy world combines upkeep, bounded daylight supply, competing
+ //! meals, and starvation. An opt-in population policy adds funded births,
+-//! maturation, and inherited upkeep. Travel, rest, and predation remain later arcs.
++//! maturation, and inherited upkeep. Mobile mode adds local choice and paid travel;
++//! rest and predation remain later arcs.
+ 
+ mod feeding;
+ mod history;
+ mod lifecycle;
++mod mobile;
+ mod model;
+ mod population;
+ mod reproduction;
+@@ -14,6 +16,11 @@
+ mod supply;
+ 
+ pub use history::{Event, EventKind, HistorySnapshot};
++pub use mobile::{
++    Cell, GrazerPlacement, GridBounds, MOBILE_VERSION, MobileError, MobileEvent, MobileEventKind,
++    MobileGrazerReading, MobileHistorySnapshot, MobileLedger, MobileScenario, MobileSnapshot,
++    MobileTotals, Motion, PatchObservation, PatchPlacement, PatchTarget, SpatialConfig,
++};
+ pub use model::{
+     Daylight, GrazerReading, GrazerSeed, Life, PatchReading, PatchSeed, Scenario, ScenarioError,
+     SimId, Snapshot, TickLedger,
+--- a/src/mobile.rs
++++ b/src/mobile.rs
+@@ -0,0 +1,249 @@
++//! Opt-in space, observations, travel, and owned projections of the same world.
++
++mod config;
++mod history;
++pub(crate) mod movement;
++pub(crate) mod perception;
++mod scenarios;
++
++use crate::model::{Clock, Grazer, Identity, Life, Patch};
++use crate::simulation::Roster;
++use crate::{PopulationSnapshot, SimId, Snapshot};
++use bevy_ecs::prelude::*;
++use std::collections::BTreeMap;
++
++pub use config::{
++    Cell, GrazerPlacement, GridBounds, MobileError, MobileScenario, Motion, PatchPlacement,
++    SpatialConfig,
++};
++use history::MobileHistory;
++pub use history::{MobileEvent, MobileEventKind, MobileHistorySnapshot};
++
++pub const MOBILE_VERSION: &amp;str = "moss-course-mobile-a-v1";
++
++#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) struct Position(pub Cell);
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct PatchObservation {
++    pub patch: SimId,
++    pub cell: Cell,
++    pub biomass_units: u32,
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct PatchTarget {
++    pub patch: SimId,
++    pub observed_cell: Cell,
++    pub observed_tick: u64,
++}
++
++#[derive(Component, Clone)]
++pub(crate) struct MobileActor {
++    pub motion: Motion,
++    pub target: Option&lt;PatchTarget&gt;,
++    pub observed_tick: Option&lt;u64&gt;,
++    pub observed_cell: Option&lt;Cell&gt;,
++    pub visible_patches: Vec&lt;PatchObservation&gt;,
++    pub last_travel_tick: Option&lt;u64&gt;,
++}
++
++impl MobileActor {
++    pub fn new(motion: Motion) -&gt; Self {
++        Self {
++            motion,
++            target: None,
++            observed_tick: None,
++            observed_cell: None,
++            visible_patches: Vec::new(),
++            last_travel_tick: None,
++        }
++    }
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct MobileGrazerReading {
++    pub id: SimId,
++    pub cell: Cell,
++    pub motion: Motion,
++    pub target: Option&lt;PatchTarget&gt;,
++    pub observed_tick: Option&lt;u64&gt;,
++    pub observed_cell: Option&lt;Cell&gt;,
++    pub visible_patches: Vec&lt;PatchObservation&gt;,
++    pub last_travel_tick: Option&lt;u64&gt;,
++}
++
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct MobileLedger {
++    pub travel_cells: u64,
++    pub travel_units: u64,
++    pub target_changes: u64,
++}
++
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct MobileTotals {
++    pub travel_cells: u64,
++    pub travel_units: u64,
++    pub target_changes: u64,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct MobileSnapshot {
++    pub version: &amp;'static str,
++    pub run: u64,
++    pub tick: u64,
++    pub initial: MobileScenario,
++    pub base: Snapshot,
++    pub population: PopulationSnapshot,
++    pub grazers: Vec&lt;MobileGrazerReading&gt;,
++    pub patches: Vec&lt;PatchPlacement&gt;,
++    pub ledger: MobileLedger,
++    pub totals: MobileTotals,
++    pub history: MobileHistorySnapshot,
++}
++
++#[derive(Resource)]
++pub(crate) struct MobileState {
++    pub newborn_motion: Motion,
++    pub ledger: MobileLedger,
++    pub totals: MobileTotals,
++    pub history: MobileHistory,
++}
++
++pub(crate) fn install(world: &amp;mut World, initial: &amp;MobileScenario) {
++    let grazers: BTreeMap&lt;_, _&gt; = initial
++        .space()
++        .grazers
++        .iter()
++        .map(|placement| (placement.id, *placement))
++        .collect();
++    let patches: BTreeMap&lt;_, _&gt; = initial
++        .space()
++        .patches
++        .iter()
++        .map(|placement| (placement.id, placement.cell))
++        .collect();
++    let roster = world.resource::&lt;Roster&gt;();
++    let grazer_entities = roster.grazers.clone();
++    let patch_entities = roster.patches.clone();
++    for entity in grazer_entities {
++        let id = world
++            .get::&lt;Identity&gt;(entity)
++            .expect("grazer identity exists")
++            .0;
++        let placement = grazers[&amp;id];
++        world
++            .entity_mut(entity)
++            .insert((Position(placement.cell), MobileActor::new(placement.motion)));
++    }
++    for entity in patch_entities {
++        let id = world
++            .get::&lt;Identity&gt;(entity)
++            .expect("patch identity exists")
++            .0;
++        world.entity_mut(entity).insert(Position(patches[&amp;id]));
++    }
++    world.insert_resource(MobileState {
++        newborn_motion: initial.space().newborn_motion,
++        ledger: MobileLedger::default(),
++        totals: MobileTotals::default(),
++        history: MobileHistory::new(initial.history_limit()),
++    });
++}
++
++pub(crate) fn snapshot(
++    world: &amp;World,
++    initial: &amp;MobileScenario,
++    base: Snapshot,
++    population: PopulationSnapshot,
++) -&gt; MobileSnapshot {
++    let roster = world.resource::&lt;Roster&gt;();
++    let mut grazers: Vec&lt;_&gt; = roster
++        .grazers
++        .iter()
++        .map(|entity| {
++            let id = world.get::&lt;Identity&gt;(*entity).expect("identity exists").0;
++            let cell = world
++                .get::&lt;Position&gt;(*entity)
++                .expect("mobile grazer is placed")
++                .0;
++            let actor = world
++                .get::&lt;MobileActor&gt;(*entity)
++                .expect("mobile actor exists");
++            MobileGrazerReading {
++                id,
++                cell,
++                motion: actor.motion,
++                target: actor.target,
++                observed_tick: actor.observed_tick,
++                observed_cell: actor.observed_cell,
++                visible_patches: actor.visible_patches.clone(),
++                last_travel_tick: actor.last_travel_tick,
++            }
++        })
++        .collect();
++    grazers.sort_by_key(|grazer| grazer.id);
++    let mut patches: Vec&lt;_&gt; = roster
++        .patches
++        .iter()
++        .map(|entity| PatchPlacement {
++            id: world
++                .get::&lt;Identity&gt;(*entity)
++                .expect("patch identity exists")
++                .0,
++            cell: world
++                .get::&lt;Position&gt;(*entity)
++                .expect("mobile patch is placed")
++                .0,
++        })
++        .collect();
++    patches.sort_by_key(|patch| patch.id);
++    let state = world.resource::&lt;MobileState&gt;();
++    MobileSnapshot {
++        version: MOBILE_VERSION,
++        run: base.run,
++        tick: base.tick,
++        initial: initial.clone(),
++        base,
++        population,
++        grazers,
++        patches,
++        ledger: state.ledger,
++        totals: state.totals,
++        history: state.history.snapshot(),
++    }
++}
++
++pub(crate) fn begin_mobile_tick(mut state: ResMut&lt;MobileState&gt;) {
++    state.ledger = MobileLedger::default();
++}
++
++/// Derive a contact token from current space; feeding rechecks the actual contact.
++pub(crate) fn derive_contacts(
++    clock: Res&lt;Clock&gt;,
++    patches: Query&lt;(&amp;Identity, &amp;Position), With&lt;Patch&gt;&gt;,
++    mut grazers: Query&lt;(&amp;Position, &amp;MobileActor, &amp;mut Grazer)&gt;,
++) {
++    let cells: BTreeMap&lt;_, _&gt; = patches
++        .iter()
++        .map(|(id, position)| (id.0, position.0))
++        .collect();
++    for (position, actor, mut grazer) in &amp;mut grazers {
++        grazer.feeding_site =
++            if grazer.life == Life::Alive &amp;&amp; clock.tick &gt;= grazer.first_eligible_tick {
++                actor
++                    .target
++                    .filter(|target| {
++                        target.observed_tick == clock.tick
++                            &amp;&amp; cells.get(&amp;target.patch) == Some(&amp;position.0)
++                    })
++                    .map(|target| target.patch)
++            } else {
++                None
++            };
++    }
++}
++
++pub(crate) fn complete_mobile_tick(clock: Res&lt;Clock&gt;, mut state: ResMut&lt;MobileState&gt;) {
++    state.history.collected_through_tick = clock.tick;
++}
+--- a/src/mobile/config.rs
++++ b/src/mobile/config.rs
+@@ -0,0 +1,193 @@
++//! Explicit mobile inputs; later extensions need not change constructor callers.
++
++use std::collections::{BTreeMap, BTreeSet};
++use std::fmt;
++
++use crate::{PopulationConfig, PopulationError, Scenario, SimId};
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
++pub struct Cell {
++    pub x: u32,
++    pub y: u32,
++}
++
++impl Cell {
++    pub fn distance(self, other: Self) -&gt; u64 {
++        u64::from(self.x.abs_diff(other.x)) + u64::from(self.y.abs_diff(other.y))
++    }
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct GridBounds {
++    pub width_cells: u32,
++    pub height_cells: u32,
++}
++
++impl GridBounds {
++    pub fn contains(self, cell: Cell) -&gt; bool {
++        cell.x &lt; self.width_cells &amp;&amp; cell.y &lt; self.height_cells
++    }
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct Motion {
++    pub sensing_radius: u32,
++    pub max_cells_per_tick: u32,
++    pub travel_units_per_cell: u32,
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct GrazerPlacement {
++    pub id: SimId,
++    pub cell: Cell,
++    pub motion: Motion,
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct PatchPlacement {
++    pub id: SimId,
++    pub cell: Cell,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct SpatialConfig {
++    pub bounds: GridBounds,
++    pub grazers: Vec&lt;GrazerPlacement&gt;,
++    pub patches: Vec&lt;PatchPlacement&gt;,
++    pub newborn_motion: Motion,
++}
++
++/// Construct raw authored inputs here; CourseWorld validates before installation.
++/// Private fields permit later optional policies without changing struct literals.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct MobileScenario {
++    scenario: Scenario,
++    population: PopulationConfig,
++    space: SpatialConfig,
++    history_limit: usize,
++}
++
++impl MobileScenario {
++    pub fn new(scenario: Scenario, population: PopulationConfig, space: SpatialConfig) -&gt; Self {
++        Self {
++            scenario,
++            population,
++            space,
++            history_limit: 128,
++        }
++    }
++
++    pub fn scenario(&amp;self) -&gt; &amp;Scenario {
++        &amp;self.scenario
++    }
++    pub fn population(&amp;self) -&gt; &amp;PopulationConfig {
++        &amp;self.population
++    }
++    pub fn space(&amp;self) -&gt; &amp;SpatialConfig {
++        &amp;self.space
++    }
++    pub fn history_limit(&amp;self) -&gt; usize {
++        self.history_limit
++    }
++    pub fn with_history_limit(mut self, limit: usize) -&gt; Self {
++        self.history_limit = limit;
++        self
++    }
++
++    pub(crate) fn validate_and_normalize(&amp;mut self) -&gt; Result&lt;SimId, MobileError&gt; {
++        let next_id = self
++            .population
++            .validate(&amp;self.scenario)
++            .map_err(MobileError::Population)?;
++        let bounds = self.space.bounds;
++        if bounds.width_cells == 0 || bounds.height_cells == 0 {
++            return Err(MobileError::InvalidBounds);
++        }
++        if self.space.newborn_motion.travel_units_per_cell == 0 {
++            return Err(MobileError::ZeroNewbornTravelCost);
++        }
++        let grazers: BTreeMap&lt;_, _&gt; = self
++            .scenario
++            .grazers
++            .iter()
++            .map(|seed| (seed.id, seed))
++            .collect();
++        for seed in grazers.values() {
++            if seed.feeding_site.is_some() {
++                return Err(MobileError::AuthoredContact(seed.id));
++            }
++        }
++        let mut seen = BTreeSet::new();
++        for placement in &amp;self.space.grazers {
++            if !seen.insert(placement.id) {
++                return Err(MobileError::DuplicateGrazerPlacement(placement.id));
++            }
++            if !grazers.contains_key(&amp;placement.id) {
++                return Err(MobileError::UnexpectedGrazerPlacement(placement.id));
++            }
++            if !bounds.contains(placement.cell) {
++                return Err(MobileError::OutOfBounds(placement.id));
++            }
++            if placement.motion.travel_units_per_cell == 0 {
++                return Err(MobileError::ZeroTravelCost(placement.id));
++            }
++        }
++        for id in grazers.keys() {
++            if !seen.contains(id) {
++                return Err(MobileError::MissingGrazerPlacement(*id));
++            }
++        }
++        let patches: BTreeSet&lt;_&gt; = self.scenario.patches.iter().map(|seed| seed.id).collect();
++        seen.clear();
++        let mut cells = BTreeSet::new();
++        for placement in &amp;self.space.patches {
++            if !seen.insert(placement.id) {
++                return Err(MobileError::DuplicatePatchPlacement(placement.id));
++            }
++            if !patches.contains(&amp;placement.id) {
++                return Err(MobileError::UnexpectedPatchPlacement(placement.id));
++            }
++            if !bounds.contains(placement.cell) {
++                return Err(MobileError::OutOfBounds(placement.id));
++            }
++            if !cells.insert(placement.cell) {
++                return Err(MobileError::SharedPatchCell(placement.cell));
++            }
++        }
++        for id in patches {
++            if !seen.contains(&amp;id) {
++                return Err(MobileError::MissingPatchPlacement(id));
++            }
++        }
++        self.scenario.grazers.sort_by_key(|seed| seed.id);
++        self.scenario.patches.sort_by_key(|seed| seed.id);
++        self.population.founders.sort_by_key(|founder| founder.id);
++        self.space.grazers.sort_by_key(|placement| placement.id);
++        self.space.patches.sort_by_key(|placement| placement.id);
++        Ok(next_id)
++    }
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum MobileError {
++    Population(PopulationError),
++    InvalidBounds,
++    AuthoredContact(SimId),
++    MissingGrazerPlacement(SimId),
++    DuplicateGrazerPlacement(SimId),
++    UnexpectedGrazerPlacement(SimId),
++    MissingPatchPlacement(SimId),
++    DuplicatePatchPlacement(SimId),
++    UnexpectedPatchPlacement(SimId),
++    OutOfBounds(SimId),
++    SharedPatchCell(Cell),
++    ZeroTravelCost(SimId),
++    ZeroNewbornTravelCost,
++}
++
++impl fmt::Display for MobileError {
++    fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
++        write!(f, "invalid mobile configuration: {self:?}")
++    }
++}
++impl std::error::Error for MobileError {}
+--- a/src/mobile/history.rs
++++ b/src/mobile/history.rs
+@@ -0,0 +1,113 @@
++//! Actual target changes, travel, and newborn placement with bounded coverage.
++
++use std::collections::VecDeque;
++
++use super::Cell;
++use crate::SimId;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum MobileEventKind {
++    TargetChanged {
++        grazer: SimId,
++        from: Option&lt;SimId&gt;,
++        to: Option&lt;SimId&gt;,
++    },
++    Travelled {
++        grazer: SimId,
++        from: Cell,
++        to: Cell,
++        cells: u32,
++        spent_units: u32,
++    },
++    BornAt {
++        child: SimId,
++        cell: Cell,
++    },
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct MobileEvent {
++    pub run: u64,
++    pub tick: u64,
++    pub kind: MobileEventKind,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct MobileHistorySnapshot {
++    pub events: Vec&lt;MobileEvent&gt;,
++    pub limit: usize,
++    pub evicted_events: u64,
++    pub complete_after_tick: u64,
++    pub collected_through_tick: u64,
++}
++
++impl MobileHistorySnapshot {
++    /// None means invalid, future, or incomplete coverage; Some(0) means no travel.
++    pub fn travelled_cells_between(&amp;self, first: u64, last: u64) -&gt; Option&lt;u64&gt; {
++        if first == 0
++            || first &gt; last
++            || first &lt;= self.complete_after_tick
++            || last &gt; self.collected_through_tick
++        {
++            return None;
++        }
++        self.events
++            .iter()
++            .filter(|event| (first..=last).contains(&amp;event.tick))
++            .try_fold(0_u64, |sum, event| {
++                let cells = match event.kind {
++                    MobileEventKind::Travelled { cells, .. } =&gt; cells,
++                    _ =&gt; 0,
++                };
++                sum.checked_add(u64::from(cells))
++            })
++    }
++}
++
++pub(crate) struct MobileHistory {
++    events: VecDeque&lt;MobileEvent&gt;,
++    limit: usize,
++    evicted_events: u64,
++    complete_after_tick: u64,
++    pub collected_through_tick: u64,
++}
++
++impl MobileHistory {
++    #[cfg(test)]
++    pub(crate) fn exhaust_eviction_counter_for_test(&amp;mut self) {
++        self.events.clear();
++        self.limit = 0;
++        self.evicted_events = u64::MAX;
++    }
++
++    pub fn new(limit: usize) -&gt; Self {
++        Self {
++            events: VecDeque::new(),
++            limit,
++            evicted_events: 0,
++            complete_after_tick: 0,
++            collected_through_tick: 0,
++        }
++    }
++    pub fn can_record(&amp;self) -&gt; bool {
++        self.events.len() &lt; self.limit || self.evicted_events.checked_add(1).is_some()
++    }
++    pub fn record(&amp;mut self, event: MobileEvent) {
++        assert!(self.can_record(), "mobile event eviction counter exhausted");
++        self.events.push_back(event);
++        if self.events.len() &gt; self.limit {
++            let evicted = self.events.pop_front().expect("an event was just appended");
++            self.complete_after_tick = self.complete_after_tick.max(evicted.tick);
++            self.evicted_events += 1;
++        }
++    }
++    pub fn snapshot(&amp;self) -&gt; MobileHistorySnapshot {
++        MobileHistorySnapshot {
++            events: self.events.iter().copied().collect(),
++            limit: self.limit,
++            evicted_events: self.evicted_events,
++            complete_after_tick: self.complete_after_tick,
++            collected_through_tick: self.collected_through_tick,
++        }
++    }
++}
+--- a/src/mobile/movement.rs
++++ b/src/mobile/movement.rs
+@@ -0,0 +1,118 @@
++//! Bounded x-then-y cardinal travel, charged only for accepted cells.
++
++use super::{Cell, MobileActor, MobileEvent, MobileEventKind, MobileState, Position};
++use crate::model::{Clock, Grazer, Identity, Life, Patch};
++use bevy_ecs::prelude::*;
++use std::collections::BTreeSet;
++
++fn advance(from: Cell, destination: Cell, cells: u32) -&gt; Cell {
++    let x_steps = cells.min(from.x.abs_diff(destination.x));
++    let y_steps = cells - x_steps;
++    Cell {
++        x: if from.x &lt; destination.x {
++            from.x + x_steps
++        } else {
++            from.x - x_steps
++        },
++        y: if from.y &lt; destination.y {
++            from.y + y_steps
++        } else {
++            from.y - y_steps
++        },
++    }
++}
++
++pub(crate) fn travel(
++    clock: Res&lt;Clock&gt;,
++    patches: Query&lt;&amp;Identity, With&lt;Patch&gt;&gt;,
++    mut grazers: Query&lt;(
++        Entity,
++        &amp;Identity,
++        &amp;mut Position,
++        &amp;mut Grazer,
++        &amp;mut MobileActor,
++    )&gt;,
++    mut state: ResMut&lt;MobileState&gt;,
++) {
++    let available: BTreeSet&lt;_&gt; = patches.iter().map(|id| id.0).collect();
++    let mut order: Vec&lt;_&gt; = grazers
++        .iter()
++        .map(|(entity, id, _, _, _)| (id.0, entity))
++        .collect();
++    order.sort_by_key(|(id, _)| *id);
++    for (id, entity) in order {
++        let (_, _, mut position, mut grazer, mut actor) =
++            grazers.get_mut(entity).expect("listed actor exists");
++        if grazer.life != Life::Alive
++            || clock.tick &lt; grazer.first_eligible_tick
++            || actor.last_travel_tick == Some(clock.tick)
++        {
++            continue;
++        }
++        let target = actor.target.filter(|target| {
++            target.observed_tick == clock.tick &amp;&amp; available.contains(&amp;target.patch)
++        });
++        let (next, cells, spent) = if let Some(target) = target {
++            let cells = position
++                .0
++                .distance(target.observed_cell)
++                .min(u64::from(actor.motion.max_cells_per_tick))
++                .min(u64::from(
++                    grazer.reserve_units / actor.motion.travel_units_per_cell,
++                )) as u32;
++            (
++                advance(position.0, target.observed_cell, cells),
++                cells,
++                cells
++                    .checked_mul(actor.motion.travel_units_per_cell)
++                    .expect("affordable travel fits reserve units"),
++            )
++        } else {
++            (position.0, 0, 0)
++        };
++        if cells &gt; 0 {
++            let ledger_cells = state
++                .ledger
++                .travel_cells
++                .checked_add(u64::from(cells))
++                .expect("travel-cell ledger exhausted");
++            let ledger_units = state
++                .ledger
++                .travel_units
++                .checked_add(u64::from(spent))
++                .expect("travel-unit ledger exhausted");
++            let total_cells = state
++                .totals
++                .travel_cells
++                .checked_add(u64::from(cells))
++                .expect("travel-cell total exhausted");
++            let total_units = state
++                .totals
++                .travel_units
++                .checked_add(u64::from(spent))
++                .expect("travel-unit total exhausted");
++            assert!(
++                state.history.can_record(),
++                "mobile event eviction counter exhausted"
++            );
++            state.history.record(MobileEvent {
++                run: clock.run,
++                tick: clock.tick,
++                kind: MobileEventKind::Travelled {
++                    grazer: id,
++                    from: position.0,
++                    to: next,
++                    cells,
++                    spent_units: spent,
++                },
++            });
++            state.ledger.travel_cells = ledger_cells;
++            state.ledger.travel_units = ledger_units;
++            state.totals.travel_cells = total_cells;
++            state.totals.travel_units = total_units;
++            grazer.reserve_units -= spent;
++            position.0 = next;
++        }
++        actor.last_travel_tick = Some(clock.tick);
++    }
++}
+--- a/src/mobile/perception.rs
++++ b/src/mobile/perception.rs
+@@ -0,0 +1,108 @@
++//! Owned local readings precede every actor's movement; choice is not a reservation.
++
++use super::{
++    MobileActor, MobileEvent, MobileEventKind, MobileState, PatchObservation, PatchTarget, Position,
++};
++use crate::model::{Clock, Grazer, Identity, Life, Patch};
++use bevy_ecs::prelude::*;
++
++pub(crate) fn observe(
++    clock: Res&lt;Clock&gt;,
++    patches: Query&lt;(&amp;Identity, &amp;Position, &amp;Patch)&gt;,
++    mut grazers: Query&lt;(&amp;Position, &amp;Grazer, &amp;mut MobileActor)&gt;,
++) {
++    for (position, grazer, mut actor) in &amp;mut grazers {
++        if grazer.life != Life::Alive || clock.tick &lt; grazer.first_eligible_tick {
++            continue;
++        }
++        let mut readings: Vec&lt;_&gt; = patches
++            .iter()
++            .filter(|(_, patch_position, _)| {
++                position.0.distance(patch_position.0) &lt;= u64::from(actor.motion.sensing_radius)
++            })
++            .map(|(id, position, patch)| PatchObservation {
++                patch: id.0,
++                cell: position.0,
++                biomass_units: patch.biomass_units,
++            })
++            .collect();
++        readings.sort_by_key(|reading| reading.patch);
++        actor.visible_patches = readings;
++        actor.observed_tick = Some(clock.tick);
++        actor.observed_cell = Some(position.0);
++    }
++}
++
++pub(crate) fn choose(
++    clock: Res&lt;Clock&gt;,
++    mut grazers: Query&lt;(Entity, &amp;Identity, &amp;Position, &amp;Grazer, &amp;mut MobileActor)&gt;,
++    mut state: ResMut&lt;MobileState&gt;,
++) {
++    let mut order: Vec&lt;_&gt; = grazers
++        .iter()
++        .map(|(entity, id, _, _, _)| (id.0, entity))
++        .collect();
++    order.sort_by_key(|(id, _)| *id);
++    for (id, entity) in order {
++        let (_, _, position, grazer, mut actor) =
++            grazers.get_mut(entity).expect("listed actor exists");
++        if grazer.life != Life::Alive || clock.tick &lt; grazer.first_eligible_tick {
++            continue;
++        }
++        let previous = actor.target.map(|target| target.patch);
++        let eligible = |reading: &amp;&amp;PatchObservation| {
++            reading.biomass_units &gt; 0
++                &amp;&amp; position.0.distance(reading.cell) &lt;= u64::from(actor.motion.sensing_radius)
++        };
++        let selected = if actor.observed_tick == Some(clock.tick) {
++            actor
++                .visible_patches
++                .iter()
++                .filter(eligible)
++                .find(|reading| Some(reading.patch) == previous)
++                .or_else(|| {
++                    actor
++                        .visible_patches
++                        .iter()
++                        .filter(eligible)
++                        .min_by_key(|reading| (position.0.distance(reading.cell), reading.patch))
++                })
++                .copied()
++        } else {
++            None
++        };
++        let next = selected.map(|reading| PatchTarget {
++            patch: reading.patch,
++            observed_cell: reading.cell,
++            observed_tick: clock.tick,
++        });
++        if previous != next.map(|target| target.patch) {
++            let ledger_changes = state
++                .ledger
++                .target_changes
++                .checked_add(1)
++                .expect("target-change ledger exhausted");
++            let total_changes = state
++                .totals
++                .target_changes
++                .checked_add(1)
++                .expect("target-change total exhausted");
++            assert!(
++                state.history.can_record(),
++                "mobile event eviction counter exhausted"
++            );
++            state.ledger.target_changes = ledger_changes;
++            state.totals.target_changes = total_changes;
++            state.history.record(MobileEvent {
++                run: clock.run,
++                tick: clock.tick,
++                kind: MobileEventKind::TargetChanged {
++                    grazer: id,
++                    from: previous,
++                    to: next.map(|target| target.patch),
++                },
++            });
++        }
++        actor.target = next;
++    }
++}
+--- a/src/mobile/scenarios.rs
++++ b/src/mobile/scenarios.rs
+@@ -0,0 +1,140 @@
++//! Fully declared course fixtures, shared by native examples and preview callers.
++
++use super::{
++    Cell, GrazerPlacement, GridBounds, MobileScenario, Motion, PatchPlacement, SpatialConfig,
++};
++use crate::{
++    Daylight, FounderTrait, GrazerSeed, PatchSeed, PopulationConfig, Scenario, SimId, UpkeepTrait,
++};
++
++impl MobileScenario {
++    /// One grazer: two paid steps to three finite units, with no renewal.
++    pub fn short_journey() -&gt; Self {
++        let motion = Motion {
++            sensing_radius: 3,
++            max_cells_per_tick: 1,
++            travel_units_per_cell: 1,
++        };
++        Self::new(
++            Scenario {
++                daylight: Daylight::new(1, 0).unwrap(),
++                grazers: vec![GrazerSeed {
++                    id: SimId(1),
++                    reserve_units: 5,
++                    capacity_units: 8,
++                    maintenance_units_per_tick: 1,
++                    meal_units_per_tick: 2,
++                    feeding_site: None,
++                }],
++                patches: vec![PatchSeed {
++                    id: SimId(100),
++                    biomass_units: 3,
++                    capacity_units: 3,
++                    growth_units_per_lit_tick: 0,
++                }],
++                history_limit: 128,
++            },
++            PopulationConfig::new(vec![FounderTrait {
++                id: SimId(1),
++                upkeep: UpkeepTrait::new(1).unwrap(),
++            }]),
++            SpatialConfig {
++                bounds: GridBounds {
++                    width_cells: 4,
++                    height_cells: 2,
++                },
++                grazers: vec![GrazerPlacement {
++                    id: SimId(1),
++                    cell: Cell { x: 0, y: 0 },
++                    motion,
++                }],
++                patches: vec![PatchPlacement {
++                    id: SimId(100),
++                    cell: Cell { x: 2, y: 0 },
++                }],
++                newborn_motion: motion,
++            },
++        )
++    }
++
++    /// Four founders, two renewable patches, inherited upkeep, and a grazer cap10.
++    pub fn meadow() -&gt; Self {
++        let cells = [
++            Cell { x: 2, y: 2 },
++            Cell { x: 3, y: 1 },
++            Cell { x: 2, y: 3 },
++            Cell { x: 3, y: 2 },
++        ];
++        let founders: Vec&lt;_&gt; = [1, 1, 2, 2]
++            .into_iter()
++            .enumerate()
++            .map(|(index, value)| FounderTrait {
++                id: SimId(index as u32 + 1),
++                upkeep: UpkeepTrait::new(value).unwrap(),
++            })
++            .collect();
++        let motion = Motion {
++            sensing_radius: 5,
++            max_cells_per_tick: 1,
++            travel_units_per_cell: 1,
++        };
++        let scenario = Scenario {
++            daylight: Daylight::new(8, 4).unwrap(),
++            grazers: founders
++                .iter()
++                .map(|founder| GrazerSeed {
++                    id: founder.id,
++                    reserve_units: 18,
++                    capacity_units: 24,
++                    maintenance_units_per_tick: founder.upkeep.units(),
++                    meal_units_per_tick: 5,
++                    feeding_site: None,
++                })
++                .collect(),
++            patches: vec![
++                PatchSeed {
++                    id: SimId(1000),
++                    biomass_units: 6,
++                    capacity_units: 18,
++                    growth_units_per_lit_tick: 8,
++                },
++                PatchSeed {
++                    id: SimId(1001),
++                    biomass_units: 18,
++                    capacity_units: 18,
++                    growth_units_per_lit_tick: 4,
++                },
++            ],
++            history_limit: 128,
++        };
++        let space = SpatialConfig {
++            bounds: GridBounds {
++                width_cells: 11,
++                height_cells: 5,
++            },
++            grazers: founders
++                .iter()
++                .zip(cells)
++                .map(|(founder, cell)| GrazerPlacement {
++                    id: founder.id,
++                    cell,
++                    motion,
++                })
++                .collect(),
++            patches: vec![
++                PatchPlacement {
++                    id: SimId(1000),
++                    cell: Cell { x: 3, y: 2 },
++                },
++                PatchPlacement {
++                    id: SimId(1001),
++                    cell: Cell { x: 7, y: 2 },
++                },
++            ],
++            newborn_motion: motion,
++        };
++        let mut population = PopulationConfig::new(founders);
++        population.max_living = 10;
++        Self::new(scenario, population, space)
++    }
++}
+--- a/src/reproduction.rs
++++ b/src/reproduction.rs
+@@ -5,12 +5,22 @@
+ use bevy_ecs::prelude::*;
+ 
+ use crate::SimId;
++use crate::mobile::{Cell, MobileActor, MobileEvent, MobileEventKind, MobileState, Position};
+ use crate::model::{Clock, Grazer, Identity, Life, Patch};
+ use crate::population::{
+     BirthOrigin, BirthRecord, Individual, PopulationEvent, PopulationEventKind, PopulationLedger,
+     PopulationState, Stage,
+ };
+ use crate::simulation::Roster;
++
++type ParentAccess&lt;'a&gt; = (
++    Entity,
++    &amp;'a Identity,
++    &amp;'a mut Grazer,
++    &amp;'a mut Individual,
++    Option&lt;&amp;'a MobileActor&gt;,
++    Option&lt;&amp;'a Position&gt;,
++);
+ 
+ #[derive(Clone, Copy)]
+ struct ParentView {
+@@ -41,6 +51,28 @@
+             &amp;&amp; tick &gt;= self.individual.next_birth_tick
+             &amp;&amp; self.reserve_units &gt; debit
+     }
++}
++
++fn current_parent(
++    id: &amp;Identity,
++    grazer: &amp;Grazer,
++    individual: &amp;Individual,
++    actor: Option&lt;&amp;MobileActor&gt;,
++    position: Option&lt;&amp;Position&gt;,
++    cells: &amp;BTreeMap&lt;SimId, Cell&gt;,
++    mobile_tick: Option&lt;u64&gt;,
++) -&gt; ParentView {
++    let mut view = ParentView::new(id, grazer, individual);
++    if let Some(tick) = mobile_tick {
++        view.site = view.site.filter(|site| {
++            actor.is_some_and(|actor| {
++                actor
++                    .target
++                    .is_some_and(|target| target.patch == *site &amp;&amp; target.observed_tick == tick)
++            }) &amp;&amp; position.is_some_and(|position| cells.get(site) == Some(&amp;position.0))
++        });
++    }
++    view
+ }
+ 
+ #[derive(Debug, PartialEq, Eq)]
+@@ -181,15 +213,21 @@
+ pub(crate) fn resolve_births(
+     clock: Res&lt;Clock&gt;,
+     mut commands: Commands,
+-    mut parents: Query&lt;(Entity, &amp;Identity, &amp;mut Grazer, &amp;mut Individual)&gt;,
+-    patches: Query&lt;&amp;Identity, With&lt;Patch&gt;&gt;,
++    mut parents: Query&lt;ParentAccess&lt;'_&gt;&gt;,
++    patches: Query&lt;(&amp;Identity, Option&lt;&amp;Position&gt;), With&lt;Patch&gt;&gt;,
+     mut roster: ResMut&lt;Roster&gt;,
+     mut state: ResMut&lt;PopulationState&gt;,
++    mut mobile_state: Option&lt;ResMut&lt;MobileState&gt;&gt;,
+ ) {
+-    let sites: BTreeSet&lt;_&gt; = patches.iter().map(|id| id.0).collect();
++    let sites: BTreeSet&lt;_&gt; = patches.iter().map(|(id, _)| id.0).collect();
++    let cells: BTreeMap&lt;_, _&gt; = patches
++        .iter()
++        .filter_map(|(id, position)| position.map(|position| (id.0, position.0)))
++        .collect();
++    let mobile_tick = mobile_state.as_ref().map(|_| clock.tick);
+     let living = parents
+         .iter()
+-        .filter(|(_, _, grazer, _)| grazer.life == Life::Alive)
++        .filter(|(_, _, grazer, _, _, _)| grazer.life == Life::Alive)
+         .count();
+     let mut available_slots = state
+         .config
+@@ -199,8 +237,8 @@
+     let debit =
+         state.config.contribution_units_per_parent + state.config.birth_cost_units_per_parent;
+     let mut groups: BTreeMap&lt;SimId, Vec&lt;(SimId, Entity)&gt;&gt; = BTreeMap::new();
+-    for (entity, id, grazer, individual) in parents.iter() {
+-        let view = ParentView::new(id, grazer, individual);
++    for (entity, id, grazer, individual, actor, position) in parents.iter() {
++        let view = current_parent(id, grazer, individual, actor, position, &amp;cells, mobile_tick);
+         if view.eligible(clock.tick, debit)
+             &amp;&amp; let Some(site) = view.site.filter(|site| sites.contains(site))
+         {
+@@ -212,11 +250,11 @@
+         for pair in group.chunks_exact(2) {
+             let entities = [pair[0].1, pair[1].1];
+             let views = entities.map(|entity| {
+-                let (_, id, grazer, individual) =
++                let (_, id, grazer, individual, actor, position) =
+                     parents.get(entity).expect("candidate parent exists");
+-                ParentView::new(id, grazer, individual)
++                current_parent(id, grazer, individual, actor, position, &amp;cells, mobile_tick)
+             });
+-            let plan = match plan_birth(&amp;clock, &amp;state, views, &amp;sites, available_slots) {
++            let mut plan = match plan_birth(&amp;clock, &amp;state, views, &amp;sites, available_slots) {
+                 Ok(plan) =&gt; plan,
+                 Err(Rejection::Ineligible) =&gt; continue,
+                 Err(Rejection::Capacity) =&gt; {
+@@ -231,10 +269,22 @@
+                     panic!("population birth counter or deadline exhausted before debit")
+                 }
+             };
++            // Prepare spatial birth data and event headroom before either debit.
++            let mobile_child = mobile_state.as_ref().map(|mobile| {
++                assert!(
++                    mobile.history.can_record(),
++                    "mobile birth event counter exhausted before debit"
++                );
++                let cell = cells[&amp;plan.child.feeding_site.expect("accepted birth has a patch")];
++                (Position(cell), MobileActor::new(mobile.newborn_motion))
++            });
++            if mobile_child.is_some() {
++                plan.child.feeding_site = None;
++            }
+             {
+                 let [
+-                    (_, _, mut first, mut first_stage),
+-                    (_, _, mut second, mut second_stage),
++                    (_, _, mut first, mut first_stage, _, _),
++                    (_, _, mut second, mut second_stage, _, _),
+                 ] = parents
+                     .get_many_mut(entities)
+                     .expect("distinct candidate parents still exist");
+@@ -252,9 +302,24 @@
+                 tick: clock.tick,
+                 kind: PopulationEventKind::Born(plan.record),
+             });
+-            let entity = commands
+-                .spawn((Identity(plan.record.child), plan.child, plan.individual))
+-                .id();
++            let mut child =
++                commands.spawn((Identity(plan.record.child), plan.child, plan.individual));
++            if let Some((position, actor)) = mobile_child {
++                mobile_state
++                    .as_mut()
++                    .expect("mobile birth has state")
++                    .history
++                    .record(MobileEvent {
++                        run: clock.run,
++                        tick: clock.tick,
++                        kind: MobileEventKind::BornAt {
++                            child: plan.record.child,
++                            cell: position.0,
++                        },
++                    });
++                child.insert((position, actor));
++            }
++            let entity = child.id();
+             roster.grazers.push(entity);
+         }
+     }
+--- a/src/simulation.rs
++++ b/src/simulation.rs
+@@ -6,12 +6,13 @@
+ };
+ 
+ use crate::history::{History, complete_tick};
++use crate::mobile::{MobileError, MobileScenario, MobileSnapshot};
+ use crate::model::{
+     Clock, Daylight, Grazer, GrazerReading, Identity, Life, Patch, PatchReading, Scenario,
+     ScenarioError, Snapshot, TickLedger,
+ };
+ use crate::population::{PopulationConfig, PopulationError, PopulationSnapshot};
+-use crate::{feeding, lifecycle, population, reproduction, supply};
++use crate::{feeding, lifecycle, mobile, population, reproduction, supply};
+ 
+ // This index stores entity handles only, never a second copy of biological state.
+ #[derive(Resource)]
+@@ -25,6 +26,7 @@
+     schedule: Schedule,
+     initial: Scenario,
+     initial_population: Option&lt;PopulationConfig&gt;,
++    initial_mobile: Option&lt;MobileScenario&gt;,
+ }
+ 
+ impl CourseWorld {
+@@ -36,6 +38,7 @@
+             schedule: tick_schedule(),
+             initial: scenario,
+             initial_population: None,
++            initial_mobile: None,
+         })
+     }
+ 
+@@ -56,7 +59,51 @@
+             schedule: population_schedule(),
+             initial: scenario,
+             initial_population: Some(config),
+-        })
++            initial_mobile: None,
++        })
++    }
++
++    /// Opt into local observations, paid travel, and spatial grazer births.
++    pub fn new_mobile(mut initial: MobileScenario) -&gt; Result&lt;Self, MobileError&gt; {
++        let next_child_id = initial.validate_and_normalize()?;
++        let world = install_mobile(&amp;initial, 1, next_child_id);
++        Ok(Self {
++            world,
++            schedule: mobile_schedule(),
++            initial: initial.scenario().clone(),
++            initial_population: Some(initial.population().clone()),
++            initial_mobile: Some(initial),
++        })
++    }
++
++    /// The complete mobile observation includes both earlier projections and space.
++    pub fn mobile_snapshot(&amp;self) -&gt; Option&lt;MobileSnapshot&gt; {
++        let initial = self.initial_mobile.as_ref()?;
++        Some(mobile::snapshot(
++            &amp;self.world,
++            initial,
++            self.snapshot(),
++            self.population_snapshot()
++                .expect("mobile mode includes a population policy"),
++        ))
++    }
++
++    /// Validate before changing any mode, run identity, or saved reset selection.
++    pub fn reset_with_mobile(&amp;mut self, mut initial: MobileScenario) -&gt; Result&lt;(), MobileError&gt; {
++        let next_child_id = initial.validate_and_normalize()?;
++        let run = self
++            .world
++            .resource::&lt;Clock&gt;()
++            .run
++            .checked_add(1)
++            .expect("run identity exhausted");
++        let world = install_mobile(&amp;initial, run, next_child_id);
++        self.world = world;
++        self.schedule = mobile_schedule();
++        self.initial = initial.scenario().clone();
++        self.initial_population = Some(initial.population().clone());
++        self.initial_mobile = Some(initial);
++        Ok(())
+     }
+ 
+     /// Return None when the population policy is disabled; never invent observations.
+@@ -75,7 +122,10 @@
+     ///
+     /// Panics if the run identity is exhausted; the old world remains unchanged.
+     pub fn reset(&amp;mut self) {
+-        if let Some(config) = self.initial_population.clone() {
++        if let Some(initial) = self.initial_mobile.clone() {
++            self.reset_with_mobile(initial)
++                .expect("stored mobile scenario was already validated");
++        } else if let Some(config) = self.initial_population.clone() {
+             self.reset_with_population(self.initial.clone(), config)
+                 .expect("stored population was already validated");
+         } else {
+@@ -102,6 +152,7 @@
+         self.schedule = tick_schedule();
+         self.initial = scenario;
+         self.initial_population = None;
++        self.initial_mobile = None;
+         Ok(())
+     }
+ 
+@@ -128,6 +179,7 @@
+         self.schedule = population_schedule();
+         self.initial = scenario;
+         self.initial_population = Some(config);
++        self.initial_mobile = None;
+         Ok(())
+     }
+ 
+@@ -194,6 +246,43 @@
+     }
+ }
+ 
++fn install_mobile(initial: &amp;MobileScenario, run: u64, next_child_id: crate::SimId) -&gt; World {
++    let mut world = install(initial.scenario(), run);
++    population::install(&amp;mut world, initial.population().clone(), next_child_id);
++    mobile::install(&amp;mut world, initial);
++    world
++}
++
++fn mobile_schedule() -&gt; Schedule {
++    let mut schedule = Schedule::default();
++    schedule.set_executor_kind(ExecutorKind::SingleThreaded);
++    schedule.add_systems(
++        (
++            begin_tick,
++            population::begin_population_tick,
++            mobile::begin_mobile_tick,
++            population::mature,
++            lifecycle::maintain,
++            supply::grow,
++            mobile::perception::observe,
++            mobile::perception::choose,
++            mobile::movement::travel,
++            mobile::derive_contacts,
++            feeding::feed,
++            lifecycle::starve,
++            reproduction::resolve_births,
++            ApplyDeferred,
++            population::cleanup_dead,
++            ApplyDeferred,
++            complete_tick,
++            population::complete_population_tick,
++            mobile::complete_mobile_tick,
++        )
++            .chain(),
++    );
++    schedule
++}
++
+ fn population_schedule() -&gt; Schedule {
+     let mut schedule = Schedule::default();
+     schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+@@ -287,4 +376,6 @@
+ }
+ 
+ #[cfg(test)]
++mod mobile_tests;
++#[cfg(test)]
+ mod tests;
+--- a/src/simulation/mobile_tests.rs
++++ b/src/simulation/mobile_tests.rs
+@@ -0,0 +1,223 @@
++//! Deliberate intervening changes exercise action-time checks, not just helpers.
++
++use super::*;
++use crate::mobile::{Cell, MobileActor, MobileEventKind, MobileState, PatchTarget, Position};
++use crate::{FounderTrait, GrazerPlacement, SimId, UpkeepTrait};
++use std::panic::{AssertUnwindSafe, catch_unwind};
++
++fn observe_and_choose(course: &amp;mut CourseWorld) {
++    let mut schedule = Schedule::default();
++    schedule.add_systems((mobile::perception::observe, mobile::perception::choose).chain());
++    schedule.run(&amp;mut course.world);
++}
++
++fn birth_fixture() -&gt; CourseWorld {
++    let initial = MobileScenario::short_journey();
++    let mut scenario = initial.scenario().clone();
++    let mut population = initial.population().clone();
++    let mut space = initial.space().clone();
++    scenario.daylight = Daylight::new(1, 1).unwrap();
++    scenario.grazers.push({
++        let mut seed = scenario.grazers[0].clone();
++        seed.id = SimId(2);
++        seed
++    });
++    scenario.patches[0].biomass_units = 0;
++    scenario.patches[0].capacity_units = 20;
++    scenario.patches[0].growth_units_per_lit_tick = 6;
++    population.founders.push(FounderTrait {
++        id: SimId(2),
++        upkeep: UpkeepTrait::new(1).unwrap(),
++    });
++    space.grazers[0].cell = space.patches[0].cell;
++    space.grazers.push(GrazerPlacement {
++        id: SimId(2),
++        ..space.grazers[0]
++    });
++    CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap()
++}
++
++#[test]
++fn feeding_rechecks_current_contact_after_a_derived_token_becomes_stale() {
++    let mut course = CourseWorld::new_mobile(MobileScenario::short_journey()).unwrap();
++    course.step();
++    let patch = course.world.resource::&lt;Roster&gt;().patches[0];
++    course.world.get_mut::&lt;Position&gt;(patch).unwrap().0.x = 1;
++    let mut contacts = Schedule::default();
++    contacts.add_systems(mobile::derive_contacts);
++    contacts.run(&amp;mut course.world);
++    assert_eq!(course.snapshot().grazers[0].feeding_site, Some(SimId(100)));
++    course.world.get_mut::&lt;Position&gt;(patch).unwrap().0.x = 2;
++    let before = course.mobile_snapshot();
++    let mut meal = Schedule::default();
++    meal.add_systems(feeding::feed);
++    meal.run(&amp;mut course.world);
++    assert_eq!(course.mobile_snapshot(), before);
++}
++
++#[test]
++fn travel_uses_the_owned_destination_not_a_targets_changed_global_cell() {
++    let initial = MobileScenario::short_journey();
++    let mut space = initial.space().clone();
++    space.grazers[0].motion.max_cells_per_tick = 3;
++    let mut course = CourseWorld::new_mobile(MobileScenario::new(
++        initial.scenario().clone(),
++        initial.population().clone(),
++        space,
++    ))
++    .unwrap();
++    course.world.resource_mut::&lt;Clock&gt;().tick = 1;
++    observe_and_choose(&amp;mut course);
++    let patch = course.world.resource::&lt;Roster&gt;().patches[0];
++    course.world.get_mut::&lt;Position&gt;(patch).unwrap().0 = Cell { x: 0, y: 1 };
++    let mut travel = Schedule::default();
++    travel.add_systems(mobile::movement::travel);
++    travel.run(&amp;mut course.world);
++    let state = course.mobile_snapshot().unwrap();
++    assert_eq!(state.grazers[0].cell, Cell { x: 2, y: 0 });
++    assert_eq!(state.base.grazers[0].reserve_units, 3);
++    assert_eq!(state.ledger.travel_cells, 2);
++}
++
++#[test]
++fn a_removed_patch_kind_rejects_travel_and_repeated_travel_has_no_second_charge() {
++    let mut course = CourseWorld::new_mobile(MobileScenario::short_journey()).unwrap();
++    course.world.resource_mut::&lt;Clock&gt;().tick = 1;
++    observe_and_choose(&amp;mut course);
++    let patch = course.world.resource::&lt;Roster&gt;().patches[0];
++    course.world.entity_mut(patch).remove::&lt;Patch&gt;();
++    let mut travel = Schedule::default();
++    travel.add_systems(mobile::movement::travel);
++    travel.run(&amp;mut course.world);
++    let actor = course.world.resource::&lt;Roster&gt;().grazers[0];
++    assert_eq!(
++        course.world.get::&lt;Position&gt;(actor).unwrap().0,
++        Cell { x: 0, y: 0 }
++    );
++    assert_eq!(course.world.get::&lt;Grazer&gt;(actor).unwrap().reserve_units, 5);
++    assert_eq!(
++        course.world.resource::&lt;MobileState&gt;().ledger.travel_cells,
++        0
++    );
++
++    let mut fresh = CourseWorld::new_mobile(MobileScenario::short_journey()).unwrap();
++    fresh.step();
++    let before = fresh.mobile_snapshot();
++    let mut late = Schedule::default();
++    late.add_systems(mobile::movement::travel);
++    late.run(&amp;mut fresh.world);
++    assert_eq!(fresh.mobile_snapshot(), before);
++}
++
++#[test]
++fn a_visible_newborn_cannot_observe_choose_or_travel_in_its_birth_tick() {
++    let mut course = birth_fixture();
++    course.step();
++    observe_and_choose(&amp;mut course);
++    let child = course.world.resource::&lt;Roster&gt;().grazers[2];
++    assert_eq!(
++        course
++            .world
++            .get::&lt;MobileActor&gt;(child)
++            .unwrap()
++            .observed_tick,
++        None
++    );
++    assert_eq!(course.world.get::&lt;MobileActor&gt;(child).unwrap().target, None);
++    // Even an erroneous late intent assignment must not grant an early action.
++    course.world.get_mut::&lt;Position&gt;(child).unwrap().0 = Cell { x: 1, y: 0 };
++    course.world.get_mut::&lt;MobileActor&gt;(child).unwrap().target = Some(PatchTarget {
++        patch: SimId(100),
++        observed_cell: Cell { x: 2, y: 0 },
++        observed_tick: 1,
++    });
++    let before = course.mobile_snapshot();
++    let mut late = Schedule::default();
++    late.add_systems(mobile::movement::travel);
++    late.run(&amp;mut course.world);
++    assert_eq!(course.mobile_snapshot(), before);
++    assert_eq!(course.world.get::&lt;Grazer&gt;(child).unwrap().reserve_units, 4);
++    assert!(
++        !course
++            .world
++            .resource::&lt;MobileState&gt;()
++            .history
++            .snapshot()
++            .events
++            .iter()
++            .any(|event| matches!(
++                event.kind,
++                MobileEventKind::Travelled {
++                    grazer: SimId(101),
++                    ..
++                }
++            ))
++    );
++}
++
++#[test]
++fn births_recheck_parent_cells_instead_of_trusting_stale_contact_tokens() {
++    let mut course = birth_fixture();
++    course.world.resource_mut::&lt;Clock&gt;().tick = 1;
++    let mut preparation = Schedule::default();
++    preparation.add_systems(
++        (
++            supply::grow,
++            mobile::perception::observe,
++            mobile::perception::choose,
++            mobile::derive_contacts,
++        )
++            .chain(),
++    );
++    preparation.run(&amp;mut course.world);
++    let second = course.world.resource::&lt;Roster&gt;().grazers[1];
++    assert_eq!(
++        course.world.get::&lt;Grazer&gt;(second).unwrap().feeding_site,
++        Some(SimId(100))
++    );
++    course.world.get_mut::&lt;Position&gt;(second).unwrap().0 = Cell { x: 1, y: 0 };
++    let before = course.mobile_snapshot();
++    let mut births = Schedule::default();
++    births.add_systems(reproduction::resolve_births);
++    births.run(&amp;mut course.world);
++    births.apply_deferred(&amp;mut course.world);
++    assert_eq!(course.mobile_snapshot(), before);
++    assert_eq!(
++        course.world.query::&lt;&amp;Grazer&gt;().iter(&amp;course.world).count(),
++        2
++    );
++}
++
++#[test]
++fn mobile_birth_event_exhaustion_rejects_before_any_parent_or_queue_mutation() {
++    let mut course = birth_fixture();
++    course.world.resource_mut::&lt;Clock&gt;().tick = 1;
++    let mut preparation = Schedule::default();
++    preparation.add_systems(
++        (
++            supply::grow,
++            mobile::perception::observe,
++            mobile::perception::choose,
++            mobile::derive_contacts,
++        )
++            .chain(),
++    );
++    preparation.run(&amp;mut course.world);
++    course
++        .world
++        .resource_mut::&lt;MobileState&gt;()
++        .history
++        .exhaust_eviction_counter_for_test();
++    let before = course.mobile_snapshot();
++    let mut births = Schedule::default();
++    births.set_apply_final_deferred(false);
++    births.add_systems(reproduction::resolve_births);
++    assert!(catch_unwind(AssertUnwindSafe(|| births.run(&amp;mut course.world))).is_err());
++    births.apply_deferred(&amp;mut course.world);
++    course.world.flush();
++    assert_eq!(course.mobile_snapshot(), before);
++    assert_eq!(
++        course.world.query::&lt;&amp;Grazer&gt;().iter(&amp;course.world).count(),
++        2
++    );
++}
+--- a/tests/mobile.rs
++++ b/tests/mobile.rs
+@@ -0,0 +1,645 @@
++use moss_course_ecosystem::{
++    Cell, CourseWorld, Daylight, EventKind, FounderTrait, GrazerPlacement, MobileError,
++    MobileEventKind, MobileScenario, MobileSnapshot, PatchPlacement, PatchSeed, PopulationConfig,
++    Scenario, SimId, UpkeepTrait,
++};
++
++fn parts(
++    spec: &amp;MobileScenario,
++) -&gt; (
++    Scenario,
++    PopulationConfig,
++    moss_course_ecosystem::SpatialConfig,
++) {
++    (
++        spec.scenario().clone(),
++        spec.population().clone(),
++        spec.space().clone(),
++    )
++}
++
++fn stores(report: &amp;MobileSnapshot) -&gt; u64 {
++    report
++        .base
++        .grazers
++        .iter()
++        .map(|grazer| u64::from(grazer.reserve_units))
++        .sum::&lt;u64&gt;()
++        + report
++            .base
++            .patches
++            .iter()
++            .map(|patch| u64::from(patch.biomass_units))
++            .sum::&lt;u64&gt;()
++}
++
++fn paired() -&gt; MobileScenario {
++    let (mut scenario, mut population, mut space) = parts(&amp;MobileScenario::short_journey());
++    scenario.grazers.push({
++        let mut seed = scenario.grazers[0].clone();
++        seed.id = SimId(2);
++        seed
++    });
++    population.founders.push(FounderTrait {
++        id: SimId(2),
++        upkeep: UpkeepTrait::new(1).unwrap(),
++    });
++    space.grazers.push(GrazerPlacement {
++        id: SimId(2),
++        ..space.grazers[0]
++    });
++    for placement in &amp;mut space.grazers {
++        placement.cell = Cell { x: 1, y: 1 };
++    }
++    space.patches[0].cell = Cell { x: 1, y: 1 };
++    MobileScenario::new(scenario, population, space)
++}
++
++#[test]
++fn literal_journey_spends_travel_then_eats_only_after_arrival() {
++    let mut world = CourseWorld::new_mobile(MobileScenario::short_journey()).unwrap();
++    let initial = world.mobile_snapshot().unwrap();
++    assert_eq!(initial.tick, 0);
++    assert_eq!(initial.grazers[0].observed_tick, None);
++    assert_eq!(initial.grazers[0].observed_cell, None);
++    for (tick, x, reserve, biomass, travelled) in
++        [(1, 1, 3, 3, 1), (2, 2, 3, 1, 1), (3, 2, 3, 0, 0)]
++    {
++        world.step();
++        let state = world.mobile_snapshot().unwrap();
++        assert_eq!(
++            state.grazers[0].observed_cell,
++            Some(Cell {
++                x: if tick == 1 {
++                    0
++                } else if tick == 2 {
++                    1
++                } else {
++                    2
++                },
++                y: 0
++            })
++        );
++        assert_eq!(
++            (
++                state.tick,
++                state.grazers[0].cell.x,
++                state.base.grazers[0].reserve_units,
++                state.base.patches[0].biomass_units,
++                state.ledger.travel_cells
++            ),
++            (tick, x, reserve, biomass, travelled)
++        );
++        assert_eq!(
++            state.base.ledger.eaten_units,
++            if tick == 1 {
++                0
++            } else if tick == 2 {
++                2
++            } else {
++                1
++            }
++        );
++        assert_eq!(
++            state.base.grazers[0].feeding_site,
++            if tick == 1 { None } else { Some(SimId(100)) }
++        );
++    }
++    assert_eq!(
++        world
++            .mobile_snapshot()
++            .unwrap()
++            .history
++            .travelled_cells_between(1, 3),
++        Some(2)
++    );
++}
++
++#[test]
++fn travel_is_cardinal_x_first_affordable_and_can_be_rescued_on_arrival() {
++    for reversed in [false, true] {
++        let (mut scenario, population, mut space) = parts(&amp;MobileScenario::short_journey());
++        scenario.grazers[0].reserve_units = 10;
++        scenario.grazers[0].capacity_units = 10;
++        space.bounds.height_cells = 3;
++        space.grazers[0].cell = if reversed {
++            Cell { x: 2, y: 2 }
++        } else {
++            Cell { x: 0, y: 0 }
++        };
++        space.patches[0].cell = if reversed {
++            Cell { x: 0, y: 0 }
++        } else {
++            Cell { x: 2, y: 2 }
++        };
++        space.grazers[0].motion.sensing_radius = 4;
++        space.grazers[0].motion.max_cells_per_tick = 3;
++        space.grazers[0].motion.travel_units_per_cell = 2;
++        let mut world =
++            CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++        world.step();
++        let first = world.mobile_snapshot().unwrap();
++        assert_eq!(
++            first.grazers[0].cell,
++            Cell {
++                x: if reversed { 0 } else { 2 },
++                y: 1
++            }
++        );
++        assert_eq!(
++            (
++                first.base.grazers[0].reserve_units,
++                first.ledger.travel_cells,
++                first.ledger.travel_units
++            ),
++            (3, 3, 6)
++        );
++        world.step();
++        let second = world.mobile_snapshot().unwrap();
++        assert_eq!(second.base.grazers[0].reserve_units, 2);
++        assert_eq!(second.ledger.travel_cells, 1);
++        assert_eq!(second.base.ledger.starvations, 0);
++    }
++}
++
++#[test]
++fn partial_affordability_and_zero_speed_do_not_overspend_or_teleport() {
++    for speed in [0, 10] {
++        let (mut scenario, population, mut space) = parts(&amp;MobileScenario::short_journey());
++        scenario.grazers[0].reserve_units = 6;
++        space.bounds.width_cells = 6;
++        space.patches[0].cell.x = 5;
++        space.grazers[0].motion.sensing_radius = 5;
++        space.grazers[0].motion.max_cells_per_tick = speed;
++        space.grazers[0].motion.travel_units_per_cell = 2;
++        let mut world =
++            CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++        world.step();
++        let state = world.mobile_snapshot().unwrap();
++        let cells = if speed == 0 { 0 } else { 2 };
++        assert_eq!(state.grazers[0].cell.x, cells);
++        assert_eq!(state.base.grazers[0].reserve_units, 5 - cells * 2);
++        assert_eq!(state.base.ledger.eaten_units, 0);
++        assert_eq!(state.base.patches[0].biomass_units, 3);
++    }
++}
++
++#[test]
++fn inspector_visibility_does_not_grant_perception_or_remote_contact() {
++    for radius in [0, 1, 2] {
++        let (scenario, population, mut space) = parts(&amp;MobileScenario::short_journey());
++        space.grazers[0].motion.sensing_radius = radius;
++        space.grazers[0].motion.max_cells_per_tick = 0;
++        let mut world =
++            CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++        world.step();
++        let state = world.mobile_snapshot().unwrap();
++        assert_eq!(state.base.patches.len(), 1);
++        assert_eq!(
++            state.grazers[0].visible_patches.len(),
++            if radius == 2 { 1 } else { 0 }
++        );
++        assert_eq!(state.grazers[0].target.is_some(), radius == 2);
++        assert_eq!(state.base.grazers[0].reserve_units, 4);
++        assert_eq!(state.base.ledger.eaten_units, 0);
++    }
++}
++
++#[test]
++fn equal_distance_ties_use_identity_and_empty_patches_are_still_observed() {
++    let (mut scenario, population, mut space) = parts(&amp;MobileScenario::short_journey());
++    space.bounds.height_cells = 3;
++    space.patches[0].cell = Cell { x: 1, y: 0 };
++    scenario.patches.push(PatchSeed {
++        id: SimId(99),
++        biomass_units: 2,
++        capacity_units: 2,
++        growth_units_per_lit_tick: 0,
++    });
++    scenario.patches.push(PatchSeed {
++        id: SimId(98),
++        biomass_units: 0,
++        capacity_units: 2,
++        growth_units_per_lit_tick: 0,
++    });
++    space.patches.push(PatchPlacement {
++        id: SimId(99),
++        cell: Cell { x: 0, y: 1 },
++    });
++    space.patches.push(PatchPlacement {
++        id: SimId(98),
++        cell: Cell { x: 0, y: 0 },
++    });
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++    world.step();
++    let state = world.mobile_snapshot().unwrap();
++    assert_eq!(state.grazers[0].target.unwrap().patch, SimId(99));
++    assert_eq!(state.grazers[0].cell, Cell { x: 0, y: 1 });
++    assert_eq!(state.grazers[0].visible_patches[0].biomass_units, 0);
++}
++
++#[test]
++fn an_actual_competing_meal_invalidates_the_later_owned_observation() {
++    let (mut scenario, mut population, space) = parts(&amp;paired());
++    scenario.patches[0].biomass_units = 1;
++    population.max_living = 2; // Explicitly isolate feeding; funded births are cap-denied.
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++    world.step();
++    let state = world.mobile_snapshot().unwrap();
++    assert_eq!(
++        state
++            .base
++            .grazers
++            .iter()
++            .map(|grazer| grazer.reserve_units)
++            .collect::&lt;Vec&lt;_&gt;&gt;(),
++        [5, 4]
++    );
++    assert_eq!(state.base.patches[0].biomass_units, 0);
++    for grazer in &amp;state.grazers {
++        assert_eq!(grazer.visible_patches[0].biomass_units, 1);
++    }
++    let meals: Vec&lt;_&gt; = state
++        .base
++        .history
++        .events
++        .iter()
++        .filter_map(|event| {
++            if let EventKind::Meal { grazer, units, .. } = event.kind {
++                Some((grazer, units))
++            } else {
++                None
++            }
++        })
++        .collect();
++    assert_eq!(meals, [(SimId(1), 1)]);
++    assert_eq!(state.population.totals.births, 0);
++}
++
++#[test]
++fn valid_target_is_retained_when_supply_renews_at_a_nearer_patch() {
++    let (mut scenario, population, mut space) = parts(&amp;MobileScenario::short_journey());
++    scenario.daylight = Daylight::new(4, 2).unwrap();
++    scenario.grazers[0].reserve_units = 20;
++    scenario.grazers[0].capacity_units = 20;
++    scenario.grazers[0].meal_units_per_tick = 1;
++    scenario.patches[0].biomass_units = 20;
++    scenario.patches[0].capacity_units = 20;
++    scenario.patches.push(PatchSeed {
++        id: SimId(101),
++        biomass_units: 0,
++        capacity_units: 5,
++        growth_units_per_lit_tick: 1,
++    });
++    space.bounds.width_cells = 7;
++    space.grazers[0].motion.sensing_radius = 6;
++    space.patches[0].cell.x = 6;
++    space.patches.push(PatchPlacement {
++        id: SimId(101),
++        cell: Cell { x: 0, y: 0 },
++    });
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++    for _ in 0..5 {
++        world.step();
++    }
++    let state = world.mobile_snapshot().unwrap();
++    assert_eq!(state.grazers[0].cell.x, 3);
++    assert_eq!(state.grazers[0].target.unwrap().patch, SimId(100));
++    assert_eq!(state.grazers[0].target.unwrap().observed_tick, 5);
++    assert_eq!(state.grazers[0].visible_patches[1].biomass_units, 1);
++    assert_eq!(state.totals.target_changes, 2);
++}
++
++#[test]
++fn spatial_birth_places_a_newborn_without_target_or_an_early_turn() {
++    let (mut scenario, population, mut space) = parts(&amp;paired());
++    scenario.daylight = Daylight::new(1, 1).unwrap();
++    scenario.patches[0].biomass_units = 0;
++    scenario.patches[0].capacity_units = 20;
++    scenario.patches[0].growth_units_per_lit_tick = 6;
++    space.newborn_motion.travel_units_per_cell = 2;
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space.clone())).unwrap();
++    world.step();
++    let first = world.mobile_snapshot().unwrap();
++    assert_eq!(first.population.totals.births, 1);
++    let child = &amp;first.grazers[2];
++    assert_eq!(
++        (child.id, child.cell, child.motion),
++        (SimId(101), Cell { x: 1, y: 1 }, space.newborn_motion)
++    );
++    assert_eq!(
++        (child.target, child.observed_tick, child.last_travel_tick),
++        (None, None, None)
++    );
++    assert!(child.visible_patches.is_empty());
++    assert_eq!(child.observed_cell, None);
++    assert_eq!(first.base.grazers[2].reserve_units, 4);
++    assert_eq!(first.base.grazers[2].feeding_site, None);
++    assert!(first.history.events.iter().any(|event| event.kind
++        == MobileEventKind::BornAt {
++            child: SimId(101),
++            cell: Cell { x: 1, y: 1 }
++        }));
++    world.step();
++    let second = world.mobile_snapshot().unwrap();
++    assert_eq!(second.base.grazers[2].reserve_units, 5);
++    assert_eq!(second.grazers[2].observed_tick, Some(2));
++    assert_eq!(second.grazers[2].last_travel_tick, Some(2));
++}
++
++#[test]
++fn parents_targeting_the_same_patch_cannot_reproduce_from_different_cells() {
++    let (mut scenario, population, mut space) = parts(&amp;paired());
++    for seed in &amp;mut scenario.grazers {
++        seed.reserve_units = 8;
++        seed.meal_units_per_tick = 0;
++    }
++    space.grazers[1].cell.x = 0;
++    for placement in &amp;mut space.grazers {
++        placement.motion.max_cells_per_tick = 0;
++    }
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++    world.step();
++    let state = world.mobile_snapshot().unwrap();
++    assert_eq!(
++        state.grazers[0].target.unwrap().patch,
++        state.grazers[1].target.unwrap().patch
++    );
++    assert_eq!(state.population.totals.births, 0);
++    assert_eq!(
++        state
++            .base
++            .grazers
++            .iter()
++            .map(|grazer| grazer.reserve_units)
++            .collect::&lt;Vec&lt;_&gt;&gt;(),
++        [7, 7]
++    );
++}
++
++#[test]
++fn complete_reports_are_canonical_owned_and_read_frequency_independent() {
++    let direct_spec = MobileScenario::meadow();
++    let (mut scenario, mut population, mut space) = parts(&amp;direct_spec);
++    scenario.grazers.reverse();
++    scenario.patches.reverse();
++    population.founders.reverse();
++    space.grazers.reverse();
++    space.patches.reverse();
++    let mut direct = CourseWorld::new_mobile(direct_spec).unwrap();
++    let mut observed =
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).unwrap();
++    assert_eq!(direct.mobile_snapshot(), observed.mobile_snapshot());
++    for _ in 0..40 {
++        direct.step();
++        for _ in 0..4 {
++            let mut copy = observed.mobile_snapshot().unwrap();
++            copy.grazers.clear();
++            copy.base.grazers.clear();
++            copy.population.individuals.clear();
++        }
++        observed.step();
++        assert_eq!(direct.mobile_snapshot(), observed.mobile_snapshot());
++    }
++}
++
++#[test]
++fn travel_and_birth_accounting_hold_for_every_tick_of_the_longer_scene() {
++    let mut world = CourseWorld::new_mobile(MobileScenario::meadow()).unwrap();
++    for _ in 0..120 {
++        let before = stores(&amp;world.mobile_snapshot().unwrap());
++        world.step();
++        let state = world.mobile_snapshot().unwrap();
++        assert_eq!(
++            stores(&amp;state)
++                + state.base.ledger.maintenance_units
++                + state.ledger.travel_units
++                + state.population.ledger.dissipated_units,
++            before + state.base.ledger.added_units
++        );
++        assert_eq!(
++            state.population.living as u64 + state.population.totals.starvations,
++            state.population.totals.initial_founders + state.population.totals.births
++        );
++        assert!(state.population.living &lt;= state.initial.population().max_living);
++        assert_eq!(state.grazers.len(), state.base.grazers.len());
++        assert!(
++            state
++                .grazers
++                .iter()
++                .all(|grazer| state.initial.space().bounds.contains(grazer.cell))
++        );
++    }
++}
++
++#[test]
++fn bounded_history_separates_lifetime_distance_from_known_empty_intervals() {
++    for limit in [0, 1] {
++        let mut world =
++            CourseWorld::new_mobile(MobileScenario::short_journey().with_history_limit(limit))
++                .unwrap();
++        for _ in 0..3 {
++            world.step();
++        }
++        let state = world.mobile_snapshot().unwrap();
++        assert_eq!(state.totals.travel_cells, 2);
++        assert!(state.history.events.len() &lt;= limit);
++        assert_eq!(state.history.travelled_cells_between(1, 3), None);
++        assert_eq!(state.history.travelled_cells_between(3, 3), Some(0));
++        assert_eq!(state.history.travelled_cells_between(3, 4), None);
++        assert_eq!(state.history.travelled_cells_between(0, 3), None);
++    }
++}
++
++#[test]
++fn distance_and_exact_arrival_handle_large_valid_coordinates_without_wrapping() {
++    assert_eq!(
++        Cell { x: 0, y: 0 }.distance(Cell {
++            x: u32::MAX,
++            y: u32::MAX
++        }),
++        8_589_934_590
++    );
++    let (mut scenario, population, mut space) = parts(&amp;MobileScenario::short_journey());
++    scenario.grazers[0].reserve_units = u32::MAX;
++    scenario.grazers[0].capacity_units = u32::MAX;
++    scenario.patches[0].biomass_units = 1;
++    space.bounds.width_cells = u32::MAX;
++    space.bounds.height_cells = u32::MAX;
++    space.grazers[0].cell = Cell {
++        x: u32::MAX - 2,
++        y: u32::MAX - 2,
++    };
++    space.grazers[0].motion.max_cells_per_tick = u32::MAX;
++    space.patches[0].cell = Cell {
++        x: u32::MAX - 1,
++        y: u32::MAX - 1,
++    };
++    let mut world =
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space.clone())).unwrap();
++    world.step();
++    let state = world.mobile_snapshot().unwrap();
++    assert_eq!(state.grazers[0].cell, space.patches[0].cell);
++    assert_eq!(state.ledger.travel_cells, 2);
++    assert_eq!(state.base.grazers[0].reserve_units, u32::MAX - 2);
++}
++
++#[test]
++fn invalid_mobile_inputs_and_mode_switches_are_atomic() {
++    let initial = MobileScenario::short_journey();
++    let (scenario, population, space) = parts(&amp;initial);
++    let cases = vec![
++        (
++            {
++                let mut s = space.clone();
++                s.bounds.width_cells = 0;
++                s
++            },
++            MobileError::InvalidBounds,
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.grazers.clear();
++                s
++            },
++            MobileError::MissingGrazerPlacement(SimId(1)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.grazers.push(s.grazers[0]);
++                s
++            },
++            MobileError::DuplicateGrazerPlacement(SimId(1)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.grazers[0].id = SimId(9);
++                s
++            },
++            MobileError::UnexpectedGrazerPlacement(SimId(9)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.patches.clear();
++                s
++            },
++            MobileError::MissingPatchPlacement(SimId(100)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.patches.push(s.patches[0]);
++                s
++            },
++            MobileError::DuplicatePatchPlacement(SimId(100)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.patches[0].id = SimId(9);
++                s
++            },
++            MobileError::UnexpectedPatchPlacement(SimId(9)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.grazers[0].cell.x = 4;
++                s
++            },
++            MobileError::OutOfBounds(SimId(1)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.grazers[0].motion.travel_units_per_cell = 0;
++                s
++            },
++            MobileError::ZeroTravelCost(SimId(1)),
++        ),
++        (
++            {
++                let mut s = space.clone();
++                s.newborn_motion.travel_units_per_cell = 0;
++                s
++            },
++            MobileError::ZeroNewbornTravelCost,
++        ),
++    ];
++    let mut world = CourseWorld::new_mobile(initial.clone()).unwrap();
++    world.step();
++    let before = world.mobile_snapshot();
++    for (bad_space, error) in cases {
++        let bad = MobileScenario::new(scenario.clone(), population.clone(), bad_space);
++        assert_eq!(CourseWorld::new_mobile(bad.clone()).err(), Some(error));
++        assert_eq!(world.reset_with_mobile(bad), Err(error));
++        assert_eq!(world.mobile_snapshot(), before);
++    }
++    let mut bad_scenario = scenario.clone();
++    bad_scenario.grazers[0].feeding_site = Some(SimId(100));
++    assert_eq!(
++        world.reset_with_mobile(MobileScenario::new(bad_scenario, population.clone(), space)),
++        Err(MobileError::AuthoredContact(SimId(1)))
++    );
++    assert_eq!(world.mobile_snapshot(), before);
++    world.reset();
++    assert_eq!(world.mobile_snapshot().unwrap().run, 2);
++    assert_eq!(world.mobile_snapshot().unwrap().tick, 0);
++    assert_eq!(world.mobile_snapshot().unwrap().initial, initial);
++    world.reset_with_population(scenario, population).unwrap();
++    assert!(world.mobile_snapshot().is_none());
++    assert_eq!(world.snapshot().run, 3);
++    world.reset();
++    assert_eq!(world.snapshot().run, 4);
++    assert!(world.mobile_snapshot().is_none());
++    world.reset_with(Scenario::limited_supply()).unwrap();
++    assert!(world.population_snapshot().is_none());
++    assert!(world.mobile_snapshot().is_none());
++    world.reset_with_mobile(MobileScenario::meadow()).unwrap();
++    assert_eq!(world.mobile_snapshot().unwrap().run, 6);
++}
++
++#[test]
++fn empty_mobile_world_is_valid_but_two_patches_cannot_occupy_one_cell() {
++    let (mut scenario, mut population, mut space) = parts(&amp;MobileScenario::short_journey());
++    scenario.grazers.clear();
++    population.founders.clear();
++    space.grazers.clear();
++    let mut world = CourseWorld::new_mobile(MobileScenario::new(
++        scenario.clone(),
++        population.clone(),
++        space.clone(),
++    ))
++    .unwrap();
++    world.step();
++    assert!(world.mobile_snapshot().unwrap().grazers.is_empty());
++    assert_eq!(
++        world
++            .mobile_snapshot()
++            .unwrap()
++            .history
++            .travelled_cells_between(1, 1),
++        Some(0)
++    );
++    scenario.patches.push(PatchSeed {
++        id: SimId(101),
++        ..scenario.patches[0].clone()
++    });
++    space.patches.push(PatchPlacement {
++        id: SimId(101),
++        ..space.patches[0]
++    });
++    assert_eq!(
++        CourseWorld::new_mobile(MobileScenario::new(scenario, population, space)).err(),
++        Some(MobileError::SharedPatchCell(Cell { x: 2, y: 0 }))
++    );
++}
+</code></pre>
+</main><noscript><p>The complete source and downloads work without JavaScript. Copy with your browser’s text selection.</p></noscript></body></html>
