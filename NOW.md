@@ -1,18 +1,19 @@
 # Now
 
 **Active session: help Fern reach Meadow.** Start with
-[today's v2 lesson](docs/tutorial/today-v2.md), designed for roughly 60–90 minutes.
+[the Fieldnotes movement chapter](learning/content/14-movement.html).
 Maintenance works. Movement's target, rate, ECS adapter, tests and inspector
 are prepared; the movement rule is still your edit and is not scheduled.
 
-For an illustrated companion, the [published Moss book](https://nicholashazen.github.io/moss/)
-opens with this same affordable-step exercise. It adds experiments and the longer
-story; it does not add another prerequisite or change today's assignment.
+[Moss Fieldnotes](https://nicholashazen.github.io/moss/) is the learning book.
+Its movement chapter contains this assignment and the complete answer; the
+remaining course provides context and separate practice, without adding a
+prerequisite to today's edit.
 
 ## One next edit — an affordable step
 
 In [`lessons.rs`](crates/moss-sim/src/lessons.rs), replace only the body of
-`move_one_cell`. [The v2 lesson](docs/tutorial/today-v2.md#3-write-one-affordable-step)
+`move_one_cell`. [The movement chapter](learning/content/14-movement.html#complete-worked-replacement)
 explains the rule, mutable borrowing and the complete worked answer. Use
 **Moss - Movement test** in RustRover's Run menu, or:
 

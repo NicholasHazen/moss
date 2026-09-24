@@ -9,14 +9,14 @@ The organization pass moved the focused maintenance regression into
 action now uses `--test maintenance`; its exact Cargo command was verified from
 the terminal on September 22. The test's name is unchanged.
 
-## Read the tutorial
+## Read Fieldnotes alongside the editor
 
-Open [today's session](../tutorial/today-v2.md) under `docs/tutorial` in the Project
-tree. Use Markdown **Preview** for reading, or **Editor and Preview** while
-comparing prose and snippets. Each chapter has a contents list, stable links
-to the next checkpoint and source files, and an explicit review stop.
-[Reading in RustRover](../tutorial/reading-in-rustrover.md) explains the layout;
-the [context shelf](../tutorial/context/README.md) holds optional Rust/ECS background.
+Open the [Fieldnotes movement chapter](https://nicholashazen.github.io/moss/14-movement.html)
+in a browser and `crates/moss-sim/src/lessons.rs` in RustRover. The chapter contains
+the full assignment, answer and review stop. Keep the browser alongside the
+editor when comparing prose with the function; the Run menu below checks your
+saved source. The [local course guide](../../learning/README.md#run) explains how
+to serve Fieldnotes from this checkout for offline reading.
 
 ## The run menu
 

@@ -73,7 +73,7 @@ Follow [document ownership and maintenance](docs/README.md#document-ownership).
 Keep `NOW.md` to one active task, a verified run path, one next edit and a stopping
 point. Put future ideas in the parking lot and brief factual work records in the
 dated session log. Maintain affected tutorial pages using the
-[authoring contract](docs/tutorial/authoring/README.md); preserve chapter links,
+[authoring contract](learning/authoring/README.md); preserve chapter links,
 label future APIs and keep evidence separate from acceptance criteria. This is
 agent work, not Nick's backlog.
 

@@ -20,8 +20,10 @@ Nick's next edit; two integration tests wait for reviewed activation.
 | Diagrams | Both tutorial SVGs rendered and inspected in Chromium, then in v2's native RustRover preview. Background scrolling exposed a repaint limitation recorded below. |
 
 [The dated build record](../history/builds/2026-09-22.md#movement-session-preparation--september-22-2026)
-contains commands and limitations. [Guide verification](../tutorial/authoring/verification.md)
-distinguishes helper, installed-world and future-chapter evidence.
+contains commands and limitations. [Dated tutorial records](../history/README.md#tutorial-checks) distinguish the
+helper, installed-world and future-reference evidence recorded at that time.
+[Fieldnotes' reading and model guide](../../learning/content/about.html) explains
+the current book's tools and their scope; it is separate from this live-runtime record.
 
 The later [native Run check](../history/builds/2026-09-22.md#movement-action-in-rustrover--september-22-2026)
 ended with the expected unfinished-helper panic and exit 101. The

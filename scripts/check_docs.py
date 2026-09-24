@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Check Moss's local Markdown navigation using only the Python standard library.
 
-Scope: root *.md, docs/**/*.md and prompts/**/*.md; single-line inline links
+Scope: root *.md, docs/**/*.md, prompts/**/*.md, learning/*.md and
+learning/authoring/**/*.md; single-line inline links
 (including images), explicit/collapsed reference links, reference definitions,
 ATX headings and quoted HTML <a id/name> aliases. Destinations may use angle
 brackets or balanced parentheses, percent escapes and an optional quoted title.
@@ -244,7 +245,9 @@ def check(root: Path) -> Report:
     """Return navigation diagnostics without fetching URLs or changing files."""
     root = root.resolve()
     files = sorted(set(root.glob("*.md")) | set((root / "docs").rglob("*.md"))
-                   | set((root / "prompts").rglob("*.md")))
+                   | set((root / "prompts").rglob("*.md"))
+                   | set((root / "learning").glob("*.md"))
+                   | set((root / "learning/authoring").rglob("*.md")))
     report = Report(files=len(files))
     if not files:
         report.errors.append(f"{root}: no Markdown files found")
@@ -285,7 +288,7 @@ def check(root: Path) -> Report:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[3])
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     report = check(parser.parse_args().root)
     print(f"Checked {report.links} local destinations across {report.files} Markdown files.")
     for error in report.errors:

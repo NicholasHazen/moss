@@ -33,8 +33,8 @@ function fixture({notes = true, saved = null, locks = true} = {}) {
     .map(id => [id, new Element()]));
   const noteIds = ["lesson-state", "lesson-note", "clippings", "save-status", "save-selection"];
   for (const id of noteIds) controls[id] = notes ? new Element() : null;
-  const toolbar = new Element(), notebook = new Element(), practice = new Element();
-  const groups = {".reading-toolbar": [toolbar], ".reading-notes": notes ? [notebook] : [],
+  const options = new Element(), toolbar = new Element(), notebook = new Element(), practice = new Element();
+  const groups = {".reading-options": [options], ".reading-toolbar": [toolbar], ".reading-notes": notes ? [notebook] : [],
     ".practice-state": notes ? [practice] : []};
   const storage = {
     getItem(key) { assert.equal(key, KEY); return bytes; },
@@ -57,7 +57,7 @@ function fixture({notes = true, saved = null, locks = true} = {}) {
     navigator: locks ? {locks: {request: async (key, action) => { assert.equal(key, KEY); return action(); }}} : {},
     window: {MossRecords: records, addEventListener: (type, listener) => events.set(type, listener)},
   });
-  return {controls, toolbar, notebook, practice, writes, bytes: () => bytes,
+  return {controls, options, toolbar, notebook, practice, writes, bytes: () => bytes,
     replaceBytes(value) { bytes = value; },
     storageEvent() { events.get("storage")({key: KEY, storageArea: storage}); },
     unloadBlocked() {
@@ -74,6 +74,8 @@ test("notes and progress still load/save without search or utility-panel control
   saved.lessons["01-observe"] = {state: "reading", note: "An earlier prediction.", clips: ["A kept passage."]};
   saved.lessons["02-ownership"] = {state: "reviewed", note: "Keep this other lesson.", clips: []};
   const f = fixture({saved: JSON.stringify(saved)});
+  assert.equal(f.options.hidden, false);
+  assert.equal(f.options.open, false, "Reading options starts collapsed");
   assert.equal(f.toolbar.hidden, false);
   assert.equal(f.notebook.hidden, false);
   assert.equal(f.notebook.open, false, "Reading notes starts collapsed");

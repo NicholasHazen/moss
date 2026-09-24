@@ -20,7 +20,7 @@ the native binary does not open the browser app.
 **Current teaching checkpoint:** full tests intentionally fail at the unfinished
 `move_one_cell` helper. Its adapter is unscheduled, so the browser can still build
 and run maintenance. Two movement integration tests are explicitly ignored until
-reviewed activation; [today's guide](../tutorial/today-v2.md) explains the red-to-green edit.
+reviewed activation; [the movement chapter](../../learning/content/14-movement.html) explains the red-to-green edit.
 
 ```sh
 scripts/check.sh
@@ -83,7 +83,7 @@ leave both animals at 57 / 100 after three Steps; zero energy does not cause
 death. Camera actions while paused must preserve biological state.
 
 That is the current maintenance-only baseline. After movement is reviewed and
-activated, use [the movement acceptance table](../tutorial/today-v2.md#6-watch-the-journey-and-stop)
+activated, use [the movement acceptance table](../../learning/content/14-movement.html#account-for-the-journey)
 instead: Fern pays maintenance plus travel while Flint remains still.
 
 When input or lifecycle behavior changes, also check drag versus click,

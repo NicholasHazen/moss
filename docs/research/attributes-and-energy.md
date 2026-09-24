@@ -1,6 +1,6 @@
 # Practical attribute and energy design
 
-[Research index](README.md) · [Attributes context](../tutorial/context/attributes-and-defaults.md) · [Future cost lessons](../tutorial/path/06-owned-costs.md)
+[Research index](README.md) · [Individual variation](../../learning/content/17-variation.html) · [Component ownership](../../learning/content/03-queries.html)
 
 **Reviewed:** September 21, 2026. This is research supporting a proposed design,
 not an implemented feature or a Moss performance result. Two bounded research
@@ -165,13 +165,12 @@ This remains the existing later movement lesson.
 
 ## The next proof
 
-The research does not expand today's [movement task](../tutorial/today-v2.md).
-When individual variation becomes active, [session 06](../tutorial/path/06-owned-costs.md)
-starts with resolving a species value and an authored override; the agent prepares
-the component and test. [Session 07](../tutorial/path/07-querying-costs.md) then
-changes which data maintenance reads. [Chapter 1D](../tutorial/01d-energy-profiles.md)
-is their integration companion. This supersedes the earlier declaration-only
-assignment and fixed test count.
+The research does not expand today's [movement task](../../learning/content/14-movement.html).
+Before individual variation becomes a live edit, the agent must prepare its
+component and focused test. Fieldnotes explains the distinction between
+[component ownership](../../learning/content/03-queries.html) and
+[query access](../../learning/content/10-borrows.html), then develops
+[individual variation](../../learning/content/17-variation.html) in separate practice.
 
 After the agent prepares spawn wiring, the decisive regression will use two
 hares starting at 60, with costs 1 and 2. Three ticks must leave 57 and 54 while
@@ -202,4 +201,4 @@ cost. A cache must also include its refresh work in that comparison.
 No simulation code, tests, dependencies or browser behavior changed during this
 research. No benchmark or new native/WASM/browser run was performed.
 
-[Research index](README.md) · [Next edit](../tutorial/01d-energy-profiles.md)
+[Research index](README.md) · [Current live edit](../../NOW.md)

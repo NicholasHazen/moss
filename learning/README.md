@@ -1,9 +1,10 @@
 # Moss Fieldnotes
 
-A new browser-first learning experience beside the published mdBook edition.
-Read [Moss Fieldnotes](https://nicholashazen.github.io/moss/fieldnotes/).
-This edition preserves `NOW.md`, the unfinished movement helper, and the existing
-simulation/presentation boundary. The original book remains at its existing URL.
+Fieldnotes is Moss's browser-first learning book, replacing the earlier mdBook
+and parallel Markdown tutorial. Read the [published course](https://nicholashazen.github.io/moss/)
+or build it locally using the commands below. `NOW.md` still selects the active
+live-project edit; its [movement chapter](content/14-movement.html) supplies the
+assignment and complete answer without completing or scheduling the helper.
 
 Fieldnotes connects Rust and ECS lessons with a continuing meadow you build in
 one saved Cargo project. The numbered lessons isolate a language or scheduling
@@ -11,8 +12,7 @@ question; the cumulative guides bring those ideas together through supply,
 competing meals, births, inherited upkeep, local movement, committed rest and
 hunting. The [refuge capstone](content/refuge.html) then asks you to design a
 complete extension and an experiment of your own, with staged hints and full
-worked answers available. The source supports the complete continuing project route; the hosted browser
-views run precompiled examples, while Rust edits and tests run locally.
+worked answers available. The source includes the course runners and complete worked checkpoints.
 
 Fieldnotes 0.3 adds chapter overviews, closing summaries and section navigation.
 The [ecosystem atlas identity](IDENTITY.md) pairs a generated habitat mark and
@@ -214,10 +214,10 @@ ElevenLabs. The key stays in the local generation process; the static course
 contains audio and timing metadata, with no runtime API requirement. Chunks are
 cached by their exact text, voice, model, settings and context. A failed request
 is not retried automatically because the provider may already have billed it.
-The generator has offline tests; no live ElevenLabs recording is included.
-Mac system-voice recordings are for the local personal edition and are excluded
-from public distribution. The hosted course retains browser speech and passage
-highlighting.
+The adapter has local tests, but real-provider alignment, voice quality and
+billing require a provider run and listening review. The
+[reading guide](content/about.html#immersive-reading) explains playback and
+provider labels; generated audio remains optional.
 
 ## Check
 
@@ -253,7 +253,7 @@ complete worked test file. `check --answer` checks that answer separately.
 After generating the optional narration and Rust hosts, package the current site:
 
 ```sh
-python3 learning/scripts/package.py /path/to/moss-fieldnotes-0.3.zip
+python3 learning/scripts/package.py /path/to/moss-fieldnotes-0.4.zip
 ```
 
 The ZIP includes a loopback server, a reading guide and a SHA-256 manifest. Extract
@@ -261,7 +261,45 @@ it and run `python3 serve.py`. Reading, delivered audio and compiled previews wo
 without the source checkout; native Rust practice still uses this checkout and its
 pinned runner. External reference links and publisher videos need a connection.
 
+## Public GitHub edition
+
+The [hosted course](https://nicholashazen.github.io/moss/) includes
+browser Listen and all seven compiled Rust hosts. The personal Mac recordings
+are excluded from public distribution under the installed voice licence.
+Local audio and the personal reading archives remain unchanged.
+
+The public source branch and Setup download contain the course runners and the
+exact worked project behind the cumulative previews. Private course review and
+session notes are excluded.
+
+After building and reviewing the complete local edition, prepare a separate export:
+
+```sh
+python3 learning/scripts/publish.py --destination work/public-fieldnotes --source-archive /path/to/reviewed-source.zip
+```
+
+The destination must be new or empty. This checks current artifacts, removes Mac
+recordings and their players, gives dotfile source views publishable filenames,
+includes the reviewed source ZIP and writes exact hashes. It does not upload or
+change the local reading edition. The Pages assembly step serves Fieldnotes at the site root and provides
+compatibility redirects for the former `/fieldnotes/` route and selected old
+book entries. It replaces the retired book's static files instead of publishing
+a second copy. The manual Pages workflow deploys the reviewed static export
+commit; its root must include `index.html`, `404.html`, `.nojekyll` and `downloads/`.
+Assemble a new site directory with:
+
+```sh
+python3 learning/scripts/assemble_pages.py work/public-fieldnotes work/pages --base-path /moss/
+```
+
+Review `work/pages/site-manifest.json` before committing that directory to the
+publication branch.
+
 ## Authoring
+
+Follow the [Fieldnotes authoring contract](authoring/README.md) for lesson
+structure, live-work boundaries, document checks and the isolated movement
+answer check.
 
 `course.json` owns available lesson order and metadata. `content` holds semantic
 HTML fragments. The build wraps fragments into complete pages and keeps a
@@ -270,27 +308,8 @@ text index for coverage checks. All prose and disclosures work without JavaScrip
 `code[data-starter="id"]` for a complete editable starter. Each example must end
 with a `#[cfg(test)] mod tests` block containing meaningful named tests.
 
-[SOURCES.md](SOURCES.md) records research provenance and permitted use.
-The project's live verification record owns actual Moss runtime evidence;
-course examples do not activate future biology in that simulation.
-
-## Source of the hosted previews
-
-[The published worked project](published-preview/README.md) contains the exact
-source used for the five cumulative browser previews, including its saved
-investigations. The website does not compile or receive your local edits.
-
-## Prepare a public export
-
-After rebuilding and reviewing the complete local site, including the compiled
-previews, prepare a separate public directory:
-
-```sh
-python3 learning/scripts/publish.py --destination work/public-fieldnotes --source-archive /path/to/reviewed-source.zip
-```
-
-The exporter checks the current source and binary metadata, excludes locally
-generated Mac recordings, retains browser Listen, includes the source download
-and writes a byte-hash manifest. It refuses a nonempty destination and never
-uploads or changes the personal reading edition. Review this separate export
-before deploying it alongside the existing book.
+The [roadmap](content/roadmap.html) describes the learning progression, and the
+[reading guide](content/about.html) explains the browser tools and model limits.
+Private editorial and delivery records are not part of this public source
+edition. The project's [live verification record](../docs/development/verification.md)
+continues to own actual Moss runtime evidence.

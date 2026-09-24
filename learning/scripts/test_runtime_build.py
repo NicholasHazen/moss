@@ -57,8 +57,6 @@ class RuntimeBuildBoundary(unittest.TestCase):
         (root / "assets").mkdir(parents=True)
         (root / "content").mkdir()
         (root / "work/runtime").mkdir(parents=True)
-        (repository / "docs/tutorial").mkdir(parents=True)
-        (repository / "docs/tutorial/today-v2.md").write_text("Review fixture reference")
         course = {"edition": "Review fixture", "description": "Review fixture", "modules": [{
             "id": "01-example", "title": "Example", "part": "Review", "minutes": 1,
             "concepts": ["review"], "summary": "Review",

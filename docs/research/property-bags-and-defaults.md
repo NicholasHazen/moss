@@ -1,6 +1,6 @@
 # Large property sets, defaults and overrides
 
-[Research index](README.md) · [Earlier ECS examples](attributes-and-energy.md) · [Attributes context](../tutorial/context/attributes-and-defaults.md)
+[Research index](README.md) · [Earlier ECS examples](attributes-and-energy.md) · [Individual variation](../../learning/content/17-variation.html)
 
 **Checked:** September 21, 2026. Nick broadened the question beyond games to
 systems with many attributes and defaults. Two bounded helpers researched
@@ -165,4 +165,4 @@ The active paired edit remains unchanged. No code, dependency or tutorial code
 example changed during this research. No native tests, browser runs or performance
 measurements were performed; these sources establish contracts and precedents.
 
-[Research index](README.md) · [Attributes context](../tutorial/context/attributes-and-defaults.md)
+[Research index](README.md) · [Individual variation](../../learning/content/17-variation.html)

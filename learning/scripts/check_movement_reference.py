@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Check worked references in an isolated copy, never the live world.
+"""Check Fieldnotes' exact movement answer in a copy, never the live world.
 
-Default: the sixteen path examples. --movement: today's v2 answer and prepared
-movement/maintenance checks. Run from any directory. Uses only Python's standard
+Runs the helper and prepared movement/maintenance checks. Run from any directory. Uses only Python's standard
 library and Moss's toolchain/lockfile. Dependencies must be cached (Cargo offline).
 """
 
 from __future__ import annotations
 
 import argparse
+from html import unescape
 import os
 from pathlib import Path
 import re
@@ -27,14 +27,16 @@ MOVEMENT_TESTS = (
 )
 
 
-def tagged_example(file: Path, marker: str) -> str:
-    pattern = rf"^<!-- {re.escape(marker)} -->\s*```rust\n(.*?)\n```"
+def movement_answer(file: Path) -> str:
     text = file.read_text()
-    examples = re.findall(pattern, text, re.DOTALL | re.MULTILINE)
-    markers = re.findall(rf"^<!-- {re.escape(marker)} -->$", text, re.MULTILINE)
-    if len(markers) != 1 or len(examples) != 1:
-        raise ValueError(f"{file.name} needs exactly one complete {marker!r} Rust fence")
-    return examples[0]
+    marker = 'data-movement-reference="move_one_cell"'
+    pattern = r'<pre><code class="language-rust" data-movement-reference="move_one_cell">(.*?)</code></pre>'
+    examples = re.findall(pattern, text, re.DOTALL)
+    if text.count(marker) != 1 or len(examples) != 1:
+        raise ValueError(f"{file.name} needs exactly one complete movement reference block")
+    if "<" in examples[0] or ">" in examples[0]:
+        raise ValueError("Movement code must contain escaped HTML text, not nested tags")
+    return unescape(examples[0])
 
 
 def replace_movement_helper(source: str, helper: str) -> str:
@@ -83,55 +85,16 @@ def run_checked(command: list[str], workspace: Path, env: dict[str, str],
     return 0
 
 
-def path_test_names(output: str, sessions: list[int]) -> tuple[str, ...]:
-    # Read libtest's compiled inventory, not Rust source or its attributes.
-    names = tuple(re.findall(r"^(\S+): test$", output, re.MULTILINE))
-    expected_modules = {f"session_{number:02d}" for number in sessions}
-    found_modules = {name.split("::", 1)[0] for name in names if "::" in name}
-    missing = expected_modules - found_modules
-    if missing:
-        raise ValueError("No compiled tests found for: " + ", ".join(sorted(missing)))
-    unexpected = [name for name in names if name.split("::", 1)[0] not in expected_modules
-                  or "::" not in name]
-    if unexpected:
-        raise ValueError("Tests outside selected reference modules: " + ", ".join(unexpected))
-    return names
-
-
-def run_path(workspace: Path, env: dict[str, str], sessions: list[int]) -> int:
-    command = [
-        "scripts/with-toolchain.sh", "cargo", "test", "-p", "moss-sim",
-        "--locked", "--offline", "--test", "month_guide",
-    ]
-    output_options = ["--format", "pretty", "--color", "never"]
-    discovery = [*command, "--", "--list", *output_options]
-    print("$ " + " ".join(discovery), flush=True)
-    result = subprocess.run(
-        discovery, cwd=workspace, env=env, check=False, text=True, stdout=subprocess.PIPE,
+def run_movement(workspace: Path, env: dict[str, str], example: str) -> int:
+    subprocess.run(
+        ["scripts/with-toolchain.sh", "rustfmt", "--edition", "2024", "--emit", "stdout"],
+        input=example, cwd=workspace, env=env, text=True, capture_output=True, check=True,
     )
-    print(result.stdout, end="", flush=True)
-    if result.returncode:
-        return result.returncode
-    names = path_test_names(result.stdout, sessions)
-    # An ignored reference must fail this check, not be silently activated.
-    return run_checked([*command, "--", *output_options], workspace, env, names)
-
-
-def run_movement(workspace: Path, env: dict[str, str], examples: tuple[str, str]) -> int:
-    normalized = []
-    for example in examples:
-        formatted = subprocess.run(
-            ["scripts/with-toolchain.sh", "rustfmt", "--edition", "2024", "--emit", "stdout"],
-            input=example, cwd=workspace, env=env, text=True, capture_output=True, check=True,
-        )
-        normalized.append(formatted.stdout)
-    if normalized[0] != normalized[1]:
-        raise ValueError("V2 and Chapter 4 movement answers differ after pinned rustfmt")
 
     lessons = workspace / "crates/moss-sim/src/lessons.rs"
     simulation = workspace / "crates/moss-sim/src/simulation.rs"
     # Validate both replacements before running or writing the copied solution.
-    updated_lessons = replace_movement_helper(lessons.read_text(), examples[0])
+    updated_lessons = replace_movement_helper(lessons.read_text(), example)
     activated_schedule = activate_movement(simulation.read_text())
     lessons.write_text(updated_lessons)
     cargo = ["scripts/with-toolchain.sh", "cargo"]
@@ -160,33 +123,15 @@ def run_movement(workspace: Path, env: dict[str, str], examples: tuple[str, str]
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--session", type=int, choices=range(1, 17))
-    mode.add_argument("--movement", action="store_true", help="check today's v2 answer and isolated activation")
     parser.add_argument("--keep-workspace", action="store_true")
     args = parser.parse_args(argv)
-
-    root = Path(__file__).resolve().parents[3]
-    path = root / "docs/tutorial/path"
-    modules = []
+    root = Path(__file__).resolve().parents[2]
     try:
-        if args.movement:
-            examples = (
-                tagged_example(path.parent / "today-v2.md", "example: movement-v2-helper"),
-                tagged_example(path.parent / "04-movement.md", "example: movement-helper"),
-            )
-        else:
-            sessions = [args.session] if args.session else list(range(1, 17))
-            for number in sessions:
-                files = sorted(path.glob(f"{number:02d}-*.md"))
-                if len(files) != 1:
-                    parser.error(f"Expected one guide for session {number:02d}, found {len(files)}")
-                example = tagged_example(files[0], f"runnable: session-{number:02d}")
-                modules.append(f"mod session_{number:02d} {{\n{example}\n}}\n")
+        example = movement_answer(root / "learning/content/14-movement.html")
     except (OSError, ValueError) as error:
         parser.error(str(error))
 
-    workspace = Path(tempfile.mkdtemp(prefix="moss-path-examples-"))
+    workspace = Path(tempfile.mkdtemp(prefix="moss-movement-reference-"))
     try:
         for name in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml"):
             shutil.copy2(root / name, workspace / name)
@@ -197,10 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         env.pop("RUSTUP_TOOLCHAIN", None)  # Honor the copied rust-toolchain.toml.
         print("Worked references only: this does not activate or test future live systems.", flush=True)
         print(f"Isolated workspace: {workspace}", flush=True)
-        if args.movement:
-            return run_movement(workspace, env, examples)
-        (workspace / "crates/moss-sim/tests/month_guide.rs").write_text("\n".join(modules))
-        return run_path(workspace, env, sessions)
+        return run_movement(workspace, env, example)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         print(f"Example check failed: {error}", file=sys.stderr)
         if isinstance(error, subprocess.CalledProcessError) and error.stderr:

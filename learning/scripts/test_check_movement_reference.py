@@ -2,6 +2,7 @@
 
 from contextlib import redirect_stderr, redirect_stdout
 import io
+from html import escape
 import os
 from pathlib import Path
 import subprocess
@@ -9,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import check_path_examples as runner
+import check_movement_reference as runner
 
 
 STUB = """pub fn move_one_cell(
@@ -58,26 +59,26 @@ class ExampleRunnerChecks(unittest.TestCase):
         for name in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml"):
             self.write(root, name, f"fixture for {name}\n")
         self.write(root, "scripts/with-toolchain.sh", "fixture wrapper\n")
-        for name, marker in (
-            ("today-v2.md", "movement-v2-helper"),
-            ("04-movement.md", "movement-helper"),
-        ):
-            self.write(root, f"docs/tutorial/{name}",
-                       f"<!-- example: {marker} -->\n```rust\n{ANSWER}\n```\n")
+        self.write(root, "learning/content/14-movement.html", self.reference())
         return root
 
-    def test_tagged_example_requires_one_complete_fence(self):
-        fence = f"<!-- example: movement -->\n```rust\n{ANSWER}\n```\n"
-        file = self.write(self.directory, "lesson.md", fence)
-        self.assertEqual(runner.tagged_example(file, "example: movement"), ANSWER)
+    def reference(self):
+        return ('<pre><code class="language-rust" data-movement-reference="move_one_cell">'
+                + escape(ANSWER, quote=False) + '</code></pre>')
+
+    def test_reference_requires_one_complete_escaped_html_block(self):
+        block = self.reference()
+        file = self.write(self.directory, "lesson.html", block)
+        self.assertEqual(runner.movement_answer(file), ANSWER)
         for contents in (
-            "# No example", fence + fence, fence.removesuffix("```\n"),
-            fence + "<!-- example: movement -->\nmissing fence\n",
+            "No example", block + block, block.removesuffix("</code></pre>"),
+            block + '<p data-movement-reference="move_one_cell">wrong</p>',
+            block.replace("&lt;", "<"),
         ):
             with self.subTest(contents=contents):
                 file.write_text(contents)
                 with self.assertRaises(ValueError):
-                    runner.tagged_example(file, "example: movement")
+                    runner.movement_answer(file)
 
     def test_helper_replacement_preserves_neighbors_and_nested_blocks(self):
         before = "fn previous() {}\n\n"
@@ -133,54 +134,6 @@ class ExampleRunnerChecks(unittest.TestCase):
                         returncode,
                     )
 
-    def test_path_inventory_accepts_multiple_and_nested_test_names(self):
-        names = ("session_01::meal", "session_01::nested::empty", "session_02::sharing")
-        output = "\n".join(f"{name}: test" for name in names) + "\n\n3 tests, 0 benchmarks\n"
-        self.assertEqual(runner.path_test_names(output, [1, 2]), names)
-
-    def test_path_inventory_requires_a_test_in_every_selected_module(self):
-        for output in (
-            "0 tests, 0 benchmarks\n",
-            "session_01::meal: benchmark\n",
-            "session_01::meal test\n",
-            "session_01::meal: test\n",
-            "session_03::meal: test\n",
-        ):
-            with self.subTest(output=output):
-                with self.assertRaisesRegex(ValueError, "No compiled tests found"):
-                    runner.path_test_names(output, [1, 2])
-        for extra in ("unwrapped", "session_02::unexpected"):
-            with self.subTest(extra=extra):
-                with self.assertRaisesRegex(ValueError, "outside selected reference modules"):
-                    runner.path_test_names(f"session_01::meal: test\n{extra}: test\n", [1])
-
-    def test_failed_path_discovery_does_not_execute_tests(self):
-        result = subprocess.CompletedProcess([], 101, stdout="")
-        with patch.object(runner.subprocess, "run", return_value=result) as process:
-            with patch.object(runner, "run_checked") as execute:
-                self.assertEqual(runner.run_path(self.directory, {}, [1]), 101)
-        self.assertIn("--list", process.call_args.args[0])
-        execute.assert_not_called()
-
-    def test_path_run_requires_every_discovered_test_to_pass(self):
-        listing = "session_01::meal: test\nsession_01::empty: test\n"
-        for second in ("test session_01::empty ... ignored\n", "", "test session_01::empty ... ok\n"):
-            with self.subTest(second=second):
-                results = [
-                    subprocess.CompletedProcess([], 0, stdout=listing),
-                    subprocess.CompletedProcess([], 0, stdout="test session_01::meal ... ok\n" + second),
-                ]
-                with patch.object(runner.subprocess, "run", side_effect=results) as process:
-                    if second.endswith("ok\n"):
-                        self.assertEqual(runner.run_path(self.directory, {}, [1]), 0)
-                    else:
-                        with self.assertRaisesRegex(ValueError, "did not report passing.*session_01::empty"):
-                            runner.run_path(self.directory, {}, [1])
-                command = process.call_args.args[0]
-                self.assertNotIn("--list", command)
-                self.assertNotIn("--include-ignored", command)
-                self.assertEqual(command[-4:], ["--format", "pretty", "--color", "never"])
-
     def test_expected_panic_is_a_pass_but_not_an_arbitrary_suffix(self):
         for suffix in (" - should panic", " - ignored"):
             with self.subTest(suffix=suffix):
@@ -196,31 +149,26 @@ class ExampleRunnerChecks(unittest.TestCase):
         lessons, simulation = self.simulation_files(self.directory)
         with patch.object(runner.subprocess, "run", return_value=self.formatter_result()):
             with patch.object(runner, "run_checked", return_value=101) as check:
-                self.assertEqual(runner.run_movement(self.directory, {}, (ANSWER, ANSWER)), 101)
+                self.assertEqual(runner.run_movement(self.directory, {}, ANSWER), 101)
         self.assertEqual(lessons.read_text(), ANSWER)
         self.assertEqual(simulation.read_text(), SCHEDULE)
         self.assertEqual(check.call_count, 1)
 
-    def test_answer_disagreement_or_schedule_drift_writes_no_solution(self):
+    def test_schedule_drift_writes_no_solution(self):
         lessons, simulation = self.simulation_files(self.directory)
-        for disagreement in (True, False):
-            with self.subTest(disagreement=disagreement):
-                simulation.write_text(SCHEDULE if disagreement else "changed schedule")
-                second = self.formatter_result()
-                if disagreement:
-                    second.stdout = ANSWER.replace("return 1", "return 2")
-                with patch.object(runner.subprocess, "run", side_effect=[self.formatter_result(), second]):
-                    with patch.object(runner, "run_checked") as check:
-                        with self.assertRaises(ValueError):
-                            runner.run_movement(self.directory, {}, (ANSWER, ANSWER))
-                self.assertEqual(lessons.read_text(), STUB)
-                check.assert_not_called()
+        simulation.write_text("changed schedule")
+        with patch.object(runner.subprocess, "run", return_value=self.formatter_result()):
+            with patch.object(runner, "run_checked") as check:
+                with self.assertRaises(ValueError):
+                    runner.run_movement(self.directory, {}, ANSWER)
+        self.assertEqual(lessons.read_text(), STUB)
+        check.assert_not_called()
 
     def test_integrated_failure_stops_before_clippy_and_includes_ignored_tests(self):
         self.simulation_files(self.directory)
         with patch.object(runner.subprocess, "run", return_value=self.formatter_result()):
             with patch.object(runner, "run_checked", side_effect=[0, 101]) as check:
-                self.assertEqual(runner.run_movement(self.directory, {}, (ANSWER, ANSWER)), 101)
+                self.assertEqual(runner.run_movement(self.directory, {}, ANSWER), 101)
         self.assertEqual(check.call_count, 2)
         command, _, _, expected = check.call_args.args
         self.assertIn("--include-ignored", command)
@@ -240,55 +188,16 @@ class ExampleRunnerChecks(unittest.TestCase):
                     self.assertEqual(workspace, scratch)
                     self.assertEqual(env["CARGO_TARGET_DIR"], str(scratch / "target"))
                     self.assertNotIn("RUSTUP_TOOLCHAIN", env)
-                    self.assertEqual(examples, (ANSWER, ANSWER))
+                    self.assertEqual(examples, ANSWER)
                     (workspace / "crates/moss-sim/src/lessons.rs").write_text("copied edit")
                     raise ValueError("fixture failure after editing the copy")
 
-                with patch.object(runner, "__file__", str(root / "docs/tutorial/authoring/check_path_examples.py")):
+                with patch.object(runner, "__file__", str(root / "learning/scripts/check_movement_reference.py")):
                     with patch.object(runner.tempfile, "mkdtemp", return_value=str(scratch)):
                         with patch.dict(os.environ, {"RUSTUP_TOOLCHAIN": "unexpected-toolchain"}):
                             with patch.object(runner, "run_movement", side_effect=fail_in_copy):
-                                args = ["--movement"] + (["--keep-workspace"] if keep else [])
+                                args = ["--keep-workspace"] if keep else []
                                 self.assertEqual(runner.main(args), 1)
-                self.assertEqual(scratch.exists(), keep)
-                after = {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
-                self.assertEqual(after, before)
-
-    def test_movement_and_session_modes_are_mutually_exclusive(self):
-        with patch.object(runner.tempfile, "mkdtemp") as create:
-            with self.assertRaises(SystemExit) as error:
-                runner.main(["--movement", "--session", "4"])
-        self.assertEqual(error.exception.code, 2)
-        create.assert_not_called()
-
-    def test_path_main_isolates_selected_examples_and_cleans_or_retains_copy(self):
-        root = self.project_fixture()
-        # A macro can generate tests; source text is not the compiled inventory.
-        for number in (1, 2):
-            self.write(root, f"docs/tutorial/path/{number:02d}-fixture.md",
-                       f"<!-- runnable: session-{number:02d} -->\n```rust\nmake_test!();\n```\n")
-        before = {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
-        for outcome, keep in ((0, False), (101, False), (ValueError("no compiled tests"), False), (101, True)):
-            with self.subTest(outcome=outcome, keep=keep):
-                scratch = Path(tempfile.mkdtemp(dir=self.directory))
-
-                def run_copy(workspace, env, sessions):
-                    self.assertEqual(workspace, scratch)
-                    self.assertEqual(sessions, [2])
-                    self.assertEqual(env["CARGO_TARGET_DIR"], str(scratch / "target"))
-                    self.assertNotIn("RUSTUP_TOOLCHAIN", env)
-                    self.assertEqual((scratch / "crates/moss-sim/tests/month_guide.rs").read_text(),
-                                     "mod session_02 {\nmake_test!();\n}\n")
-                    if isinstance(outcome, Exception):
-                        raise outcome
-                    return outcome
-
-                with patch.object(runner, "__file__", str(root / "docs/tutorial/authoring/check_path_examples.py")):
-                    with patch.object(runner.tempfile, "mkdtemp", return_value=str(scratch)):
-                        with patch.dict(os.environ, {"RUSTUP_TOOLCHAIN": "unexpected-toolchain"}):
-                            with patch.object(runner, "run_path", side_effect=run_copy):
-                                args = ["--session", "2"] + (["--keep-workspace"] if keep else [])
-                                self.assertEqual(runner.main(args), 1 if isinstance(outcome, Exception) else outcome)
                 self.assertEqual(scratch.exists(), keep)
                 after = {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
                 self.assertEqual(after, before)

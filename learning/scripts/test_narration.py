@@ -71,8 +71,6 @@ class NarrationExtraction(unittest.TestCase):
             root = Path(directory) / "learning"
             (root / "content").mkdir(parents=True)
             (root / "assets").mkdir()
-            (root.parent / "docs/tutorial").mkdir(parents=True)
-            (root.parent / "docs/tutorial/today-v2.md").write_text("Fixture guide")
             source = '<p>One saved reading.</p>'
             (root / "content/about.html").write_text(source)
             (root / "content/01-fixture.html").write_text(source)

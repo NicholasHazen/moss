@@ -196,7 +196,7 @@ def rename_public_gitignore(files):
 
 def validate_export(files, course, public=False):
     expected_pages = {m["id"] + ".html" for m in course["modules"]} | {n + ".html" for n in course["guides"]}
-    require(len(expected_pages) == 41, "This exporter expects the reviewed 41-page edition")
+    require(len(expected_pages) == len(course["modules"]) + len(course["guides"]), "Duplicate course page IDs")
     require({n for n in files if "/" not in n and n.endswith(".html")} == expected_pages, "Missing/extra course pages")
     allowed = {"assets", "examples", "reference", "downloads", "runtime", "previews"} | ({"narration"} if not public else set())
     for name in files:
@@ -326,7 +326,7 @@ def publish(destination, source_archive=None):
     validate_export(files, course, public=True)
     manifest = {"edition": course["edition"], "publicEdition": True,
                 "recordings": "Excluded macOS system-voice recordings; browser Listen remains available",
-                "pageCount": 41, "wasmCount": 7, "checkpointCount": 6,
+                "pageCount": len(course["modules"]) + len(course["guides"]), "wasmCount": 7, "checkpointCount": 6,
                 "files": {n: {"bytes": len(data), "sha256": digest(data)} for n, data in sorted(files.items())}}
     files["manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -356,7 +356,7 @@ def main():
         manifest = publish(args.destination, args.source_archive)
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
         parser.exit(1, f"Public export refused: {error}\n")
-    print(f"Prepared {len(manifest['files'])} manifested files in {args.destination}; 41 pages, 7 WASM, 6 checkpoints. No upload performed.")
+    print(f"Prepared {len(manifest['files'])} manifested files in {args.destination}; {manifest['pageCount']} pages, 7 WASM, 6 checkpoints. No upload performed.")
 
 
 if __name__ == "__main__":

@@ -36,6 +36,16 @@ class DocumentationChecks(unittest.TestCase):
         self.assertEqual(report.files, 2)
         self.assertGreaterEqual(report.links, 4)
 
+    def test_fieldnotes_entry_and_authoring_are_checked_without_generated_copies(self):
+        self.write("README.md", "# Project\n")
+        self.write("learning/README.md", "[Contract](authoring/README.md#write)\n")
+        contract = self.write("learning/authoring/README.md", "# Write\n[Home](../README.md)\n")
+        self.write("learning/_site/example.md", "[Generated](missing.md)\n")
+        self.write("learning/work/scratch.md", "[Scratch](missing.md)\n")
+        self.assertEqual(check(self.root).errors, [])
+        contract.write_text("# Renamed\n")
+        self.assertTrue(any("#write" in error for error in check(self.root).errors))
+
     def test_missing_file_and_missing_heading_are_separate_errors(self):
         self.write("README.md", "[File](gone.md)\n[Heading](docs/lesson.md#absent)\n")
         self.write("docs/lesson.md", "# Present\n")

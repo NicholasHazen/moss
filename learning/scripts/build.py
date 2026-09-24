@@ -217,9 +217,11 @@ def shell(title, body, modules, current="index", description="", lab=None, narra
         previous = modules[i - 1] if i else None
         following = modules[i + 1] if i + 1 < len(modules) else None
         stepper = '<nav class="chapter-nav" aria-label="Lesson navigation">'
-        stepper += f'<a href="{previous["id"]}.html">← {esc(previous["title"])}</a>' if previous else '<a href="index.html">← Field guide</a>'
+        stepper += f'<a href="{previous["id"]}.html">← {esc(previous["title"])}</a>' if previous else '<a href="introduction.html">← Meet Moss</a>'
         stepper += f'<a href="{following["id"]}.html">{esc(following["title"])} →</a>' if following else '<a href="roadmap.html">Explore the curriculum →</a>'
         stepper += '</nav>'
+    if current == 'introduction':
+        stepper = '<nav class="chapter-nav" aria-label="Lesson navigation"><a href="index.html">← Moss Fieldnotes</a><a href="01-observe.html">Begin: A tick is a promise →</a></nav>'
     controls = f'''<section class="practice-state" hidden aria-labelledby="practice-title"><h2 id="practice-title">Your place in this lesson</h2>
       <label for="lesson-state">Progress</label><select id="lesson-state"><option value="new">Not started</option><option value="reading">Reading</option><option value="practicing">Practicing</option><option value="reviewed">Reviewed</option></select>
       <p class="quiet">This is your own reading record. It does not certify tests or change Moss’s active assignment.</p>
@@ -235,11 +237,11 @@ def shell(title, body, modules, current="index", description="", lab=None, narra
     overview = re.search(r'<section\b[^>]*class="lesson-overview"[^>]*>.*?</section>', body, re.S)
     if overview:
         at = overview.end()
-        body = body[:at] + contents + narration + model + body[at:]
+        body = body[:at] + contents + model + body[at:]
     else:
         end = body.find('</p>')
         at = end + 4 if end >= 0 else 0
-        body = body[:at] + contents + narration + model + body[at:]
+        body = body[:at] + contents + model + body[at:]
     cover = '<div class="atlas-cover"><img src="assets/identity/atlas-meadow-v1.png" width="1984" height="794" alt="" fetchpriority="high"></div>' if current == "index" else ""
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -247,11 +249,11 @@ def shell(title, body, modules, current="index", description="", lab=None, narra
 <title>{esc(title)} · Moss Fieldnotes</title><link rel="icon" href="assets/identity/atlas-mark-v1.png" type="image/png"><link rel="stylesheet" href="assets/fieldnotes.css?v={assets_version}">
 <script src="assets/records.js?v={assets_version}" defer></script><script src="assets/models.js?v={assets_version}" defer></script><script src="assets/terrarium.js?v={assets_version}" defer></script><script src="assets/evidence.js?v={assets_version}" defer></script><script src="assets/ecosystem.js?v={assets_version}" defer></script><script src="assets/population.js?v={assets_version}" defer></script><script src="assets/mobile.js?v={assets_version}" defer></script><script src="assets/fieldnotes.js?v={assets_version}" defer></script><script src="assets/narration.js?v={assets_version}" defer></script></head>
 <body data-page="{esc(current)}"><a class="skip-link" href="#reading">Skip to reading</a>
-<header class="masthead"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
-<span class="edition-label">{esc(edition)}</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></header>{cover}
-<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><ol>{nav(modules,current)}</ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+<header class="masthead"><div class="masthead-inner"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">{esc(edition)}</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></div></header>{cover}
+<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><a class="introduction-link" href="introduction.html"{' aria-current="page"' if current == "introduction" else ""}>Start here · Meet Moss</a><ol>{nav(modules,current)}</ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
 </details></aside>
-<main id="reading" tabindex="-1"><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span><span id="reading-status" role="status"></span></div>
+<main id="reading" tabindex="-1"><details class="reading-options" hidden><summary>Reading options</summary><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span><span id="reading-status" role="status"></span></div>{narration}</details>
 <article>{meta}<h1 data-narration="0">{esc(title)}</h1>{body}</article>{notes}{stepper}</main>
 </div>
 <footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
@@ -340,7 +342,8 @@ def build():
             print("Runtime is stale or its metadata is unreadable: rebuild with python3 learning/scripts/runtime.py build")
     (OUT / "examples").mkdir(exist_ok=True)
     (OUT / "reference").mkdir(exist_ok=True)
-    shutil.copyfile(ROOT.parent / "docs/tutorial/today-v2.md", OUT / "reference/today-v2.md")
+    # This former companion is now part of the canonical movement chapter.
+    (OUT / "reference/today-v2.md").unlink(missing_ok=True)
     checkpoints = copy_checkpoints()
     views = source_views(checkpoints, guides, assets_version)
     if (OUT / "narration").exists():

@@ -1,6 +1,6 @@
 # Teaching small changes in Moss
 
-[Research index](README.md) · [Tutorial authoring](../tutorial/authoring/README.md)
+[Research index](README.md) · [Fieldnotes authoring](../../learning/authoring/README.md)
 
 **Reviewed September 22, 2026.** This note explains choices behind the tutorial,
 not additional reading Nick must complete. The reader is an experienced programmer
@@ -73,7 +73,7 @@ The useful design prompt here is the progression from inspecting an example to
 modifying and making something with it, rather than treating copied code as the
 only evidence. [Authors' institutional record and abstract](https://eprints.gla.ac.uk/229013/).
 
-For Moss, this informs the [authoring progression](../tutorial/authoring/progression.md):
+For Moss, this informs the [course progression](../../learning/content/roadmap.html):
 trace one value, make a small decision, then reuse the idea when another behavior
 needs it. Support can recede when that part is comfortable and return when a new
 mechanism appears. Complete answers remain accessible. This is our adaptation,

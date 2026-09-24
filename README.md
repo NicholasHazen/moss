@@ -2,27 +2,27 @@
 
 **A little life. A world to grow.**
 
-A browser-first Rust/ECS ecosystem workbench. The current 32 × 20 chamber has
-Hare #1 (Fern), Fox #2 (Flint), a grass patch, inspection, camera controls and
-explicit simulation ticks. Species-configured maintenance spends energy,
-bounded at zero. Movement, feeding and death are future work.
+Moss is a browser-based ecosystem sandbox built in Rust. Small creatures find
+food, spend energy, compete, and leave consequences for the lives around them.
+The ambition is a world you can enjoy watching and understand well enough to
+change: pause at a surprising encounter, inspect the rule behind it, and try a
+different starting condition.
 
-Start with [NOW.md](NOW.md) when returning, the
-[documentation index](docs/README.md) to browse, or the
-[today's v2 tutorial](docs/tutorial/today-v2.md) for the prepared movement session.
-[PROJECT_BRIEF.md](PROJECT_BRIEF.md) records the vision.
+[Moss Fieldnotes](https://nicholashazen.github.io/moss/) is the project's book.
+Start with [Meet Moss](https://nicholashazen.github.io/moss/introduction.html) for
+the world, purpose and technical approach. Its practical Rust and Bevy ECS
+lessons lead into one continuing course project, with explanations, experiments,
+hints and complete worked answers. The [local source guide](learning/README.md)
+explains how to run the book and edit its examples.
 
-## Learn with Fieldnotes
-
-[Read Moss Fieldnotes](https://nicholashazen.github.io/moss/fieldnotes/) for the
-new Rust and ECS course, or use [the course source and local setup](learning/README.md).
-The course develops a separate continuing terrarium through food, population,
-movement, rest, hunting and refuge. It does not change the live movement assignment.
-The [original Moss book](https://nicholashazen.github.io/moss/) remains available.
+For the live application's current assignment, return to [NOW.md](NOW.md).
+[PROJECT_BRIEF.md](PROJECT_BRIEF.md) holds the wider vision, and the
+[documentation index](docs/README.md) leads to technical and development notes.
+The book includes source, commands and worked checkpoints for its practical route.
 
 ## Run locally
 
-From the workspace root (`/Users/nick/Code/moss` on this Mac):
+From the workspace root:
 
 ```sh
 scripts/with-toolchain.sh trunk serve --locked --release

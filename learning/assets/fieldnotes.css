@@ -251,3 +251,71 @@ details[open] { background:#f0f4eb; }
   .chapter-nav a { max-width:none; }
 }
 @media print { .atlas-cover { display:none; }.lesson-overview,details[open] { background:none; } }
+
+
+/* One book: quiet controls, aligned page edges, and space between ideas. */
+.masthead { padding:0; min-height:0; }
+.masthead-inner { width:100%; max-width:1100px; margin:auto; padding:1.4rem 2.5rem; display:flex; align-items:center; gap:2rem; }
+.masthead-inner>a:last-child { font-size:.8rem; text-decoration:none; }
+.workspace { max-width:1100px; grid-template-columns:196px minmax(0,760px); gap:4rem; padding:0 2.5rem; }
+.atlas-cover { max-width:1020px; width:calc(100% - 5rem); height:clamp(180px,21vw,240px); margin:2rem auto 0; border-radius:10px; }
+main { padding-top:2.75rem; padding-bottom:5rem; }
+.sidebar { padding-top:2.75rem; }
+.introduction-link { display:block; padding:.8rem .5rem; font-size:.82rem; text-decoration:none; border-bottom:1px solid var(--line); }
+.introduction-link[aria-current=page] { font-weight:650; background:#e3ede2; border-radius:4px; }
+.reading-options { margin:0 0 2.5rem; padding:0; border:0; }
+.reading-options>summary { width:fit-content; margin-left:auto; padding:.4rem 0 .4rem 1rem; font-size:.75rem; font-weight:400; color:var(--muted); }
+.reading-options[open] { background:none; }
+.reading-toolbar { position:static; margin:.75rem 0 0; padding:1rem; border:1px solid var(--line); border-radius:8px; gap:.6rem; background:var(--surface); }
+.reading-toolbar label { margin-left:0; }
+.reading-options .narration-player { margin:1rem 0 0; }
+article h1 { margin-top:0; margin-bottom:2.2rem; }
+article p { margin:1.25rem 0; }
+article h2 { margin-top:4.5rem; margin-bottom:1.35rem; }
+article h3 { margin-top:2.75rem; margin-bottom:1rem; }
+article h2[id],article h3[id] { scroll-margin-top:2.5rem; }
+article figure { margin:2.75rem 0; }
+article pre,article table { margin-top:1.75rem; margin-bottom:1.75rem; }
+article details { margin:1.7rem 0; }
+.lesson-overview { margin:2.75rem 0; padding:1.6rem 1.8rem; }
+.lesson-overview h2 { margin:0 0 1rem; }
+.lesson-overview p { margin:.8rem 0 0; }
+.lesson-summary { margin-top:4.5rem; padding-top:2rem; }
+.lesson-summary h2 { margin:0 0 1.35rem; }
+.chapter-contents { margin:2rem 0 3rem; }
+.experiment { margin:3rem 0; }
+.chapter-nav { margin-top:4rem; padding-top:1.8rem; }
+.site-footer { max-width:1100px; margin:auto; padding:2.5rem; }
+.entry-actions { display:flex; align-items:center; flex-wrap:wrap; gap:1rem 1.8rem; margin:2rem 0 3.5rem; font:.88rem/1.5 system-ui,sans-serif; }
+.entry-primary { display:inline-block; padding:.85rem 1.15rem; color:var(--paper); background:var(--leaf); border-radius:6px; text-decoration:none; }
+.entry-primary:hover { background:#236461; }
+[data-page=index] article h1 { max-width:none; font-size:clamp(2.6rem,4vw,3.5rem); }
+@media(max-width:1100px) and (min-width:761px) {
+  .workspace { grid-template-columns:180px minmax(0,1fr); gap:2.5rem; }
+}
+@media(max-width:760px) {
+  .masthead-inner { padding:1.15rem 1.25rem; gap:1rem; }
+  .masthead-inner>a:last-child { margin-left:auto; font-size:.72rem; }
+  .workspace { padding:0 1.25rem; }
+  .atlas-cover { width:calc(100% - 2.5rem); margin:1.5rem auto 0; height:170px; }
+  .sidebar { padding-top:1.25rem; }
+  main { padding-top:1.5rem; padding-bottom:3.5rem; }
+  .reading-options { margin-bottom:2.75rem; }
+  .reading-options>summary { min-height:40px; padding-top:.6rem; }
+  article h2 { margin-top:3.5rem; }
+  .lesson-overview { padding:1.3rem; margin:2.25rem 0; }
+  .lesson-overview h2 { margin-top:0; }
+  .lesson-summary { margin-top:3.5rem; }
+  .lesson-summary h2 { margin-top:0; }
+  .site-footer { padding:2rem 1.25rem; }
+}
+@media print {
+  .reading-options { display:none !important; }
+  .workspace { padding:0; }
+  main { padding:0; }
+  article h2 { margin-top:1.6rem; margin-bottom:.75rem; }
+  article h3 { margin-top:1.3rem; }
+  article p { margin:.7rem 0; }
+  .lesson-overview { margin:1.3rem 0; padding:.5rem 0 .5rem 1rem; }
+  .lesson-overview h2,.lesson-summary h2 { margin-top:0; }
+}

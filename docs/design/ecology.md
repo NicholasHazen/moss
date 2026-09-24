@@ -8,20 +8,17 @@ records checks separately from the proposed rules below. `NOW.md` owns the activ
 
 ## Current teaching route
 
-[Today's session](../tutorial/today-v2.md) starts with one affordable cardinal step.
+[The movement chapter](../../learning/content/14-movement.html) starts with one affordable cardinal step.
 After helper review, the agent activates movement and verifies Fern's nine-cell
 journey. A finite meal is a separate stretch. Autonomous choice follows those
 observable actions; population and individual-cost experiments follow when useful.
 
-The [teaching path](../tutorial/path/README.md) proposes sixteen short checkpoints
-in four adaptable arcs: finite meals and autonomous choice, population
-and individual-cost comparisons, bounded growth and daylight, then a deliberate
-starvation boundary and scarcity experiments. These are future learning steps;
-they neither replace today's exercise nor authorize activating all the rules.
-After an arc, the agent recommends the next edit from the observed behavior and
-learning needs. Hunting can be reconsidered at the first foraging review. The
-proposed pursuit/contact version needs exclusive prey resolution; neither that
-version nor a simpler in-range consumption rule needs every environmental lesson.
+[Fieldnotes](../../learning/README.md) is the teaching route. Its numbered lessons
+explain Rust and ECS concepts through these proposed rules; its cumulative guides
+build a separate saved course project through meals, supply, births, travel,
+rest, hunting and refuges. Working through those examples does not install them
+in the live application. After the current reviewed movement journey, choose
+one live increment from the observed behavior and learning needs.
 
 An authored destination is a teaching fixture, not a claim of animal autonomy.
 It lets us test action execution before implementing policy. Retain correctness
@@ -63,14 +60,15 @@ does not acquire animal maintenance merely because it has a species label.
 
 The live resource still has `hare_maintenance_units_per_tick` and
 `fox_maintenance_units_per_tick`, with a shared lookup in maintenance.
-The future [individual-cost sessions](../tutorial/path/06-owned-costs.md) retain
+The proposed individual-cost change retains
 Nick's expected overrides: introduce `AnimalEnergyCosts` as a component,
 then have species defaults and authored spawn overrides initialize one value on
 each animal. Maintenance will query that component with `Energy` directly.
 The component's values will be authoritative individual baselines, not a cache.
 Grouping the species defaults into the same value type remains agent preparation.
-These changes are planned, not yet implemented. [Chapter 1D](../tutorial/01d-energy-profiles.md)
-keeps the component, export and attachment details as an integration companion.
+These changes are planned for the live project, not yet implemented there.
+[Fieldnotes on individual variation](../../learning/content/17-variation.html)
+explains ownership and overrides; the course project practices a separate model.
 
 Keep defaults fixed during a run; changing configuration starts a new run.
 An authored override takes precedence at spawn, including an explicit zero.
@@ -84,7 +82,7 @@ Label its source only if that provenance has been collected. Small frequently
 read individual attributes belong in typed components; large shared definitions
 can stay behind keys. Temporary conditions preserve the baseline, with effect
 ordering and arithmetic chosen when those rules arrive. See the
-[attributes context](../tutorial/context/attributes-and-defaults.md) for the scaling
+[typed-attribute research](../research/attributes-and-energy.md) for the scaling
 tradeoffs and the separate case of derived caches.
 
 The regression experiment sets Hare to 1 and Fox to 2 units per tick. Starting
@@ -236,12 +234,12 @@ effects individually before combining them.
 ## A later starvation boundary, proposed for pairing
 
 Zero currently causes no death. After finite food, renewal and daylight work,
-the teaching path recommends testing for zero **after that tick's allowed feeding**.
+the proposed rule tests for zero **after that tick's allowed feeding**.
 An animal on food can therefore receive a final meal before the terminal check;
 one stranded without affordable movement may still end at zero. This is a proposed
 game rule to choose explicitly during pairing, not a claim about biology or an
-implemented consequence. The exact boundary and cases live in
-[session 13](../tutorial/path/13-deciding-starvation.md).
+implemented consequence. [Fieldnotes on death and retained history](../../learning/content/19-history.html)
+explores the boundary with a separate example.
 
 Maintenance currently clamps at zero. The proposal therefore forgives any
 unpaid upkeep: reserve 1, requested cost 2 and a one-unit meal end at reserve 1.

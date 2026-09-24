@@ -97,7 +97,7 @@
       lesson().clips.push(text); save(); drawClips();
     });
   }
-  document.querySelectorAll(".reading-toolbar,.reading-notes,.practice-state").forEach(node => { node.hidden = false; });
+  document.querySelectorAll(".reading-options,.reading-toolbar,.reading-notes,.practice-state").forEach(node => { node.hidden = false; });
   if (!storageAvailable) storageProblem(storageBlocked
     ? "Saved reading data could not be read and has been left unchanged. Changes in this tab cannot be saved; copy any new notes somewhere safe before leaving."
     : "Browser storage is unavailable. Changes may be lost when this tab closes; copy any new notes somewhere safe before leaving.");

@@ -1,6 +1,6 @@
 {
-  "edition": "Moss \u00b7 Fieldnotes 0.3",
-  "description": "Learn Rust by making a small world explain itself.",
+  "edition": "Moss · Fieldnotes 0.4",
+  "description": "Build a living ecosystem in Rust, and understand the rules that shape it.",
   "modules": [
     {
       "id": "01-observe",
@@ -375,7 +375,8 @@
     }
   ],
   "guides": {
-    "index": "A small world, understood.",
+    "index": "A world worth understanding.",
+    "introduction": "A little life. A world to grow.",
     "roadmap": "A path through a living world",
     "setup": "Open the workbench",
     "about": "Read, listen, investigate",

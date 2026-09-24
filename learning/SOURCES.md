@@ -47,7 +47,7 @@ synthetic programs do not certify Bevy 0.18.1, Cargo workspaces or offline reuse
 | ID | Source | Intended use |
 | --- | --- | --- |
 | M01 | [Project brief](../PROJECT_BRIEF.md), [current assignment](../NOW.md), [architecture](../docs/design/architecture.md) | Learner ownership, one live assignment, one authoritative ECS world and simulation/presentation boundary |
-| M02 | [Existing book](../book/README.md), [tutorial path](../docs/tutorial/path/README.md), [authoring contract](../docs/tutorial/authoring/README.md) | Consequence-led organization, explicit worked answers, helper/integration/browser evidence distinction |
+| M02 | [Retired book](https://github.com/NicholasHazen/moss/blob/015ecdbf76a4c5253df8e1b182c0bee84c0cca9e/book/README.md), [retired tutorial path](https://github.com/NicholasHazen/moss/blob/015ecdbf76a4c5253df8e1b182c0bee84c0cca9e/docs/tutorial/path/README.md), [current authoring contract](authoring/README.md) | Consequence-led organization, explicit worked answers, helper/integration/browser evidence distinction |
 | M03 | [Development commands](../docs/development/README.md), [tested stack](../docs/development/verification.md) | Existing exact-version run path and clearly bounded prior verification |
 
 These are user-supplied project sources. Preserve repository notices for adapted

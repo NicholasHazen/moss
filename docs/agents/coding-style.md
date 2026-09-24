@@ -126,7 +126,7 @@ testable. Report the checks actually run using the development guide.
 Use `//!` for a module's purpose and `///` for behavior, units, invariants, and
 relevant panic conditions. Explain consequential choices in local comments;
 put extended teaching in the guide. Maintain examples and paths according to the
-[tutorial authoring guide](../tutorial/authoring/README.md). The three documented,
+[tutorial authoring guide](../../learning/authoring/README.md). The three documented,
 unscheduled lesson stubs are intentional landmarks; do not implement or schedule
 them during organization work. New speculative stubs are not the default.
 
