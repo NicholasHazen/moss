@@ -29,7 +29,7 @@ Extract this ZIP, open a terminal in the extracted directory, and run:
 Open http://127.0.0.1:8091 in your browser. Python 3.11+ is sufficient. Keep the
 terminal running; Control-C stops the server. If that port is occupied, use
 `python3 serve.py --port 8092` and open the printed address. Do not open index.html
-directly: browser fetches for search, narration cues, and WASM need the local server.
+directly: browser fetches for narration cues and WASM need the local server.
 
 The course is readable offline. Optional publisher videos and external reference
 links need a connection. Narration is generated speech, not a human performance.
@@ -54,8 +54,9 @@ scripts. A complete reference checkpoint is an answer to inspect beside your
 work, not an instruction to replace your project or discard your investigations.
 
 Notes, highlights, and progress stay in this browser's local origin. Keep the same
-address and port to retain them. Copy/export your reading record before changing
-browser, address, or port; paste/import it at the new location. Progress is self
+address and port to retain them. Open Reading notes beneath a lesson to return
+to your writing. Notes do not sync between devices or site addresses; copy any
+writing you want to keep elsewhere into your usual notebook. Progress is self
 reported and does not certify that tests passed.
 
 `manifest.json` lists the edition, course page counts, and SHA-256 and size of each

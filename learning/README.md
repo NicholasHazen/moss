@@ -17,7 +17,8 @@ views run precompiled examples, while Rust edits and tests run locally.
 Fieldnotes 0.3 adds chapter overviews, closing summaries and section navigation.
 The [ecosystem atlas identity](IDENTITY.md) pairs a generated habitat mark and
 meadow cover with a quieter reading layout. Chapter menus collapse on narrow
-screens; the prose, code and explanatory diagrams remain selectable.
+screens, and optional Reading notes sit below each lesson. The prose, code and
+explanatory diagrams remain selectable.
 
 ## Run
 
@@ -263,8 +264,8 @@ pinned runner. External reference links and publisher videos need a connection.
 ## Authoring
 
 `course.json` owns available lesson order and metadata. `content` holds semantic
-HTML fragments. The build wraps fragments into complete pages and indexes their
-text for local search. All prose and disclosures work without JavaScript. Use
+HTML fragments. The build wraps fragments into complete pages and keeps a
+text index for coverage checks. All prose and disclosures work without JavaScript. Use
 `code[data-runnable="id"]` for a complete reference, and
 `code[data-starter="id"]` for a complete editable starter. Each example must end
 with a `#[cfg(test)] mod tests` block containing meaningful named tests.
