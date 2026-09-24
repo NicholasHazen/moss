@@ -219,8 +219,8 @@
       "sha256": "3e5d8e7176bb772426d348ad1adc8dbc046f011c9edea8962da613cad5c5e7eb"
     },
     "downloads/moss-fieldnotes-source.zip": {
-      "bytes": 4811971,
-      "sha256": "62e284ad9b22b37045b45dce3142629cef2996c471feb3094a6793590d88d810"
+      "bytes": 4733888,
+      "sha256": "57353149264499e241fb2f93cc3b1d5300a029cff130d7f29d754b86dd9416e4"
     },
     "downloads/population-reference.zip": {
       "bytes": 47580,
@@ -539,8 +539,8 @@
       "sha256": "3e5d8e7176bb772426d348ad1adc8dbc046f011c9edea8962da613cad5c5e7eb"
     },
     "fieldnotes/downloads/moss-fieldnotes-source.zip": {
-      "bytes": 4811971,
-      "sha256": "62e284ad9b22b37045b45dce3142629cef2996c471feb3094a6793590d88d810"
+      "bytes": 4733888,
+      "sha256": "57353149264499e241fb2f93cc3b1d5300a029cff130d7f29d754b86dd9416e4"
     },
     "fieldnotes/downloads/population-reference.zip": {
       "bytes": 47580,
@@ -2476,7 +2476,7 @@
     },
     "manifest.json": {
       "bytes": 82621,
-      "sha256": "753c5acbc5b6666363bfaba672e0f28b55851fd6a0ba303ff96311bf8b5e263d"
+      "sha256": "a5f12a848c5fb186de6963a14e67f5586a0eca719bdfc6edfd70b9cd15900ca2"
     },
     "mobile.html": {
       "bytes": 54601,
