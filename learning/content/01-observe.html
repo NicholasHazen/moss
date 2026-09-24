@@ -1,5 +1,10 @@
-<p class="lesson-lead">Fern is standing still, but her reserve has fallen from 60 to 57. Has something gone wrong, or has the world done useful work that the picture doesn't show? We'll follow those three missing units through a simulation tick, then build a small Rust example that lets us separate changing the world from looking at it.</p>
+<p class="lesson-lead">Fern is standing still, but her reserve has fallen from 60 to 57. Has something gone wrong, or has the world done useful work that the picture doesn't show?</p>
 <aside class="scope-note"><p>You'll inspect the current maintenance-only Moss build and run a standalone Rust lab. Ordinary functions and structs are enough to begin; we'll introduce Bevy later. The live movement exercise remains in <code>NOW.md</code>.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Tell a changing world from a changing view</h2>
+<p>Start by pairing Fern's reserve with the completed-tick counter, then follow the same distinction in a small Rust program. Comparing three advances with different numbers of reads will show which operation changes the state. Finally, check the installed maintenance rule separately, so you can explain both the expected 57 units and what each kind of evidence establishes.</p>
+</section>
 
 <h2 id="one-observation">Read the reserve together with the tick</h2>
 <p>In the current fixture, Fern and Flint each start with 60 reserve units and pay one unit of maintenance per executed simulation tick. After three ticks, each should have 57. Their positions can stay exactly where they were: the application has a maintenance rule, while movement is still unfinished and unscheduled. A changing reserve is already a consequence we can investigate.</p>
@@ -113,7 +118,7 @@ rustc +1.93.1 --edition=2024 --test observe.rs -o observe-tests
 <p>An empty reserve also doesn't remove a creature in this example. The current Moss maintenance rule has the same floor, with death still outside that live checkpoint. Arithmetic can tell us that an account is empty; deciding what happens to its owner requires a lifecycle rule. We'll keep those questions separate as the terrarium grows.</p>
 
 <h2 id="evidence-with-a-boundary">Check the rule where it is installed</h2>
-<p>Our small program explains the distinction, but it doesn't call Moss's installed schedule. To check that integration, run the existing focused maintenance test from the repository root:</p>
+<p>The two read frequencies tested the separation between observation and advancement in our small program. They don't tell us whether Moss actually installs and runs its maintenance rule. To follow the same claim into the real world, run the existing focused maintenance test from the repository root:</p>
 <pre><code class="language-sh">scripts/with-toolchain.sh cargo test -p moss-sim --locked --test maintenance maintenance_spends_energy_and_stops_at_zero -- --exact</code></pre>
 <p>Look for one passed test with that exact name. A report of zero tests means the filter selected nothing, while a compilation error means execution never reached the assertion. If you run a broader suite and encounter the unfinished movement exercise, treat that failure as its own result; it doesn't replace this maintenance check.</p>
 <p>We now have three ways to investigate Fern's reserve. Each follows a different part of the path from a requested tick to a displayed number:</p>
@@ -121,9 +126,11 @@ rustc +1.93.1 --edition=2024 --test observe.rs -o observe-tests
 <p>A native assertion can catch incorrect reserve arithmetic even if the picture looks plausible. Checking the browser can reveal a stale label even when that arithmetic is correct. When the two disagree, you've learned where to look next instead of having to question the entire program at once.</p>
 <p>You can also inspect the installed Rust schedule inside this course through <a href="terrarium.html">the Rust terrarium</a>. It runs a locally compiled WebAssembly build of <code>moss-sim</code>. The small <code>State</code> example above remains useful because you can trace its access rules on one page; the terrarium lets you follow the corresponding behavior in the actual simulation crate.</p>
 
-<h2 id="carry-the-model-forward">Keep a reading while the world continues</h2>
-<p>Fern's stationary square now has an explanation: three maintenance ticks changed her reserve, and observing her added no further charge. You can repeat that reasoning with six reads or six hundred because the mutation occurs in the same three advances.</p>
+<section class="lesson-summary" id="carry-the-model-forward" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">A tick explains the change; a reading records it</h2>
+<p>Fern's stationary square now has an explanation: three maintenance ticks changed her reserve, and observing her added no further charge. The small program made that separation easy to trace. The installed test checks Moss's scheduled work, while the browser observation checks what its controls and inspector show. In each case, reading tick and reserve together lets you connect a measurement to completed work instead of guessing from the picture.</p>
 <p>There is another kind of observation we haven't built yet. Suppose the inspector saves a reading at tick 0 and keeps it while Fern advances to tick 3. Should the saved reserve become 57 too, or should it remember 60? The answer depends on what we kept: access to the original value, or an independent value of our own.</p>
 <details><summary>Recall the access distinction</summary><p>A shared borrow lets a function read the original state under Rust's borrowing rules. A copied measurement can remain unchanged after the original changes. Both are useful, but a saved historical reading needs to retain what was true when it was captured.</p></details>
 <p>In <a href="02-ownership.html">ownership at the inspector boundary</a>, we'll build that saved reading and use it to work out when to borrow, copy, and take ownership.</p>
+</section>
 <p class="source-note">The <a href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">Rust Book's references and borrowing chapter</a> develops the access rules used here. The schedule and test names match this edition's repository source. The browser results above describe what to check in your running build.</p>

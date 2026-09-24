@@ -1,5 +1,10 @@
-<p class="lesson-lead">The percentage helper passes its tests, but the inspector still says 99. You fix the update and now its current value is 37, yet a downstream observer still records 99. Before changing the arithmetic again, we need evidence about the rest of that path: which sample was selected, whether the projection ran, and when the observer read its result. We'll repair the projection, then write tests that can distinguish these failures for themselves.</p>
+<p class="lesson-lead">The percentage helper passes its tests, but the inspector still says 99. You fix the update and now its current value is 37, yet a downstream observer still records 99. Before changing the arithmetic again, we need evidence about the rest of that path: which sample was selected, whether the projection ran, and when the observer read its result.</p>
 <aside class="scope-note"><p><strong>Isolated evidence lab.</strong> These are presentation samples in a miniature Bevy ECS 0.18.1 world. You will complete a projection system and investigate deliberately incomplete or misordered schedules. Nothing is installed into Moss, and the live movement exercise remains unchanged.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Choose a check that can expose the mistake</h2>
+<p>First you'll complete a projection and compare the value it leaves with the value its observer actually saw. Then you'll write your own tests and try them against six supplied defects, using their failures or survival to improve the evidence. The optional compiled-Rust panel extends that investigation into the browser. Throughout, the goal is to connect each claim to a check that reaches the part of the program capable of making it false.</p>
+</section>
 
 <h2 id="name-the-claim-first">Name the claim before choosing a check</h2>
 <p>Start by making the claim small enough to check. “The percentage is correct” might mean the helper floors a fraction correctly, the system chooses the intended entity, an observer sees the updated result, or the browser displays it. A test must reach the part of the program that could make its particular claim false. Otherwise the test can remain green while the defect survives somewhere it never looked.</p>
@@ -358,9 +363,11 @@ python3 learning/scripts/build.py</code></pre>
 <p>The same discipline applies when you return to current Moss. Pause, reset, and press Step three times at the maintenance-only checkpoint; the paired expectation is tick 3 and reserve 57. Record what that particular browser build actually shows. A still creature in a screenshot does not reveal whether its reserve was charged correctly, just as this native projection test cannot certify a separate Moss browser build.</p>
 <p>If the browser result disagrees, trace the value inward from the displayed text to the projected resource, installed schedule, and helper inputs. Find the first boundary where expected and observed values diverge. That keeps the repair tied to evidence: rewriting correct arithmetic before discovering that its system never ran could add another defect while leaving the original one in place.</p>
 
-<h2 id="carry-a-counterexample">Carry a counterexample into the next review</h2>
+<p>For that browser boundary, the course includes <a href="terrarium.html">a precompiled Rust terrarium</a> at the current maintenance checkpoint. Its displayed readings let you make an observation about that specific host, alongside the native practice you completed here.</p>
+
+<section class="lesson-summary" id="carry-a-counterexample" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Carry a counterexample into the next review</h2>
 <p>Look once more at the fixture and name the wrong program each feature can expose. Why did we include an unselected sample, begin with stale 99, and preserve the observer's trace instead of checking only the final display? This is the reasoning you can carry into the next test you design.</p>
 <details><summary>Recall answer</summary><p>The unselected sample exposes incorrect query selection or “take the first row.” The stale initial value exposes omitted projection and failure to clear unavailable data. The trace exposes an observer that ran before the update even when final state is correct.</p></details>
 <p>The selected-query and schedule APIs were checked against Bevy ECS 0.18.1. The native lab now distinguishes helper arithmetic, projection, and observation for these cases; integration into real Moss and its browser still need their own evidence. <a href="14-movement.html">The next bridge</a> applies that separation to the canonical affordable-movement task, where a returned distance, a changed reserve, and a visible journey must agree.</p>
-
-<p>For that browser boundary, the course includes <a href="terrarium.html">a precompiled Rust terrarium</a> at the current maintenance checkpoint. Its displayed readings let you make an observation about that specific host, alongside the native practice you completed here.</p>
+</section>

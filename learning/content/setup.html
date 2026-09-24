@@ -1,5 +1,10 @@
 <p class="lede">Read in the browser, then bring the compiler to the question.</p>
 <p>You can follow the explanations, diagrams, and teaching models without setting up Rust first. When you're ready to edit a lab, the local workbench compiles and tests your saved file. That gives you Rust's actual diagnostics while keeping the lesson beside your editor. The small browser teaching models provide a quicker way to test a prediction; their labels distinguish them from compiled Rust.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">A workbench you can trust</h2>
+<p>By the end of this guide, you should have the course beside your editor and know whether a command is checking the printed answer or your own file. We’ll open the reading edition, verify the pinned toolchain, and run a small reference before preparing an unfinished exercise. That order separates a setup problem from a mistake in the code you are learning to write. The browser-build commands come afterward, for the lessons that need a compiled view.</p>
+</section>
+
 <h2 id="open-course">Open this edition</h2>
 <p>From the root of the Moss checkout containing <code>learning</code>, build and serve the course. You need Python 3.11 or newer, with no additional Python packages:</p>
 <pre><code class="language-sh">python3 learning/scripts/build.py
@@ -39,4 +44,8 @@ python3 learning/scripts/build.py</code></pre>
 <p>The main Moss application has its own server. From the repository root, run:</p>
 <pre><code class="language-sh">scripts/with-toolchain.sh trunk serve --locked --release</code></pre>
 <p>It opens at <a href="http://127.0.0.1:8080">port 8080</a>, separately from Fieldnotes; keep one simulation preview on that port. At the current live checkpoint, maintenance runs while the unfinished movement rule remains unscheduled. Full workspace tests still encounter that intentional exercise, so use the focused command named by a lesson when you're inspecting an existing rule.</p>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Know which file your test is checking</h2>
 <p>When you return to active Moss development, open <code>NOW.md</code>. Your course work can help explain the decision in front of you while the live assignment remains the place to make that project change.</p>
+<p>For the course, a working reference establishes the toolchain and a check labelled <strong>LEARNER FILE</strong> identifies your selected edit. An initial failure at <code>todo!</code> is the intended starting point for that exercise. Begin with <a href="01-observe.html">one observable tick</a>, then use <a href="02-ownership.html">the ownership lesson</a> to complete the inspector you prepared here.</p>
+</section>

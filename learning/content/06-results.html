@@ -1,5 +1,10 @@
-<p class="lesson-lead">Suppose an inspector form asks for a report beginning at tick 12 and covering three ticks. We can turn that into a window containing 12, 13, and 14. Now change the count to zero. The text still parses as a number, but the request no longer satisfies the report's rules. We'll build a small validation boundary that can tell the caller why a request failed and return a usable value when it succeeds.</p>
+<p class="lesson-lead">Suppose an inspector form asks for a report beginning at tick 12 and covering three ticks. We can turn that into a window containing 12, 13, and 14. Now change the count to zero. The text still parses as a number, but the request no longer satisfies the report's rules.</p>
 <aside class="scope-note"><p>You'll implement a constructor in the isolated <code>results.rs</code> lab, then compare it with Moss's existing configuration code. The 4,096-tick limit is an illustrative reporting policy. This exercise doesn't add a live form or change the movement task in <code>NOW.md</code>.</p></aside>
+
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Turn a request into a value callers can trust</h2>
+<p>You'll build a constructor that either produces a valid reading window or explains why it cannot. We'll separate parsing from the report's policy, follow errors through the supplied parsing function, and test both accepted and rejected endpoints. That gives a request for ticks 12 through 14 a dependable representation, while keeping a zero count or an overflowing endpoint from becoming a misleading report.</p>
+</section>
 
 <h2 id="valid-text-is-not-valid-configuration">Follow a request from text to meaning</h2>
 <p>A form begins with strings, so our first question is whether each input can be read as the integer type we've chosen. “Three” can't be parsed as a <code>u64</code>; “3” can. But parsing only gives us a representable number. It doesn't know what our report considers a useful count, which is why “0” gets through this first step.</p>
@@ -23,7 +28,7 @@
 <p>We also need to decide what rejection means. Clamping a request for 4,097 ticks to 4,096 would silently change what the caller asked for. This constructor rejects the unsupported count instead. An interface could offer a suggested correction afterward, but the accepted value should describe a request the caller actually agreed to make.</p>
 
 <h2 id="follow-the-error-path">Read the validation pipeline</h2>
-<p>The supplied <code>parse_window</code> function connects text inputs to the constructor. It parses the start, then the count, and finally calls <code>ReadingWindow::new</code>. Keeping that final call matters: successfully parsing two integers mustn't bypass the report's range policy.</p>
+<p>The constructor gives us one place to enforce the policy for numeric inputs; the form still begins with text. The supplied <code>parse_window</code> function connects those text inputs to the constructor. It parses the start, then the count, and finally calls <code>ReadingWindow::new</code>. Keeping that final call matters: successfully parsing two integers mustn't bypass the report's range policy.</p>
 <p>After each parse, <code>map_err</code> converts the parser's error into our field-specific <code>WindowError</code>. The following question mark either yields the successful integer for continued work or returns the error from <code>parse_window</code>. It saves us an explicit match for propagation. It doesn't log a message, retry, or decide which correction the user should make.</p>
 <p>Inside the constructor, <code>checked_add</code> presents a slightly different shape: it returns an <code>Option</code>, because its failed result carries no reason of its own. We know what failure means at this point, so <code>ok_or</code> turns <code>None</code> into <code>EndOverflow</code> with the relevant inputs. A question mark then propagates that error in the same way as the parsing failures.</p>
 <p>The <a href="https://doc.rust-lang.org/std/option/enum.Option.html#method.ok_or">Option conversion reference</a> and <a href="https://doc.rust-lang.org/std/result/enum.Result.html#method.map_err">Result error-mapping reference</a> describe these transformations. In this example, they let several operations speak the same error language. The final constructor call already returns the right <code>Result</code>, so <code>parse_window</code> returns it directly.</p>
@@ -243,7 +248,9 @@ rejected: CountOutOfRange { tick_count: 0 }</code></pre>
 <pre><code class="language-sh">scripts/with-toolchain.sh cargo test -p moss-sim --locked --lib config::tests::configuration_rejects_dimensions_outside_the_supported_range -- --exact</code></pre>
 <p>This command doesn't resize a running world or exercise a browser form. It checks the actual dimension constructor, just as our isolated tests check the window calculation. Following an entered value through a real form would add another question: did the interface send the intended input and display the resulting acceptance or error?</p>
 
-<h2 id="a-value-you-can-rely-on">Carry the accepted value forward</h2>
+<section class="lesson-summary" id="a-value-you-can-rely-on" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Carry the accepted value forward</h2>
 <p>The request for zero ticks now has a useful outcome. Parsing recognizes the number, the constructor rejects its meaning for this report, and the caller receives the count-range reason. For a valid request, the caller instead receives a window whose getters can rely on the checks already performed.</p>
 <details><summary>Recall why the getter can subtract directly</summary><p>The constructor establishes an end greater than the start, with a supported difference. Keeping those fields unchanged preserves the relationship. Parsing alone wouldn't establish it, and code that directly constructs fields inside the owning module must still uphold it.</p></details>
 <p>We have one remaining design task: make this construction path the one other parts of the program actually use. <a href="07-modules.html">Put the boundary in the code</a> follows the same contract into modules and visibility, where the layout of the program can help preserve the promises we've just tested.</p>
+</section>

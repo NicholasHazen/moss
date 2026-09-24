@@ -168,6 +168,46 @@ def nav(modules, current):
     return "".join(f'<li class="nav-group"><details{" open" if part == active_part else ""}><summary>{esc(part)}</summary><ol>{"".join(items)}</ol></details></li>' for part, items in groups.items())
 
 
+class ChapterOutline(HTMLParser):
+    """Read authored section headings without indexing hidden answer headings."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.skipped = 0
+        self.heading = None
+        self.items = []
+
+    def handle_starttag(self, tag, attributes):
+        if tag in {"details", "pre", "nav"}:
+            self.skipped += 1
+        if tag == "h2" and not self.skipped:
+            identity = dict(attributes).get("id")
+            if identity and identity != "chapter-overview":
+                self.heading = (identity, [])
+
+    def handle_data(self, text):
+        if self.heading:
+            self.heading[1].append(text)
+
+    def handle_endtag(self, tag):
+        if tag == "h2" and self.heading:
+            identity, words = self.heading
+            self.items.append((identity, "".join(words)))
+            self.heading = None
+        if tag in {"details", "pre", "nav"}:
+            self.skipped -= 1
+
+
+def chapter_contents(body):
+    outline = ChapterOutline()
+    outline.feed(body)
+    if len(outline.items) < 2:
+        return ""
+    links = "".join(f'<li><a href="#{esc(identity)}">{esc(title)}</a></li>'
+                    for identity, title in outline.items)
+    return f'<details class="chapter-contents"><summary>In this chapter <span>{len(outline.items)} sections</span></summary><nav aria-label="In this chapter"><ol>{links}</ol></nav></details>'
+
+
 def shell(title, body, modules, current="index", description="", lab=None, narration_version="", assets_version="", *, edition, narration_provider="macos"):
     module = next((m for m in modules if m["id"] == current), None)
     meta = f'<p class="eyebrow">{esc(module["part"])} · {module["minutes"]} minutes</p>' if module else '<p class="eyebrow">A living world. An inspectable program.</p>'
@@ -186,28 +226,35 @@ def shell(title, body, modules, current="index", description="", lab=None, narra
       <label for="lesson-note">Field note</label><textarea id="lesson-note" rows="5" placeholder="A prediction, a question, or the evidence you want to remember…"></textarea><p id="save-status" role="status"></p>
       <button id="save-selection" type="button">Keep selected text</button><div id="clippings" aria-label="Saved passages"></div></section>''' if module or current in {"fieldwork", "returns", "population", "mobile", "resting", "hunting", "refuge"} else ''
     model = f'<section class="experiment" data-lab="{esc(lab)}" aria-label="Interactive teaching experiment"></section>' if lab else ''
-    # Put the model after the opening paragraph, so the question precedes controls.
-    if model:
-        end = body.find('</p>')
-        body = body[:end + 4] + model + body[end + 4:] if end >= 0 else model + body
     narrator = {"macos": "Generated with an installed macOS voice.",
                 "elevenlabs": "Generated with ElevenLabs."}.get(narration_provider, "Generated narration.")
     narration = f'<section class="narration-player" data-narration-source="narration/{esc(current)}/cues.json?v={esc(narration_version)}" aria-label="Generated narration"><p><strong>Listen with passage highlighting</strong></p><audio controls preload="metadata" aria-label="Lesson narration"><source src="narration/{esc(current)}/narration.m4a?v={esc(narration_version)}" type="audio/mp4"></audio><p class="quiet">{narrator} Prose and tables are read; code and answer disclosures are skipped. Playback uses the audio files included with this course.</p><p data-narration-status role="status"></p></section>' if narration_version else ''
+    # Establish the destination before asking the reader to operate a model.
+    contents = chapter_contents(body) if current not in {"index", "roadmap"} else ""
+    overview = re.search(r'<section\b[^>]*class="lesson-overview"[^>]*>.*?</section>', body, re.S)
+    if overview:
+        at = overview.end()
+        body = body[:at] + contents + narration + model + body[at:]
+    else:
+        end = body.find('</p>')
+        at = end + 4 if end >= 0 else 0
+        body = body[:at] + contents + narration + model + body[at:]
+    cover = '<div class="atlas-cover"><img src="assets/identity/atlas-meadow-v1.png" width="1984" height="794" alt="" fetchpriority="high"></div>' if current == "index" else ""
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="{esc(description)}"><meta name="color-scheme" content="light dark">
-<title>{esc(title)} · Moss Fieldnotes</title><link rel="stylesheet" href="assets/fieldnotes.css?v={assets_version}">
+<meta name="description" content="{esc(description)}"><meta name="color-scheme" content="light"><meta name="theme-color" content="#164f50">
+<title>{esc(title)} · Moss Fieldnotes</title><link rel="icon" href="assets/identity/atlas-mark-v1.png" type="image/png"><link rel="stylesheet" href="assets/fieldnotes.css?v={assets_version}">
 <script src="assets/records.js?v={assets_version}" defer></script><script src="assets/models.js?v={assets_version}" defer></script><script src="assets/terrarium.js?v={assets_version}" defer></script><script src="assets/evidence.js?v={assets_version}" defer></script><script src="assets/ecosystem.js?v={assets_version}" defer></script><script src="assets/population.js?v={assets_version}" defer></script><script src="assets/mobile.js?v={assets_version}" defer></script><script src="assets/fieldnotes.js?v={assets_version}" defer></script><script src="assets/narration.js?v={assets_version}" defer></script></head>
 <body data-page="{esc(current)}"><a class="skip-link" href="#reading">Skip to reading</a>
-<header class="masthead"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">m</span><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
-<span class="edition-label">{esc(edition)}</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></header>
-<div class="workspace"><aside class="sidebar"><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><ol>{nav(modules,current)}</ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
+<header class="masthead"><a class="brand" href="index.html"><img class="brand-mark" src="assets/identity/atlas-mark-v1.png" width="44" height="44" alt=""><span>Moss <span class="brand-edition">Fieldnotes</span></span></a>
+<span class="edition-label">{esc(edition)}</span><a href="roadmap.html">The learning path <span aria-hidden="true">↗</span></a></header>{cover}
+<div class="workspace"><aside class="sidebar"><details class="course-browser" open><summary>Browse chapters and guides</summary><nav aria-label="Learning path"><p class="eyebrow">The field guide</p><ol>{nav(modules,current)}</ol><a class="path-link" href="roadmap.html">See the full curriculum →</a><a class="path-link" href="setup.html">Set up the local workbench →</a><a class="path-link" href="fieldwork.html">Build one continuing meadow →</a><a class="path-link" href="population.html">Let a population develop →</a><a class="path-link" href="mobile.html">Follow a local opportunity →</a><a class="path-link" href="resting.html">Investigate a costly pause →</a><a class="path-link" href="hunting.html">Follow a contested capture →</a><a class="path-link" href="refuge.html">Give shelter a rule you can test →</a><a class="path-link" href="returns.html">Return to a different case →</a><a class="path-link" href="shelf.html">Visit the reading &amp; viewing shelf →</a></nav>
 <div class="search-control" hidden><label for="search">Find an idea</label><input id="search" type="search" placeholder="ownership, ticks, queries…" autocomplete="off"><div id="search-results" aria-live="polite"></div></div>
-<p class="sidebar-caption">Small experiments.<br>Complete explanations.<br>A world you can account for.</p></aside>
+</details></aside>
 <main id="reading" tabindex="-1"><div class="reading-toolbar" hidden aria-label="Reading controls"><button type="button" id="focus-mode" aria-pressed="false">Focus</button><label for="text-size">Text</label><select id="text-size"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select><button type="button" id="listen">Listen</button><button type="button" id="pause-reading" hidden>Pause</button><button type="button" id="stop-reading" hidden>Stop</button><button type="button" id="print-lesson">Print</button><span id="speech-status" role="status"></span></div>
-<article>{meta}<h1 data-narration="0">{esc(title)}</h1>{narration}{body}</article>{stepper}</main>
+<article>{meta}<h1 data-narration="0">{esc(title)}</h1>{body}</article>{stepper}</main>
 <aside class="field-desk"><p class="eyebrow">On your desk</p><p class="desk-boundary">The browser is your reading and experiment space. Rust edits run in your local workbench.</p>{controls}
-<section class="data-controls" hidden><h2>Take your notes with you</h2><button type="button" id="export-progress">Export reading record</button><button type="button" id="export-recovery" hidden>Download unreadable saved data</button><label class="file-label">Import reading record<input id="import-progress" type="file" accept="application/json,.json"></label><details><summary>Use copy and paste</summary><button type="button" id="copy-record">Copy reading record</button><label for="paste-record">Paste a reading record (JSON)</label><textarea id="paste-record" rows="4" spellcheck="false"></textarea><button type="button" id="import-pasted">Import pasted record</button></details><p id="data-status" role="status"></p><p class="quiet">Saved in this browser, on this origin. Export before clearing browser data or changing ports.</p></section>
+<details class="notebook-tools"><summary>Export or import your notes</summary><section class="data-controls" hidden><h2>Take your notes with you</h2><button type="button" id="export-progress">Export reading record</button><button type="button" id="export-recovery" hidden>Download unreadable saved data</button><label class="file-label">Import reading record<input id="import-progress" type="file" accept="application/json,.json"></label><details><summary>Use copy and paste</summary><button type="button" id="copy-record">Copy reading record</button><label for="paste-record">Paste a reading record (JSON)</label><textarea id="paste-record" rows="4" spellcheck="false"></textarea><button type="button" id="import-pasted">Import pasted record</button></details><p id="data-status" role="status"></p><p class="quiet">Saved in this browser, on this origin. Export before clearing browser data or changing ports.</p></section></details>
 <details><summary>What is live in Moss?</summary><p>Maintenance is live. Movement remains the learner-owned edit in <code>NOW.md</code>. Later biology is proposed or isolated reference work. Reading a lesson never activates a rule.</p></details></aside></div>
 <footer class="site-footer"><span>Moss Fieldnotes · Learn the rule. Follow the consequence.</span><a href="about.html">Sources, evidence &amp; reading support</a></footer>
 <noscript><p class="noscript-note">The full lessons, answers and navigation work without JavaScript. Interactive models, local notes and listening need JavaScript.</p></noscript>

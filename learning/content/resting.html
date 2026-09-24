@@ -1,4 +1,8 @@
-<p class="lesson-lead">Our grazer can see food two cells ahead, and it still has enough reserve to reach it. Instead, it stops. For the next two ticks its fatigue falls, but so does its reserve: resting has interrupted the journey without removing the cost of staying alive. In this chapter we'll add that interruption to your meadow, then investigate why recovering quickly doesn't necessarily mean the grazer is ready to leave.</p>
+<p class="lesson-lead">Our grazer can see food two cells ahead, and it still has enough reserve to reach it. Instead, it stops. For the next two ticks its fatigue falls, but so does its reserve: resting has interrupted the journey without removing the cost of staying alive.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Make a pause change the journey without creating energy</h2>
+<p>You'll choose an activity representation, write the complete ECS system that performs rest, and connect its guards to observation, travel, meals and births in your saved project. A fast-recovery test will separate being recovered from having fulfilled a commitment; a matched meadow comparison will then ask what an extra rest action changes over a longer run. The expected outcome is a pause you can explain through activity, fatigue, reserve and fresh observations, with native tests and a browser view exposing the same interrupted journey.</p>
+</section>
 <aside class="scope-note"><p>Continue your saved course project from <a href="mobile.html#continue-the-same-world">the mobile guide</a>, normally <code>work/fieldwork</code>. This chapter adds an authored rest policy to that isolated world; it doesn't activate rest in live Moss or change <code>NOW.md</code>. The traces below were checked against the complete resting checkpoint.</p></aside>
 
 <h2 id="interrupt-the-same-journey">Give the journey a reason to pause</h2>
@@ -184,4 +188,8 @@ python3 learning/scripts/build.py</code></pre>
 <section class="experiment" data-resting-preview aria-label="Cumulative course resting"></section>
 <p>Start with the interrupted journey and inspect activity, fatigue, reserve and position at the same completed tick. Then select fast recovery and start a new run. You should be able to point to the moment when fatigue is zero but another rest action is still owed. Selecting a different animal or pausing to read leaves the simulation tick unchanged; an animal rests only when the Rust simulation executes that action.</p>
 <p>The source label identifies the compiled project being observed. Your native tests establish behavior in its Rust schedule, while this view lets you check how the compiled reports appear and how the controls operate. The <a href="reference/resting/README.md">checkpoint notes</a> describe the policies and verification in more detail.</p>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Recovery and permission to leave have separate evidence</h2>
 <p>We can now account for the grazer that stopped short of food. Its earlier steps accumulated enough fatigue to trigger a commitment, and the next two actions fulfilled that commitment while upkeep continued. Only a later decision reopened the journey. Keep the fast-recovery test as you change the policy: it captures the moment when being recovered and being free to leave become two different things.</p>
+<p>In <a href="hunting.html">the hunting checkpoint</a>, a grazer's journey can end permanently. We'll make one capture change its eligibility immediately, then follow the consequences for another hunter, a later meal and a possible birth in this same world.</p>
+</section>

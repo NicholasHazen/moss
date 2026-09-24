@@ -1,4 +1,9 @@
-<p class="lesson-lead">Fern begins a tick with one reserve unit. Maintenance spends it, and our model now declares her dead. She must miss the later action, but removing her from the world shouldn't erase the explanation. We'll separate that immediate change in eligibility from cleanup, then give the explanation an owned record whose limits remain visible as the journal fills.</p>
+<p class="lesson-lead">Fern begins a tick with one reserve unit. Maintenance spends it, and our model now declares her dead. She must miss the later action, but removing her from the world shouldn't erase the explanation.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Stop an action and keep an honest account of why</h2>
+<p>You'll implement <code>resolve_terminal</code> so one alive-to-dead transition changes eligibility and produces one owned record. We'll follow that record after cleanup, then after a bounded journal has to forget it. This separates the state that governs what Fern may do from the evidence available to someone inspecting her history.</p>
+<p>The supplied tick and journal make both boundaries testable. You should finish able to prevent a terminal-tick action and a duplicate death, identify a removed individual by run and ID, and distinguish a known zero event count from an interval the retained history can no longer answer.</p>
+</section>
 <aside class="scope-note"><p>This isolated lab proposes a terminal rule: an alive animal at zero reserve after maintenance becomes dead. It is a teaching policy rather than a scientific starvation model. Live Moss still keeps animals alive at zero, and the assignment in <code>NOW.md</code> remains unchanged.</p></aside>
 
 <h2 id="one-transition-three-responsibilities">Change eligibility before the next action</h2>
@@ -7,7 +12,7 @@
 <p>We'll first use ordinary structs and an ordered function so every step is easy to inspect. The next lesson puts the same concern into a Bevy schedule. The reason for checking eligibility again is the same in either form: an animal that was alive at the beginning of the tick can stop being alive before its action phase.</p>
 
 <h2 id="record-a-transition-not-a-condition">Give a death one event</h2>
-<p>The <code>resolve_terminal</code> helper accepts exactly one situation: life is <code>Alive</code> and reserve is zero. It changes life to <code>Dead</code>, appends a terminal record, and returns <code>true</code>. Positive reserve or an already dead animal returns <code>false</code> without adding a record.</p>
+<p>The helper must distinguish a new death from an animal that remains dead, because only the transition earns a record. The <code>resolve_terminal</code> helper accepts exactly one situation: life is <code>Alive</code> and reserve is zero. It changes life to <code>Dead</code>, appends a terminal record, and returns <code>true</code>. Positive reserve or an already dead animal returns <code>false</code> without adding a record.</p>
 <p>The life check is what makes a repeated call harmless. Zero reserve may remain true for many later ticks, but the alive-to-dead transition has already happened. If we recorded an event whenever the number was zero, a single animal could appear to die repeatedly. Checking both the condition and the current life state gives the event its once-only meaning.</p>
 <p>It may be tempting to search history instead: if a death record exists, don't add another. That would make eligibility depend on how much history we retain. Once an old record was evicted, the same animal could qualify again. Current life state must own the decision, while history describes the decision that was made.</p>
 <p>Our record calls the cause <code>Starved</code>, naming the toy rule that accepted the transition. An animal authored at zero qualifies too. The word doesn't supply a physiological model or a grace period. If we later want a rescue meal, health loss, or a delay at zero, we'll need to change the rule and its timing explicitly.</p>
@@ -210,7 +215,7 @@ mod tests {
 </code></pre></details>
 
 <h2 id="the-complete-transition">Read the transition beside its journal</h2>
-<p>The complete reference below contains the helper, bounded journal, and ordered tick in one file. Read the life check first, then follow a successful call into <code>record</code>. The checked counters stop on exhaustion instead of wrapping sequence or tick values into misleading history.</p>
+<p>Now follow the helper through the parts that keep its explanation usable after the action has ended. The complete reference below contains the helper, bounded journal, and ordered tick in one file. Read the life check first, then follow a successful call into <code>record</code>. The checked counters stop on exhaustion instead of wrapping sequence or tick values into misleading history.</p>
 <details><summary>Complete worked answer: history.rs</summary><pre><code class="language-rust" data-runnable="history">use std::collections::VecDeque;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -396,8 +401,10 @@ retained=2 evicted=1 complete=2..=3
 old=None later=Some(0)</code></pre>
 <p>The first two lines show that an animal can stop participating while its explanation remains. The later lines show the journal's separate limit: retaining recent events doesn't make it a complete lifetime archive. Displaying the final <code>None</code> as zero would undo the distinction its query carefully preserved.</p>
 
-<h2 id="recall-and-evidence">Keep eligibility and evidence independent</h2>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway" id="recall-and-evidence">
+<h2 id="chapter-takeaway">Eligibility can end before its evidence does</h2>
 <p>Fern's disappearance now has two different lifetimes. Her current life state changes before the action, and her owned record can remain after cleanup. Later, eviction can shorten our historical evidence without changing that terminal decision. Neither cleanup timing nor journal capacity needs to decide whether she may act again.</p>
 <details><summary>Recall the three boundaries</summary><p>An owned key survives removal without borrowing the animal. The life check permits one alive-to-dead transition while zero reserve persists. Coverage treats a tick as incomplete if any of its events were evicted, even when other rows from that tick remain.</p></details>
 <p>The native tests exercise this ordered model, owned identities, eviction, and coverage queries. A live ECS integration would also need schedule checks, while a browser history panel would need an observation path showing identity, cause, and coverage after removal. The isolated result gives us the contract those integrations must preserve.</p>
 <p>In <a href="20-predation.html">two hunters and one prey</a>, the same immediate eligibility change will have another purpose: preventing a later hunter from receiving a second reward while the consumed entity is still waiting for cleanup.</p>
+</section>

@@ -14,6 +14,11 @@ complete extension and an experiment of your own, with staged hints and full
 worked answers available. The source supports the complete continuing project route; the hosted browser
 views run precompiled examples, while Rust edits and tests run locally.
 
+Fieldnotes 0.3 adds chapter overviews, closing summaries and section navigation.
+The [ecosystem atlas identity](IDENTITY.md) pairs a generated habitat mark and
+meadow cover with a quieter reading layout. Chapter menus collapse on narrow
+screens; the prose, code and explanatory diagrams remain selectable.
+
 ## Run
 
 From the repository root, with Python 3.11+ (Node 22+ is used for the JavaScript checks):
@@ -247,7 +252,7 @@ complete worked test file. `check --answer` checks that answer separately.
 After generating the optional narration and Rust hosts, package the current site:
 
 ```sh
-python3 learning/scripts/package.py /path/to/moss-fieldnotes-0.2.1.zip
+python3 learning/scripts/package.py /path/to/moss-fieldnotes-0.3.zip
 ```
 
 The ZIP includes a loopback server, a reading guide and a SHA-256 manifest. Extract

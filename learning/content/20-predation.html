@@ -1,4 +1,9 @@
-<p class="lesson-lead">Two hunters reach the same prey. The first succeeds and queues its removal, but the prey's entity is still present when the second hunter gets a turn. We need one capture to produce one reward, and we need the prey to miss its own later action. We'll deliberately leave cleanup pending so we can see which state change supplies those guarantees.</p>
+<p class="lesson-lead">Two hunters reach the same prey. The first succeeds and queues its removal, but the prey's entity is still present when the second hunter gets a turn. We need one capture to produce one reward, and we need the prey to miss its own later action.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Make a capture take effect before cleanup</h2>
+<p>You'll implement <code>claim</code>, combining the finite meal's accounting with the terminal transition's eligibility check. A supplied Bevy schedule will resolve both hunters, try the prey's action, and inspect the result while deferred removal is still pending. Leaving the entity present makes the immediate availability change visible.</p>
+<p>By the end, you should be able to show why only one hunter receives a reward, why a rejected claim leaves both participants unchanged, and why the consumed prey performs no later action. We'll then apply the queued cleanup and check what remains: one owned interaction record, independent of the entity's continued existence.</p>
+</section>
 <aside class="scope-note"><p>This isolated Bevy ECS 0.18.1 lab proposes a whole-prey meal at same-cell contact, converting biomass to reserve one for one only when the entire gain fits. These teaching rules don't activate hunting, death, or movement in live Moss.</p></aside>
 
 <h2 id="reuse-the-finite-resource-question">Combine a transfer with a terminal transition</h2>
@@ -8,7 +13,7 @@
 <p>The ID priority makes this small contest repeatable. It doesn't show fairness or real predator behavior: lower IDs keep winning otherwise identical contests. Once accounting and eligibility are established, another priority policy can be compared against them without confusing a change of winner with a double reward.</p>
 
 <h2 id="validate-before-claiming">Leave a rejected prey available</h2>
-<p>The resolver first locates the hunter's selected prey by stable ID. If that identity is missing, it doesn't redirect the action toward another animal. The <code>claim</code> helper then checks that the hunter is alive, the prey remains available with positive biomass, both occupy the same cell, and the hunter's reserve is valid.</p>
+<p>A hunter that cannot accept the whole meal must leave the next hunter's opportunity intact. We'll establish every condition before claiming the prey, starting when the resolver locates the hunter's selected prey by stable ID. If that identity is missing, it doesn't redirect the action toward another animal. The <code>claim</code> helper then checks that the hunter is alive, the prey remains available with positive biomass, both occupy the same cell, and the hunter's reserve is valid.</p>
 <p>A valid reserve lets us calculate room as capacity minus reserve. The full biomass must fit in that room before any participant changes. This matters for the order of the contest: if hunter 2 starts at nine of ten units, rejecting its three-unit meal must leave prey 40 available for hunter 9.</p>
 <p>After acceptance, the helper computes the new reserve with checked addition. It then writes three connected changes: the prey becomes unavailable, its biomass becomes zero, and the hunter receives the full gain. The returned <code>Some(gain)</code> lets the caller record those actual units and queue structural cleanup.</p>
 <p>Rejected attempts return <code>None</code>. That intentionally combines the reasons in this focused lab; an inspector could use the named rejection style from the meal lesson if it needed to explain each one. Whatever return type we choose, the failed attempt must leave both participants unchanged so another eligible action can still resolve correctly.</p>
@@ -27,7 +32,7 @@
 <p>Checking only the last row wouldn't establish why the second reward or prey action was prevented. Holding cleanup open lets the tests show that eligibility changed while the entity was still accessible.</p>
 
 <h2 id="keep-one-shared-interaction">Record both participants in the same event</h2>
-<p>The accepted capture records run seven, tick one, prey ID 40, hunter ID 2, and the three units gained. A future biography for either participant can refer to this interaction. Producing separate “matching” events for each biography would introduce another opportunity for their identities, times, or amounts to disagree.</p>
+<p>Cleanup will remove the prey's components, so the accepted interaction needs an explanation that belongs to neither live participant. The capture records run seven, tick one, prey ID 40, hunter ID 2, and the three units gained. A future biography for either participant can refer to this interaction. Producing separate “matching” events for each biography would introduce another opportunity for their identities, times, or amounts to disagree.</p>
 <p>These are application IDs rather than retained ECS handles. Handles help the resolver access current entities; owned run and actor identities keep the record interpretable after despawn. The fixture assumes unique hunter and prey IDs within the run and assigns separate roles. It doesn't define role changes or cannibalism.</p>
 <p>The journal is a short vector because this fixture performs only a few controlled resolutions. A long-running world would need the previous lesson's bounded retention and visible coverage around these records too. Pursuit, injury, and escape also remain outside this one-contact transaction.</p>
 
@@ -442,8 +447,10 @@ terminal records=1
 prey after cleanup=0</code></pre>
 <p>The pending tuple contains identity, availability, biomass, and action count, in that order. Its presence is useful evidence: the prey still existed when the action phase skipped it. Applying deferred commands removes the entity afterward while leaving the owned record intact.</p>
 
-<h2 id="recall-and-evidence">Separate acceptance from cleanup</h2>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway" id="recall-and-evidence">
+<h2 id="chapter-takeaway">One claim settles the contest</h2>
 <p>The opening contest now resolves without depending on immediate removal. Hunter 2's accepted claim changes the prey's eligibility and supply before either hunter 9 or the prey itself gets another opportunity. Cleanup can follow at its chosen boundary because it no longer carries responsibility for preventing another action.</p>
 <details><summary>Recall why the checks precede the claim</summary><p>Deferred insertion and despawn may both remain unapplied while other work runs, so the immediate availability change supplies this lab's eligibility boundary. A hunter that cannot hold the full gain must reject before that change, preserving the prey for another eligible hunter.</p></details>
 <p>The eight native tests execute the miniature schedule, including reversed spawn order, repeated pending resolution, missing targets, and exact numerical limits. They establish the isolated interaction rather than a live Moss installation or browser result. The deferred settings match the installed 0.18.1 source; the <a href="https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/schedule/struct.Schedule.html">versioned schedule reference</a> provides further detail.</p>
-<p>Next we'll return to one individual's sequence of actions. Rest introduces a different kind of state: a recoverable fatigue value and a commitment to continue resting. Keeping those separate from reserve will preserve the accounting we've built here.</p>
+<p>In <a href="21-rest.html">rest and commitment</a>, we'll return to one individual's sequence of actions. A recoverable fatigue value and a remembered commitment will determine when it rests or works, while reserve continues to account for the energy those ticks consume.</p>
+</section>

@@ -1,5 +1,10 @@
 <p class="lede">Step the Rust world, then inspect what changed.</p>
 <p>Here you can run the existing <code>moss-sim</code> crate through a small WebAssembly host. Fern, Flint, Meadow, their stores, and the tick counter belong to one Bevy ECS world. JavaScript requests a step or reset and draws the returned readings; the maintenance calculation still runs in Rust. Start by comparing a change to that world with a change to its presentation.</p>
+<section class="lesson-overview" aria-labelledby="chapter-overview">
+<h2 id="chapter-overview">Connect a click to a Rust tick</h2>
+<p>We’ll use three steps and a redraw to trace the boundary between the simulation and its display. The expected result is deliberately small: Fern’s reserve falls from 60 to 57, while changing the picture leaves it at 57. Following that result from the controls to the schedule will help you decide which claims need a helper test, an integration test, or an actual browser observation.</p>
+</section>
+
 <section class="experiment rust-terrarium" data-rust-terrarium aria-labelledby="runtime-heading">
 <h2 id="runtime-heading">One world, two ways to inspect it</h2>
 <p>Predict Fern's reserve after three Steps. Then resize the labels and redraw the view. Read the table to decide whether either presentation change spent any energy.</p>
@@ -36,5 +41,8 @@ python3 learning/scripts/serve.py</code></pre>
 <tr><td>The runtime host's native tests</td><td>Does the installed Moss schedule change real components and complete ticks?</td><td>Both animals, the unchanged patch and position, reset identity, and repeated reads.</td></tr>
 <tr><td>This browser view</td><td>Can this WebAssembly build accept a click and present the resulting readings?</td><td>Three Steps, redraw, label size, depletion and reset.</td></tr>
 </tbody></table>
+<section class="lesson-summary" aria-labelledby="chapter-takeaway">
+<h2 id="chapter-takeaway">Keep the tick separate from the picture</h2>
 <p>A passing helper test explains its subtraction cases, but can't establish which schedule ran in the browser. An animation alone doesn't identify the source of its numbers. Following the dependency to the actual simulation and checking the native schedule alongside this view makes the result easier to explain when one layer differs from your expectation.</p>
 <p>Return to <a href="01-observe.html">A tick is a promise</a> to connect the observation with its smaller Rust example. In <a href="11-schedules.html">the scheduling lesson</a>, the next complication is timing within the tick: a correct final value can coexist with an earlier observation that saw the wrong state.</p>
+</section>
