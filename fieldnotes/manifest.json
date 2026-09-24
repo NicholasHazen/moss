@@ -179,8 +179,8 @@
       "sha256": "3e5d8e7176bb772426d348ad1adc8dbc046f011c9edea8962da613cad5c5e7eb"
     },
     "downloads/moss-fieldnotes-source.zip": {
-      "bytes": 1915909,
-      "sha256": "e597286d04eaef8648346031ba9f67cf1e4deeab495f065350da190576b191ce"
+      "bytes": 1917039,
+      "sha256": "61de8dd5911ad10beb284c0298fd01b4c8551c3c94584296ec76edf372e75623"
     },
     "downloads/population-reference.zip": {
       "bytes": 47580,
@@ -1026,14 +1026,6 @@
       "bytes": 25138,
       "sha256": "fd034b6a5633c545e952e7b8acb41550cc97102af4ee52a7107c6eea605b85ec"
     },
-    "reference/population/.gitignore": {
-      "bytes": 9,
-      "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
-    },
-    "reference/population/.gitignore.html": {
-      "bytes": 1740,
-      "sha256": "8cae7f395a4a1764303402682b3fd667c8a4d35cf5729b9b9b6eaa0a2274851a"
-    },
     "reference/population/CHECKPOINT.md": {
       "bytes": 431,
       "sha256": "453429bfe7bfbdab70bda0cb282c525d0f1607a887f8fef89b00740893cdfe03"
@@ -1089,6 +1081,14 @@
     "reference/population/examples/populations.rs.html": {
       "bytes": 6699,
       "sha256": "3b1a24c7c42aca48dadcfe8e28201098bac84ca45b5a08eefeee4c9494efa687"
+    },
+    "reference/population/gitignore.txt": {
+      "bytes": 9,
+      "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
+    },
+    "reference/population/gitignore.txt.html": {
+      "bytes": 1746,
+      "sha256": "9d5daae953c1ca502ab8e3f295f86e329591cb92eab95273dbe42b3bd231564a"
     },
     "reference/population/rust-toolchain.toml": {
       "bytes": 86,
@@ -1210,14 +1210,6 @@
       "bytes": 25172,
       "sha256": "009d7aea3cf06105045e2ed0c211fa72bc96244423fded375db904e5924d880d"
     },
-    "reference/refuge/.gitignore": {
-      "bytes": 9,
-      "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
-    },
-    "reference/refuge/.gitignore.html": {
-      "bytes": 1708,
-      "sha256": "b0d6c30aa25692a84328d6800698b17513f45704fbb0b8045a75ff3884d53ff0"
-    },
     "reference/refuge/CHECKPOINT.md": {
       "bytes": 463,
       "sha256": "5a650f3f32787536e7651e563d31814ec8f4b80e9138f74e9d3161c9975991e6"
@@ -1321,6 +1313,14 @@
     "reference/refuge/examples/resting.rs.html": {
       "bytes": 5363,
       "sha256": "c3d2b56fc742bb9e0dc2d293fa7e181924abe18c78c0825278421e72be480bae"
+    },
+    "reference/refuge/gitignore.txt": {
+      "bytes": 9,
+      "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
+    },
+    "reference/refuge/gitignore.txt.html": {
+      "bytes": 1714,
+      "sha256": "0bff000d661eee024d452b8ba5e987f0092f21bfee42529137a85d740e2d452f"
     },
     "reference/refuge/rust-toolchain.toml": {
       "bytes": 86,
@@ -1938,14 +1938,6 @@
       "bytes": 18752,
       "sha256": "77dac470b0b0ac66b40df6ae3c5c1893368561e6f55fb50625eb4190ddcccdc5"
     },
-    "reference/shared-meadow/.gitignore": {
-      "bytes": 9,
-      "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
-    },
-    "reference/shared-meadow/.gitignore.html": {
-      "bytes": 1739,
-      "sha256": "17e4b1e64c0f9364e888b705f92fd532ddbf3653f509e51eeaa68f8dec239700"
-    },
     "reference/shared-meadow/CHECKPOINT.md": {
       "bytes": 584,
       "sha256": "323dfd9cd7a803267cc51cdb34c5e4e9a7550247d49c2719b30d1138c2bb238d"
@@ -1985,6 +1977,14 @@
     "reference/shared-meadow/examples/compare.rs.html": {
       "bytes": 2762,
       "sha256": "61a7edca0e60fbcd4a40709414c2aafc67cd3eeaa766f5861e400d0f7e6c9552"
+    },
+    "reference/shared-meadow/gitignore.txt": {
+      "bytes": 9,
+      "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
+    },
+    "reference/shared-meadow/gitignore.txt.html": {
+      "bytes": 1745,
+      "sha256": "f039cb87bdce72644eeef8872e2fd2e060ff2f5cb5a63a711968594803cdae41"
     },
     "reference/shared-meadow/rust-toolchain.toml": {
       "bytes": 86,
