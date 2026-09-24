@@ -4,28 +4,32 @@
   const page = document.body.dataset.page;
   const courseBrowser = document.querySelector(".course-browser");
   if (courseBrowser && window.matchMedia("(max-width: 760px)").matches) courseBrowser.open = false;
-  const { empty, validate, mergeImported, reconcile } = window.MossRecords;
+  const { empty, validate, reconcile } = window.MossRecords;
   let record = empty();
   let baseRecord = empty();
   let storageAvailable = true;
-  let recoveryBytes = null;
   let storageBlocked = false;
   try {
     const saved = localStorage.getItem(KEY);
     if (saved) {
       try { record = validate(JSON.parse(saved)); baseRecord = validate(record); }
-      catch { recoveryBytes = saved; storageBlocked = true; storageAvailable = false; }
+      catch { storageBlocked = true; storageAvailable = false; }
     }
   } catch { storageAvailable = false; }
   const status = document.getElementById("save-status");
-  const dataStatus = document.getElementById("data-status");
+  const readingStatus = document.getElementById("reading-status");
+  const concurrencyNotice = "This browser cannot coordinate simultaneous saves. Keep one Fieldnotes tab open when editing notes.";
+  function storageProblem(message) {
+    if (status) status.textContent = message;
+    if (readingStatus) readingStatus.textContent = message;
+  }
   let saveQueue = Promise.resolve();
   let pendingSaves = 0;
   let unsavedChanges = false;
   function save() {
     pendingSaves++; unsavedChanges = true;
     const persist = () => {
-      if (storageBlocked) throw new Error("Existing saved data could not be read and has not been overwritten. Download it for recovery; export this session separately.");
+      if (storageBlocked) throw new Error("Existing saved data could not be read and has been left unchanged.");
       const bytes = localStorage.getItem(KEY);
       const latest = bytes ? validate(JSON.parse(bytes)) : empty();
       const merged = reconcile(baseRecord, record, latest);
@@ -34,12 +38,12 @@
       unsavedChanges = false;
       sync();
       if (status) status.textContent = "Saved in this browser.";
+      if (readingStatus) readingStatus.textContent = navigator.locks ? "" : concurrencyNotice;
       return true;
     };
     saveQueue = saveQueue.then(() => navigator.locks ? navigator.locks.request(KEY, persist) : persist()).catch(error => {
       storageAvailable = false;
-      const message = `${error.message} Export this session’s record to keep it.`;
-      if (status) status.textContent = message; else dataStatus.textContent = message;
+      storageProblem(`${error.message} Your changes remain only in this tab. Copy any new notes somewhere safe before leaving.`);
       return false;
     }).finally(() => { pendingSaves--; });
     return saveQueue;
@@ -92,17 +96,19 @@
       if (text.length > 5000 || lesson().clips.length >= 100) { status.textContent = "Save up to 100 passages of 5,000 characters each per lesson."; return; }
       lesson().clips.push(text); save(); drawClips();
     });
-    if (!storageAvailable) status.textContent = "Saved data could not be loaded. Export your session before leaving.";
   }
-  document.querySelectorAll(".reading-toolbar,.data-controls,.search-control,.practice-state").forEach(node => { node.hidden = false; });
-  if (!navigator.locks) dataStatus.textContent = "This browser cannot coordinate simultaneous saves. Keep one Fieldnotes tab open when editing notes.";
+  document.querySelectorAll(".reading-toolbar,.reading-notes,.practice-state").forEach(node => { node.hidden = false; });
+  if (!storageAvailable) storageProblem(storageBlocked
+    ? "Saved reading data could not be read and has been left unchanged. Changes in this tab cannot be saved; copy any new notes somewhere safe before leaving."
+    : "Browser storage is unavailable. Changes may be lost when this tab closes; copy any new notes somewhere safe before leaving.");
+  else if (!navigator.locks && readingStatus) readingStatus.textContent = concurrencyNotice;
   window.addEventListener("storage", event => {
     if (event.key !== KEY || event.storageArea !== localStorage || storageBlocked) return;
     try {
       const bytes = localStorage.getItem(KEY);
       const latest = bytes ? validate(JSON.parse(bytes)) : empty();
       record = reconcile(baseRecord, record, latest); baseRecord = latest; sync();
-    } catch { dataStatus.textContent = "Another tab saved data this tab could not merge. Export this session before reloading."; }
+    } catch { storageProblem("Saved data from another tab could not be merged and has been left unchanged. Copy any new notes somewhere safe before reloading."); }
   });
   window.addEventListener("beforeunload", event => {
     if (pendingSaves || unsavedChanges) { event.preventDefault(); event.returnValue = ""; }
@@ -110,60 +116,6 @@
   document.getElementById("text-size").addEventListener("change", event => { record.settings.textSize = event.target.value; sync(); save(); });
   document.getElementById("focus-mode").addEventListener("click", event => {
     const on = document.body.classList.toggle("focus-mode"); event.target.setAttribute("aria-pressed", String(on)); event.target.textContent = on ? "Leave focus" : "Focus";
-  });
-  function downloadRecord(bytes, name) {
-    const blob = new Blob([bytes], { type: "application/json" });
-    const url = URL.createObjectURL(blob); const a = document.createElement("a");
-    a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  document.getElementById("export-progress").addEventListener("click", async () => {
-    await saveQueue;
-    downloadRecord(JSON.stringify(record, null, 2), "moss-fieldnotes-reading-record.json");
-    dataStatus.textContent = "Reading record exported.";
-  });
-  if (recoveryBytes !== null) {
-    const recovery = document.getElementById("export-recovery"); recovery.hidden = false;
-    recovery.addEventListener("click", () => downloadRecord(recoveryBytes, "moss-fieldnotes-unreadable-backup.json"));
-    dataStatus.textContent = "Existing saved data could not be read. It has been preserved. Download it before any recovery work.";
-  }
-  async function importBytes(bytes) {
-    try {
-      const incoming = JSON.parse(bytes);
-      record = mergeImported(record, incoming); sync();
-      const stored = await save();
-      dataStatus.textContent = stored ? "Imported and merged with your existing reading record." : "Imported into this session, but browser storage is unavailable. Export to keep your merged record.";
-      return true;
-    } catch (error) { dataStatus.textContent = `Import failed: ${error.message}`; return false; }
-  }
-  document.getElementById("import-progress").addEventListener("change", async event => {
-    const file = event.target.files[0]; if (!file) return;
-    try { await importBytes(await file.text()); }
-    catch (error) { dataStatus.textContent = `Import failed: ${error.message}`; }
-    event.target.value = "";
-  });
-  document.getElementById("copy-record").addEventListener("click", async () => {
-    await saveQueue;
-    try { await navigator.clipboard.writeText(JSON.stringify(record, null, 2)); dataStatus.textContent = "Reading record copied."; }
-    catch { dataStatus.textContent = "Clipboard unavailable. Use Export reading record to download it."; }
-  });
-  document.getElementById("import-pasted").addEventListener("click", async () => {
-    const input = document.getElementById("paste-record");
-    if (await importBytes(input.value)) input.value = "";
-  });
-  let indexPromise;
-  let searchVersion = 0;
-  document.getElementById("search").addEventListener("input", async event => {
-    const version = ++searchVersion;
-    const query = event.target.value.trim().toLowerCase(); const results = document.getElementById("search-results");
-    results.replaceChildren(); if (query.length < 2) return;
-    try {
-      indexPromise ||= fetch("assets/search.json").then(response => { if (!response.ok) throw new Error("search index unavailable"); return response.json(); });
-      const index = await indexPromise; if (version !== searchVersion) return;
-      const terms = query.split(/\s+/);
-      const found = index.filter(item => terms.every(term => `${item.title} ${item.text}`.toLowerCase().includes(term))).slice(0, 8);
-      if (!found.length) results.textContent = "No matching lesson. Try a broader term.";
-      for (const item of found) { const a = document.createElement("a"); a.href = `${item.id}.html`; a.textContent = item.title; results.append(a); }
-    } catch { if (version === searchVersion) results.textContent = "Search needs the local web server. The learning path links still work."; indexPromise = null; }
   });
   document.querySelectorAll("article pre").forEach(pre => {
     const code = pre.querySelector("code"); if (!code) return;
